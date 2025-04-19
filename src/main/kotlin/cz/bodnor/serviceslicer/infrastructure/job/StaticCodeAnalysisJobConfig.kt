@@ -1,6 +1,6 @@
 package cz.bodnor.serviceslicer.infrastructure.job
 
-import cz.bodnor.serviceslicer.application.module.analysis.PrepareProjectRootTasklet
+import cz.bodnor.serviceslicer.adapter.`in`.batch.PrepareProjectRootTasklet
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.job.builder.JobBuilder
 import org.springframework.batch.core.repository.JobRepository

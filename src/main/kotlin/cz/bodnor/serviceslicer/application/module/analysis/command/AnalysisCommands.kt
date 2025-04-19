@@ -17,3 +17,7 @@ data class CreateAnalysisJobCommand(
 data class RunAnalysisJobCommand(
     val analysisJobId: UUID,
 ) : Command<Unit>
+
+data class PrepareProjectRootCommand(
+    val projectId: UUID,
+) : Command<Unit>
