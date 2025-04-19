@@ -1,0 +1,4 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:17:///serviceslicer?serverTimezone=UTC&reWriteBatchedInserts=true
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver

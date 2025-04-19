@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: 'postgres:17.4-alpine'
+    environment:
+      - 'POSTGRES_DB=serviceslicer'
+      - 'POSTGRES_PASSWORD=postgres'
+      - 'POSTGRES_USER=postgres'
+    ports:
+      - '5432'
