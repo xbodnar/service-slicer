@@ -14,7 +14,8 @@ class CollectCompilationUnits {
         javaParser: JavaParser,
         projectDir: Path,
     ): List<CompilationUnit> {
-        val sourcesDir = projectDir.resolve("src").resolve("main")
+        // TODO: Find Java project root dir (based on gradle build file or pom.xml)
+        val sourcesDir = projectDir.resolve("api").resolve("src").resolve("main")
 
         return Files.walk(sourcesDir)
             .filter { it.extension == "java" }

@@ -63,7 +63,8 @@ class BuildDependencyGraph(
     }
 
     private fun buildParser(projectRootDir: Path): JavaParser {
-        val javaSymbolSolver = JavaSymbolSolver(JavaParserTypeSolver(projectRootDir.resolve("src/main/java")))
+        // TODO: Find java root source (check CollectCompilationUnits)
+        val javaSymbolSolver = JavaSymbolSolver(JavaParserTypeSolver(projectRootDir.resolve("api/src/main/java")))
         val parserConfig = ParserConfiguration()
         parserConfig.setSymbolResolver(javaSymbolSolver)
 

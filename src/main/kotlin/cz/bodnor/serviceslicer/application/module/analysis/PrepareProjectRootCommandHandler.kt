@@ -21,7 +21,7 @@ class PrepareProjectRootCommandHandler(
 
     override fun handle(command: PrepareProjectRootCommand) {
         val project = projectFinderService.getById(command.projectId)
-        val projectSource = projectSourceFinderService.getById(command.projectId)
+        val projectSource = projectSourceFinderService.getByProjectId(command.projectId)
 
         val projectRoot = when (projectSource) {
             is ZipFileProjectSource -> prepareProjectRootFromZip(projectSource)

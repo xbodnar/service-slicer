@@ -20,7 +20,7 @@ class PrepareProjectRootFromZip(
         val file = fileService.get(fileId = source.fileId)
         val originalFileName = fileFinderService.getById(source.fileId).originalFileName
 
-        val unzippedFolderPath = Path.of(projectWorkingDir, "${source.projectId}")
+        val unzippedFolderPath = Path.of(projectWorkingDir, source.projectId.toString())
 
         extractZipFile(source = file, destination = unzippedFolderPath)
 
