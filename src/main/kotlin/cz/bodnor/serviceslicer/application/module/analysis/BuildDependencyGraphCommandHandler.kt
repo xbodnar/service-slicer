@@ -7,7 +7,6 @@ import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderS
 import cz.bodnor.serviceslicer.domain.analysis.graph.TypeNodeCreateService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.stereotype.Component
-import java.nio.file.Path
 
 @Component
 class BuildDependencyGraphCommandHandler(
@@ -21,15 +20,9 @@ class BuildDependencyGraphCommandHandler(
     override fun handle(command: BuildDependencyGraphCommand) {
         val project = projectFinderService.getById(command.projectId)
         require(project.projectRootDir != null) { "Project root dir is missing" }
-        val projectDir = Path.of(project.projectRootDir!!)
 
-        val graphNodes = buildDependencyGraph(projectId = project.id, projectRootDir = projectDir)
+        val graphNodes = buildDependencyGraph(projectId = project.id, projectRootDir = project.projectRootDir!!)
 
         typeNodeCreateService.save(graphNodes.values.toList())
     }
-
-    fun resolveFqn(
-        pkg: String,
-        simple: String,
-    ): String = if (simple.contains(".")) simple else "$pkg.$simple"
 }

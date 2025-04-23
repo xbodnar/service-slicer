@@ -1,6 +1,7 @@
 package cz.bodnor.serviceslicer.domain.project
 
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
+import jakarta.persistence.Convert
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -17,22 +18,6 @@ import kotlin.io.path.isDirectory
 class Project(
     id: UUID = UUID.randomUUID(),
     val name: String,
-
-    /**
-     * Source type (ZIP file or GitHub repository)
-     */
-    @Enumerated(EnumType.STRING)
-    val sourceType: SourceType,
-
-    /**
-     * ID of the uploaded ZIP file
-     */
-    val sourceFileId: UUID?,
-
-    /**
-     * URL of the GitHub repository
-     */
-    val githubRepositoryUrl: String?,
 ) : UpdatableEntity(id) {
 
     /**
@@ -42,25 +27,18 @@ class Project(
     var status: ProjectStatus = ProjectStatus.CREATED
         private set
 
-    var projectRootDir: String? = null
+    @Convert(converter = PathHibernateConverter::class)
+    var projectRootDir: Path? = null
         private set
 
     fun setProjectRoot(path: Path) {
         require(path.isDirectory()) { "Working directory must be a directory" }
-        this.projectRootDir = path.toString()
+        this.projectRootDir = path
     }
 }
 
 @Repository
 interface ProjectRepository : JpaRepository<Project, UUID>
-
-/**
- * Source type of the project
- */
-enum class SourceType {
-    ZIP_FILE,
-    GITHUB_REPOSITORY,
-}
 
 /**
  * Status of the project

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="0" author="bodnar">
+        <addForeignKeyConstraint baseTableName="project_source"
+                                 baseColumnNames="project_id"
+                                 constraintName="project_source_project_id_fk"
+                                 referencedTableName="project"
+                                 referencedColumnNames="id"/>
+        <addForeignKeyConstraint baseTableName="project_source"
+                                 baseColumnNames="file_id"
+                                 constraintName="project_source_file_id"
+                                 referencedTableName="file"
+                                 referencedColumnNames="id"/>
+    </changeSet>
+</databaseChangeLog>

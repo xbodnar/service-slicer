@@ -1,7 +1,5 @@
 package cz.bodnor.serviceslicer
 
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -27,19 +25,10 @@ abstract class IntegrationTest {
     }
 
     companion object {
-        @JvmStatic
-        private var neo4jContainer = Neo4jContainer("neo4j:5.18.0")
+        private val neo4jContainer = Neo4jContainer("neo4j:5.18.0")
 
-        @BeforeAll
-        @JvmStatic
-        fun initializeNeo4j() {
+        init {
             neo4jContainer.start()
-        }
-
-        @AfterAll
-        @JvmStatic
-        fun stopNeo4j() {
-            neo4jContainer.stop()
         }
 
         @DynamicPropertySource
