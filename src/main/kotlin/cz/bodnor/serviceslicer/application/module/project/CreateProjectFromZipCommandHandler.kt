@@ -19,7 +19,7 @@ class CreateProjectFromZipCommandHandler(
         val file = fileService.upload(command.file)
 
         val project = projectCreateService.createFromZip(
-            name = command.file.name,
+            name = command.projectName,
             fileId = file.id,
         )
 

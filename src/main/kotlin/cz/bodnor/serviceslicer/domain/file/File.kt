@@ -9,6 +9,7 @@ import java.util.UUID
 @Entity
 class File(
     id: UUID = UUID.randomUUID(),
+    val originalFileName: String,
     extension: String,
 ) : CreatableEntity(id) {
 

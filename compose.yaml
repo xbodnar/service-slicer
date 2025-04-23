@@ -6,4 +6,12 @@ services:
       - 'POSTGRES_PASSWORD=postgres'
       - 'POSTGRES_USER=postgres'
     ports:
-      - '5432'
+      - '33771:5432'
+
+  neo4j:
+    image: 'neo4j:5.18.0'
+    environment:
+      - 'NEO4J_AUTH=neo4j/password'
+    ports:
+      - '7474:7474'
+      - '7687:7687'

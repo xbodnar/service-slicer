@@ -8,5 +8,8 @@ import java.util.UUID
 class FileCreateService(private val fileRepository: FileRepository) {
 
     @Transactional
-    fun create(extension: String): File = fileRepository.save(File(id = UUID.randomUUID(), extension = extension))
+    fun create(
+        fileName: String,
+        extension: String,
+    ): File = fileRepository.save(File(id = UUID.randomUUID(), originalFileName = fileName, extension = extension))
 }

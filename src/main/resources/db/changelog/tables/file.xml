@@ -18,6 +18,9 @@
             </column>
 
             <!-- Entity -->
+            <column name="original_file_name" type="text">
+                <constraints nullable="false"/>
+            </column>
             <column name="extension" type="text">
                 <constraints nullable="false"/>
             </column>

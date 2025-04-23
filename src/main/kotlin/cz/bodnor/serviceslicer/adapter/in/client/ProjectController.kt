@@ -21,8 +21,15 @@ class ProjectController(
 ) {
 
     @PostMapping("/upload")
-    fun createFromZip(@RequestParam file: MultipartFile): CreateProjectFromZipCommand.Result =
-        commandBus(CreateProjectFromZipCommand(file = file))
+    fun createFromZip(
+        @RequestParam file: MultipartFile,
+        @RequestParam projectName: String,
+    ): CreateProjectFromZipCommand.Result = commandBus(
+        CreateProjectFromZipCommand(
+            projectName = projectName,
+            file = file,
+        ),
+    )
 
     @GetMapping("/{projectId}")
     fun getProject(@PathVariable projectId: UUID): GetProjectQuery.Result =
