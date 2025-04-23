@@ -25,11 +25,6 @@
             <column name="name" type="text">
                 <constraints nullable="false"/>
             </column>
-            <column name="source_type" type="text">
-                <constraints nullable="false"/>
-            </column>
-            <column name="source_file_id" type="uuid"/>
-            <column name="github_repository_url" type="text"/>
             <column name="status" type="text">
                 <constraints nullable="false"/>
             </column>

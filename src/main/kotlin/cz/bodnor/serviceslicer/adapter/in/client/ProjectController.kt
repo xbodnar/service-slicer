@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.adapter.`in`.client
 
+import cz.bodnor.serviceslicer.application.module.project.command.CreateProjectFromGitHubCommand
 import cz.bodnor.serviceslicer.application.module.project.command.CreateProjectFromZipCommand
 import cz.bodnor.serviceslicer.application.module.project.query.GetProjectQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
@@ -7,6 +8,7 @@ import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryBus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
@@ -31,7 +33,21 @@ class ProjectController(
         ),
     )
 
+    @PostMapping
+    fun createFromGithub(@RequestBody request: CreateProjectFromGitHubRequest): CreateProjectFromGitHubCommand.Result =
+        commandBus(request.toCommand())
+
     @GetMapping("/{projectId}")
     fun getProject(@PathVariable projectId: UUID): GetProjectQuery.Result =
         queryBus(GetProjectQuery(projectId = projectId))
+}
+
+data class CreateProjectFromGitHubRequest(
+    val projectName: String,
+    val gitHubUrl: String,
+) {
+    fun toCommand(): CreateProjectFromGitHubCommand = CreateProjectFromGitHubCommand(
+        projectName = projectName,
+        gitHubUrl = gitHubUrl,
+    )
 }

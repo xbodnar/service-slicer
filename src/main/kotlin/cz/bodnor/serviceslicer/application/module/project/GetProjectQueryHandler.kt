@@ -17,7 +17,6 @@ class GetProjectQueryHandler(
                 projectId = it.id,
                 name = it.name,
                 status = it.status,
-                sourceType = it.sourceType,
             )
         }
 }

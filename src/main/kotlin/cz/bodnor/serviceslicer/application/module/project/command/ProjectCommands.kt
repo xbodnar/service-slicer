@@ -13,3 +13,13 @@ data class CreateProjectFromZipCommand(
         val projectId: UUID,
     )
 }
+
+data class CreateProjectFromGitHubCommand(
+    val gitHubUrl: String,
+    val projectName: String,
+) : Command<CreateProjectFromGitHubCommand.Result> {
+
+    data class Result(
+        val projectId: UUID,
+    )
+}
