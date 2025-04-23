@@ -1,6 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.analysis
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.PrepareProjectRootCommand
+import cz.bodnor.serviceslicer.application.module.file.FileFinderService
 import cz.bodnor.serviceslicer.application.module.file.FileService
 import cz.bodnor.serviceslicer.application.module.project.service.ExtractZipFile
 import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
@@ -14,6 +15,7 @@ import java.nio.file.Path
 class PrepareProjectRootCommandHandler(
     private val projectFinderService: ProjectFinderService,
     private val fileService: FileService,
+    private val fileFinderService: FileFinderService,
     private val extractZipFile: ExtractZipFile,
     @Value("\${app.projects.working-dir}") private val projectWorkingDir: String,
 ) : CommandHandler<Unit, PrepareProjectRootCommand> {
@@ -25,12 +27,13 @@ class PrepareProjectRootCommandHandler(
         when (project.sourceType) {
             SourceType.ZIP_FILE -> {
                 val file = fileService.get(fileId = project.sourceFileId!!)
+                val originalFileName = fileFinderService.getById(project.sourceFileId).originalFileName
 
-                val unzippedFolderPath = Path.of(projectWorkingDir, "${project.name}_${command.projectId}")
+                val unzippedFolderPath = Path.of(projectWorkingDir, "${command.projectId}")
 
                 extractZipFile(source = file, destination = unzippedFolderPath)
 
-                project.setProjectRoot(unzippedFolderPath)
+                project.setProjectRoot(unzippedFolderPath.resolve(originalFileName))
             }
 
             SourceType.GITHUB_REPOSITORY -> TODO()

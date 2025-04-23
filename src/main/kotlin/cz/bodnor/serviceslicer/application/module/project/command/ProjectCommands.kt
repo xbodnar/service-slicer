@@ -6,6 +6,7 @@ import java.util.UUID
 
 data class CreateProjectFromZipCommand(
     val file: MultipartFile,
+    val projectName: String,
 ) : Command<CreateProjectFromZipCommand.Result> {
 
     data class Result(

@@ -29,7 +29,10 @@ class FileService(
     ): File {
         val bufferedInputStream = BufferedInputStream(inputStream)
         val fileExtension = getFileExtension(bufferedInputStream, filename)
-        val file = fileCreateService.create(fileExtension)
+        val file = fileCreateService.create(
+            fileName = filename.removeSuffix(".$fileExtension"),
+            extension = fileExtension,
+        )
 
         fileStorageService.save(file.fileName(), bufferedInputStream)
 

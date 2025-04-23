@@ -85,11 +85,6 @@
         <!-- For Java AST parsing -->
         <dependency>
             <groupId>com.github.javaparser</groupId>
-            <artifactId>javaparser-core</artifactId>
-            <version>3.25.5</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.javaparser</groupId>
             <artifactId>javaparser-symbol-solver-core</artifactId>
             <version>3.25.5</version>
         </dependency>
@@ -173,6 +168,11 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>neo4j</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- Kotest -->
