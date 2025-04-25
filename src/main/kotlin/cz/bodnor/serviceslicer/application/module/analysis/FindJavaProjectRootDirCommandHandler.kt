@@ -28,6 +28,7 @@ class FindJavaProjectRootDirCommandHandler(
 
         val projectSource = projectSourceFinderService.getByProjectId(project.id)
 
+        // TODO: If relativePath starts with '/', resolving it removes the projectRoot part from the final Path
         val javaProjectRoot = projectSource.javaProjectRootRelativePath?.let { project.projectRoot!!.resolve(it) }
             ?: project.projectRoot!!
 

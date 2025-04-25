@@ -43,12 +43,12 @@ class Project(
         private set
 
     fun setProjectRoot(path: Path) {
-        require(path.isDirectory()) { "Working directory must be a directory" }
+        require(path.isDirectory()) { "Project root directory must be a directory, but was: $path" }
         this.projectRoot = path
     }
 
     fun setJavaProjectRoot(path: Path) {
-        require(path.isDirectory()) { "Src directory must be a directory" }
+        require(path.isDirectory()) { "Java project root directory must be a directory, but was: $path" }
         this.javaProjectRoot = path
     }
 }
