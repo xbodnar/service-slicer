@@ -17,6 +17,8 @@ import java.util.UUID
 abstract class ProjectSource(
     id: UUID,
 
+    val javaProjectRootRelativePath: String?,
+
     val projectId: UUID,
 
     @Enumerated(EnumType.STRING)

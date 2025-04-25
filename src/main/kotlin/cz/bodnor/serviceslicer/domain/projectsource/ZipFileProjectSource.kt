@@ -9,9 +9,15 @@ import java.util.UUID
 class ZipFileProjectSource(
     id: UUID = UUID.randomUUID(),
     projectId: UUID,
+    javaProjectRootRelativePath: String?,
 
     val fileId: UUID,
-) : ProjectSource(id = id, projectId = projectId, sourceType = SourceType.ZIP_FILE)
+) : ProjectSource(
+    id = id,
+    projectId = projectId,
+    javaProjectRootRelativePath = javaProjectRootRelativePath,
+    sourceType = SourceType.ZIP_FILE,
+)
 
 @Repository
 interface ZipFileProjectSourceRepository : JpaRepository<ZipFileProjectSource, UUID>

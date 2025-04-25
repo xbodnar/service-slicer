@@ -19,12 +19,12 @@ class BuildDependencyGraph(
 
     operator fun invoke(
         projectId: UUID,
-        projectRootDir: Path,
+        javaProjectRootDir: Path,
     ): Map<String, TypeNode> {
-        val javaParser = buildParser(projectRootDir)
+        val javaParser = buildParser(javaProjectRootDir)
 
         // Phase 1: Collect all ClassOrInterfaceDeclarations
-        val classOrInterfaceTypeDeclarations = collectCompilationUnits(javaParser, projectRootDir)
+        val classOrInterfaceTypeDeclarations = collectCompilationUnits(javaParser, javaProjectRootDir)
             .flatMap { it.findAll(ClassOrInterfaceDeclaration::class.java) }
             .associateBy { it.resolve().qualifiedName }
 
@@ -39,7 +39,9 @@ class BuildDependencyGraph(
             val references = mutableSetOf<String>()
             ReferencedTypeCollector().visit(declaration, references)
 
-            typeNode.references = references.mapNotNull { typeNodes[it] }
+            typeNode.references = references
+                .filter { it != fqn } // remove self references
+                .mapNotNull { typeNodes[it] }
         }
 
         return typeNodes
@@ -62,9 +64,9 @@ class BuildDependencyGraph(
         )
     }
 
-    private fun buildParser(projectRootDir: Path): JavaParser {
-        // TODO: Find java root source (check CollectCompilationUnits)
-        val javaSymbolSolver = JavaSymbolSolver(JavaParserTypeSolver(projectRootDir.resolve("api/src/main/java")))
+    private fun buildParser(javaProjectRootDir: Path): JavaParser {
+        val rootPackageDir = javaProjectRootDir.resolve("src/main/java")
+        val javaSymbolSolver = JavaSymbolSolver(JavaParserTypeSolver(rootPackageDir))
         val parserConfig = ParserConfiguration()
         parserConfig.setSymbolResolver(javaSymbolSolver)
 

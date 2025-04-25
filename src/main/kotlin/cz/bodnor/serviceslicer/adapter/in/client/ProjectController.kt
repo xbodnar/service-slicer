@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
@@ -24,11 +25,13 @@ class ProjectController(
 
     @PostMapping("/upload")
     fun createFromZip(
-        @RequestParam file: MultipartFile,
+        @RequestPart file: MultipartFile,
         @RequestParam projectName: String,
+        @RequestParam javaProjectRoot: String?,
     ): CreateProjectFromZipCommand.Result = commandBus(
         CreateProjectFromZipCommand(
             projectName = projectName,
+            javaProjectRoot = javaProjectRoot,
             file = file,
         ),
     )
@@ -45,9 +48,11 @@ class ProjectController(
 data class CreateProjectFromGitHubRequest(
     val projectName: String,
     val gitHubUrl: String,
+    val javaProjectRoot: String?,
 ) {
     fun toCommand(): CreateProjectFromGitHubCommand = CreateProjectFromGitHubCommand(
         projectName = projectName,
         gitHubUrl = gitHubUrl,
+        javaProjectRoot = javaProjectRoot,
     )
 }

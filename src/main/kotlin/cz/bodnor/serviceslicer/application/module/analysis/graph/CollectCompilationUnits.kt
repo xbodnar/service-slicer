@@ -12,10 +12,9 @@ class CollectCompilationUnits {
 
     operator fun invoke(
         javaParser: JavaParser,
-        projectDir: Path,
+        javaProjectDir: Path,
     ): List<CompilationUnit> {
-        // TODO: Find Java project root dir (based on gradle build file or pom.xml)
-        val sourcesDir = projectDir.resolve("api").resolve("src").resolve("main")
+        val sourcesDir = javaProjectDir.resolve("src").resolve("main")
 
         return Files.walk(sourcesDir)
             .filter { it.extension == "java" }

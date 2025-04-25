@@ -22,7 +22,8 @@ class CreateProjectFromGitHubCommandHandler(
 
         projectSourceCreateService.createFromGitHub(
             projectId = project.id,
-            githubRepositoryUrl = command.gitHubUrl,
+            javaProjectRootRelativePath = command.javaProjectRoot,
+            repositoryGitUri = command.gitHubUrl,
             branchName = "main",
         )
 
