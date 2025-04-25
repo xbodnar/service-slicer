@@ -28,7 +28,8 @@
             <column name="status" type="text">
                 <constraints nullable="false"/>
             </column>
-            <column name="project_root_dir" type="text"/>
+            <column name="project_root" type="text"/>
+            <column name="java_project_root" type="text"/>
         </createTable>
     </changeSet>
 </databaseChangeLog>

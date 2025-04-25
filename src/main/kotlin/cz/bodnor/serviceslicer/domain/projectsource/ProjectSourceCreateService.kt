@@ -13,24 +13,28 @@ class ProjectSourceCreateService(
     @Transactional
     fun createFromGitHub(
         projectId: UUID,
-        githubRepositoryUrl: String,
+        javaProjectRootRelativePath: String?,
+        repositoryGitUri: String,
         branchName: String,
     ) = gitHubSourceRepository.save(
         GitHubProjectSource(
             projectId = projectId,
-            gitHubRepositoryUrl = githubRepositoryUrl,
+            repositoryGitUri = repositoryGitUri,
             branchName = branchName,
+            javaProjectRootRelativePath = javaProjectRootRelativePath,
         ),
     )
 
     @Transactional
     fun createFromZip(
         projectId: UUID,
+        javaProjectRootRelativePath: String?,
         fileId: UUID,
     ) = zipFileSourceRepository.save(
         ZipFileProjectSource(
             projectId = projectId,
             fileId = fileId,
+            javaProjectRootRelativePath = javaProjectRootRelativePath,
         ),
     )
 }

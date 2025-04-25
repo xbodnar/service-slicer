@@ -28,6 +28,7 @@ class CreateProjectFromZipCommandHandler(
 
         projectSourceCreateService.createFromZip(
             projectId = project.id,
+            javaProjectRootRelativePath = command.javaProjectRoot,
             fileId = file.id,
         )
 

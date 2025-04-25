@@ -27,9 +27,10 @@
             <column name="dtype" type="text">
                 <constraints nullable="false"/>
             </column>
+            <column name="java_project_root_relative_path" type="text"/>
 
             <!-- GitHubProjectSource -->
-            <column name="git_hub_repository_url" type="text"/>
+            <column name="repository_git_uri" type="text"/>
             <column name="branch_name" type="text"/>
 
             <!-- ZipFileProjectSource -->

@@ -25,3 +25,7 @@ data class PrepareProjectRootCommand(
 data class BuildDependencyGraphCommand(
     val projectId: UUID,
 ) : Command<Unit>
+
+data class FindJavaProjectRootDirCommand(
+    val projectId: UUID,
+) : Command<Unit>

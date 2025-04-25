@@ -19,9 +19,9 @@ class BuildDependencyGraphCommandHandler(
 
     override fun handle(command: BuildDependencyGraphCommand) {
         val project = projectFinderService.getById(command.projectId)
-        require(project.projectRootDir != null) { "Project root dir is missing" }
+        require(project.projectRoot != null) { "Project root dir is missing" }
 
-        val graphNodes = buildDependencyGraph(projectId = project.id, projectRootDir = project.projectRootDir!!)
+        val graphNodes = buildDependencyGraph(projectId = project.id, projectRootDir = project.projectRoot!!)
 
         typeNodeCreateService.save(graphNodes.values.toList())
     }

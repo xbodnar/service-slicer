@@ -9,5 +9,7 @@ class ProjectCreateService(
 ) {
 
     @Transactional
-    fun create(name: String) = projectRepository.save(Project(name = name))
+    fun create(name: String) = projectRepository.save(
+        Project(name = name),
+    )
 }

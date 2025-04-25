@@ -7,6 +7,7 @@ import java.util.UUID
 data class CreateProjectFromZipCommand(
     val file: MultipartFile,
     val projectName: String,
+    val javaProjectRoot: String?,
 ) : Command<CreateProjectFromZipCommand.Result> {
 
     data class Result(
@@ -17,6 +18,7 @@ data class CreateProjectFromZipCommand(
 data class CreateProjectFromGitHubCommand(
     val gitHubUrl: String,
     val projectName: String,
+    val javaProjectRoot: String?,
 ) : Command<CreateProjectFromGitHubCommand.Result> {
 
     data class Result(

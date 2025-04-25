@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
 import java.util.UUID
@@ -24,14 +24,9 @@ class ProjectController(
 
     @PostMapping("/upload")
     fun createFromZip(
-        @RequestParam file: MultipartFile,
-        @RequestParam projectName: String,
-    ): CreateProjectFromZipCommand.Result = commandBus(
-        CreateProjectFromZipCommand(
-            projectName = projectName,
-            file = file,
-        ),
-    )
+        @RequestPart file: MultipartFile,
+        @RequestPart request: CreateProjectFromZipRequest,
+    ): CreateProjectFromZipCommand.Result = commandBus(request.toCommand(file))
 
     @PostMapping
     fun createFromGithub(@RequestBody request: CreateProjectFromGitHubRequest): CreateProjectFromGitHubCommand.Result =
@@ -42,12 +37,25 @@ class ProjectController(
         queryBus(GetProjectQuery(projectId = projectId))
 }
 
+data class CreateProjectFromZipRequest(
+    val projectName: String,
+    val javaProjectRoot: String?,
+) {
+    fun toCommand(file: MultipartFile): CreateProjectFromZipCommand = CreateProjectFromZipCommand(
+        projectName = projectName,
+        javaProjectRoot = javaProjectRoot,
+        file = file,
+    )
+}
+
 data class CreateProjectFromGitHubRequest(
     val projectName: String,
     val gitHubUrl: String,
+    val javaProjectRoot: String?,
 ) {
     fun toCommand(): CreateProjectFromGitHubCommand = CreateProjectFromGitHubCommand(
         projectName = projectName,
         gitHubUrl = gitHubUrl,
+        javaProjectRoot = javaProjectRoot,
     )
 }
