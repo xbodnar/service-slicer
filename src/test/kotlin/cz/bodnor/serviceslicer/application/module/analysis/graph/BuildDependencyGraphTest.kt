@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.application.module.analysis.graph
 
 import cz.bodnor.serviceslicer.IntegrationTest
 import cz.bodnor.serviceslicer.toUUID
-import io.kotest.inspectors.forAny
 import io.kotest.inspectors.shouldForAll
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
@@ -22,7 +21,7 @@ class BuildDependencyGraphTest(
         val result = underTest(projectId = 1.toUUID(), projectDir)
 
         // then
-        result.size shouldBe 24
+        result.size shouldBe 23
     }
 
     @Test
@@ -36,9 +35,27 @@ class BuildDependencyGraphTest(
         // then
         val owner = result["org.springframework.samples.petclinic.owner.Owner"]!!
         with(owner) {
-            references.forAny { it.simpleClassName shouldBe "Person" }
-            references.forAny { it.simpleClassName shouldBe "Pet" }
-            references.forAny { it.simpleClassName shouldBe "Visit" }
+            with(dependencies.find { it.target.simpleClassName == "Pet" }) {
+                this?.fieldAccesses shouldBe 0
+                // Type references: field (1), return types (3), parameter (1), loop vars (2) = 7
+                this?.typeReferences shouldBe 7
+                // Method calls: Counts method calls with explicit scope
+                // Note: Some methods may resolve to parent types or fail to resolve
+                this?.methodCalls shouldBe 2
+                this?.objectCreations shouldBe 0
+            }
+            with(dependencies.find { it.target.simpleClassName == "Person" }) {
+                this?.fieldAccesses shouldBe 0
+                this?.typeReferences shouldBe 1
+                this?.methodCalls shouldBe 0
+                this?.objectCreations shouldBe 0
+            }
+            with(dependencies.find { it.target.simpleClassName == "Visit" }) {
+                this?.fieldAccesses shouldBe 0
+                this?.typeReferences shouldBe 1
+                this?.methodCalls shouldBe 0
+                this?.objectCreations shouldBe 0
+            }
         }
     }
 

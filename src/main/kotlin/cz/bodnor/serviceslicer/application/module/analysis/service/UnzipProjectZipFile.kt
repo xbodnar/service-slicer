@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 import java.nio.file.Path
 
 @Component
-class PrepareProjectRootFromZip(
+class UnzipProjectZipFile(
     private val fileService: FileService,
     private val fileFinderService: FileFinderService,
     private val extractZipFile: ExtractZipFile,

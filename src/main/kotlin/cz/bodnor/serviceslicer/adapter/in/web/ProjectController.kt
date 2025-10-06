@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.adapter.`in`.client
+package cz.bodnor.serviceslicer.adapter.`in`.web
 
 import cz.bodnor.serviceslicer.application.module.project.command.CreateProjectFromGitHubCommand
 import cz.bodnor.serviceslicer.application.module.project.command.CreateProjectFromZipCommand

@@ -9,13 +9,13 @@ import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Node
-data class TypeNode(
+data class ClassNode(
 
     @Id
     @GeneratedValue
-    val id: UUID = UUID.randomUUID(),
+    val id: String? = null,
 
-    val type: TypeNodeType,
+    val type: ClassNodeType,
 
     val simpleClassName: String,
 
@@ -24,15 +24,18 @@ data class TypeNode(
     val projectId: UUID,
 ) {
 
-    @Relationship(type = "REFERENCES", direction = Relationship.Direction.OUTGOING)
-    var references: List<TypeNode> = emptyList()
+    @Relationship(
+        type = "DEPENDS_ON",
+        direction = Relationship.Direction.OUTGOING,
+    )
+    var dependencies: List<ClassNodeDependency> = emptyList()
 }
 
-enum class TypeNodeType {
+enum class ClassNodeType {
     CLASS,
     INTERFACE,
     ENUM,
 }
 
 @Repository
-interface TypeNodeRepository : Neo4jRepository<TypeNode, UUID>
+interface ClassNodeRepository : Neo4jRepository<ClassNode, String>

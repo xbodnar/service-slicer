@@ -8,13 +8,9 @@ class AnalysisJobCreateService(
     private val analysisJobRepository: AnalysisJobRepository,
 ) {
 
-    fun create(
-        projectId: UUID,
-        analysisType: AnalysisType,
-    ): AnalysisJob = analysisJobRepository.save(
+    fun create(projectId: UUID): AnalysisJob = analysisJobRepository.save(
         AnalysisJob(
             projectId = projectId,
-            analysisType = analysisType,
         ),
     )
 }

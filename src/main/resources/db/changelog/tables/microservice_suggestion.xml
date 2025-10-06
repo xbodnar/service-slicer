@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="create-microservice-suggestion-table" author="claude">
+        <createTable tableName="microservice_suggestion">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="version" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="analysis_job_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="algorithm" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modularity_score" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex tableName="microservice_suggestion" indexName="idx_suggestion_analysis_job_id">
+            <column name="analysis_job_id"/>
+        </createIndex>
+
+        <createIndex tableName="microservice_suggestion" indexName="idx_suggestion_algorithm">
+            <column name="algorithm"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="create-service-boundary-table" author="claude">
+        <createTable tableName="service_boundary">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="version" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="suggestion_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="suggested_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="size" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cohesion" type="DOUBLE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="coupling" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="internal_dependencies" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_dependencies" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="service_boundary"
+                baseColumnNames="suggestion_id"
+                constraintName="fk_service_boundary_suggestion"
+                referencedTableName="microservice_suggestion"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="service_boundary" indexName="idx_boundary_suggestion_id">
+            <column name="suggestion_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="create-service-boundary-types-table" author="claude">
+        <createTable tableName="service_boundary_types">
+            <column name="boundary_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type_fqn" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="service_boundary_types"
+                baseColumnNames="boundary_id"
+                constraintName="fk_boundary_types_boundary"
+                referencedTableName="service_boundary"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <createIndex tableName="service_boundary_types" indexName="idx_boundary_types_boundary_id">
+            <column name="boundary_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

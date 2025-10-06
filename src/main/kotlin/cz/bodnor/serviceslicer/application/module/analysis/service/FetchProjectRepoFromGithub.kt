@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component
 import java.nio.file.Path
 
 @Component
-class PrepareProjectRootFromGitHub(
+class FetchProjectRepoFromGithub(
     @Value("\${app.projects.working-dir}") private val projectWorkingDir: String,
 ) {
 

@@ -4,14 +4,14 @@ import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependen
 import cz.bodnor.serviceslicer.application.module.analysis.graph.BuildDependencyGraph
 import cz.bodnor.serviceslicer.application.module.analysis.graph.CollectCompilationUnits
 import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
-import cz.bodnor.serviceslicer.domain.analysis.graph.TypeNodeCreateService
+import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeCreateService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.stereotype.Component
 
 @Component
 class BuildDependencyGraphCommandHandler(
     private val projectFinderService: ProjectFinderService,
-    private val typeNodeCreateService: TypeNodeCreateService,
+    private val classNodeCreateService: ClassNodeCreateService,
     private val collectCompilationUnits: CollectCompilationUnits,
     private val buildDependencyGraph: BuildDependencyGraph,
 ) : CommandHandler<Unit, BuildDependencyGraphCommand> {
@@ -23,6 +23,6 @@ class BuildDependencyGraphCommandHandler(
 
         val graphNodes = buildDependencyGraph(projectId = project.id, javaProjectRootDir = project.javaProjectRoot!!)
 
-        typeNodeCreateService.save(graphNodes.values.toList())
+        classNodeCreateService.saveGraphWithRelationships(graphNodes)
     }
 }

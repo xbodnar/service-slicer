@@ -21,11 +21,7 @@ class AnalysisJob(
      */
     val projectId: UUID,
 
-    /**
-     * Type of analysis
-     */
-    @Enumerated(EnumType.STRING)
-    val analysisType: AnalysisType,
+    // TODO: Run configuration, compose.yaml, workload script
 ) : UpdatableEntity(id) {
 
     /**
@@ -50,14 +46,6 @@ class AnalysisJob(
 
 @Repository
 interface AnalysisJobRepository : JpaRepository<AnalysisJob, UUID>
-
-/**
- * Type of analysis
- */
-enum class AnalysisType {
-    STATIC,
-    DYNAMIC,
-}
 
 /**
  * Status of the analysis job
