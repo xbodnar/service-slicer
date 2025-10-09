@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.analysis.graph.ast
+package cz.bodnor.serviceslicer.application.module.graph.service
 
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.github.javaparser.ast.body.FieldDeclaration
@@ -8,8 +8,19 @@ import com.github.javaparser.ast.expr.Expression
 import com.github.javaparser.ast.expr.FieldAccessExpr
 import com.github.javaparser.ast.expr.MethodCallExpr
 import com.github.javaparser.ast.expr.ObjectCreationExpr
+import com.github.javaparser.ast.type.Type
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter
 import com.github.javaparser.resolution.types.ResolvedReferenceType
+
+data class WeightedReference(
+    var methodCalls: Int = 0,
+    var fieldAccesses: Int = 0,
+    var objectCreations: Int = 0,
+    var typeReferences: Int = 0,
+) {
+    val totalWeight: Int
+        get() = methodCalls + fieldAccesses + objectCreations + typeReferences
+}
 
 /**
  * Collects weighted references from a class to other types.
@@ -20,7 +31,7 @@ import com.github.javaparser.resolution.types.ResolvedReferenceType
  * - objectCreations: new SomeType() calls
  * - fieldAccesses: Accessing fields of other types (e.g., obj.field)
  */
-class WeightedReferencedTypeCollector : VoidVisitorAdapter<MutableMap<String, WeightedReference>>() {
+class WeightedReferencedTypeCollector : com.github.javaparser.ast.visitor.VoidVisitorAdapter<MutableMap<String, WeightedReference>>() {
 
     // Track extends/implements relationships
     override fun visit(
@@ -139,6 +150,6 @@ class WeightedReferencedTypeCollector : VoidVisitorAdapter<MutableMap<String, We
         expr.calculateResolvedType()
     }.getOrNull()?.let { if (it.isReferenceType) it.asReferenceType() else null }
 
-    private fun resolveTypeSafely(type: com.github.javaparser.ast.type.Type): ResolvedReferenceType? =
+    private fun resolveTypeSafely(type: Type): ResolvedReferenceType? =
         runCatching { type.resolve() }.getOrNull()?.let { if (it.isReferenceType) it.asReferenceType() else null }
 }

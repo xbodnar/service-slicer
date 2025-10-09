@@ -2,6 +2,7 @@ package cz.bodnor.serviceslicer.application.module.analysis.graph
 
 import com.github.javaparser.JavaParser
 import cz.bodnor.serviceslicer.IntegrationTest
+import cz.bodnor.serviceslicer.application.module.graph.service.CollectCompilationUnits
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired

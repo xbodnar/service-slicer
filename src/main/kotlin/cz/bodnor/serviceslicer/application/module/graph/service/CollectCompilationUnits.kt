@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.analysis.graph
+package cz.bodnor.serviceslicer.application.module.graph.service
 
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.CompilationUnit

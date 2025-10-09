@@ -1,6 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.analysis.graph
 
 import cz.bodnor.serviceslicer.IntegrationTest
+import cz.bodnor.serviceslicer.application.module.graph.service.BuildDependencyGraph
 import cz.bodnor.serviceslicer.toUUID
 import io.kotest.inspectors.shouldForAll
 import io.kotest.matchers.shouldBe

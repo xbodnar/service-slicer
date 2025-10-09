@@ -65,7 +65,7 @@ enum class BoundaryDetectionAlgorithm {
     /**
      * Uses community detection algorithms (Louvain, Label Propagation)
      */
-    COMMUNITY_DETECTION,
+    COMMUNITY_DETECTION_LABEL_PROPAGATION,
 
     /**
      * Applies DDD heuristics to identify bounded contexts

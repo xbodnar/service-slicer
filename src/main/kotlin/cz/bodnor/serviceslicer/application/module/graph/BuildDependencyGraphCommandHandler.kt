@@ -1,8 +1,8 @@
-package cz.bodnor.serviceslicer.application.module.analysis
+package cz.bodnor.serviceslicer.application.module.graph
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependencyGraphCommand
-import cz.bodnor.serviceslicer.application.module.analysis.graph.BuildDependencyGraph
-import cz.bodnor.serviceslicer.application.module.analysis.graph.CollectCompilationUnits
+import cz.bodnor.serviceslicer.application.module.graph.service.BuildDependencyGraph
+import cz.bodnor.serviceslicer.application.module.graph.service.CollectCompilationUnits
 import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeCreateService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
@@ -23,6 +23,6 @@ class BuildDependencyGraphCommandHandler(
 
         val graphNodes = buildDependencyGraph(projectId = project.id, javaProjectRootDir = project.javaProjectRoot!!)
 
-        classNodeCreateService.saveGraphWithRelationships(graphNodes)
+        classNodeCreateService.save(graphNodes.values.toList())
     }
 }

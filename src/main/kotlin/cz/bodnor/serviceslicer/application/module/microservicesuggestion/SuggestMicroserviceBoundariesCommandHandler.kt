@@ -1,9 +1,10 @@
-package cz.bodnor.serviceslicer.application.module.analysis
+package cz.bodnor.serviceslicer.application.module.microservicesuggestion
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.SuggestMicroserviceBoundariesCommand
-import cz.bodnor.serviceslicer.application.module.analysis.service.CommunityDetectionBoundaryDetector
-import cz.bodnor.serviceslicer.application.module.analysis.service.GraphAnalysisService
+import cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection.LabelPropagationCommunityDetectionStrategy
+import cz.bodnor.serviceslicer.application.module.microservicesuggestion.service.CommunityBoundaryDetector
 import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
+import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeRepository
 import cz.bodnor.serviceslicer.domain.analysis.suggestion.MicroserviceSuggestionCreateService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.slf4j.LoggerFactory
@@ -12,8 +13,8 @@ import org.springframework.stereotype.Component
 @Component
 class SuggestMicroserviceBoundariesCommandHandler(
     private val projectFinderService: ProjectFinderService,
-    private val graphAnalysisService: GraphAnalysisService,
-    private val communityDetectionDetector: CommunityDetectionBoundaryDetector,
+    private val classNodeRepository: ClassNodeRepository,
+    private val communityBoundaryDetector: CommunityBoundaryDetector,
     private val suggestionCreateService: MicroserviceSuggestionCreateService,
 ) : CommandHandler<Unit, SuggestMicroserviceBoundariesCommand> {
 
@@ -27,7 +28,7 @@ class SuggestMicroserviceBoundariesCommandHandler(
         logger.info("Generating microservice boundary suggestions for project ${project.id}")
 
         // Load all class nodes with their references from Neo4j
-        val classNodes = graphAnalysisService.getClassNodesWithReferences(project.id)
+        val classNodes = classNodeRepository.findAllByProjectId(project.id)
 
         if (classNodes.isEmpty()) {
             logger.warn("No class nodes found for project ${project.id}. Skipping suggestion generation.")
@@ -38,9 +39,10 @@ class SuggestMicroserviceBoundariesCommandHandler(
 
         // Run community detection
         logger.info("Running community detection boundary detection")
-        val communityDetectionSuggestion = communityDetectionDetector(
+        val communityDetectionSuggestion = communityBoundaryDetector(
             analysisJobId = project.id,
             classNodes = classNodes,
+            communityDetectionStrategy = LabelPropagationCommunityDetectionStrategy(),
         )
         suggestionCreateService.save(communityDetectionSuggestion)
         logger.info(

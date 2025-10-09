@@ -8,7 +8,7 @@ import org.springframework.data.neo4j.repository.Neo4jRepository
 import org.springframework.stereotype.Repository
 
 @RelationshipProperties
-data class ClassNodeDependency(
+class ClassNodeDependency(
     @RelationshipId
     @GeneratedValue
     val id: String? = null,
@@ -26,6 +26,3 @@ data class ClassNodeDependency(
 
     val typeReferences: Int = 0,
 )
-
-@Repository
-interface ClassNodeDependencyRepository : Neo4jRepository<ClassNodeDependency, String>

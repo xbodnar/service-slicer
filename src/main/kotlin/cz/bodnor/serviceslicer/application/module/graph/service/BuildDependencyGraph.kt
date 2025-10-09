@@ -1,14 +1,13 @@
-package cz.bodnor.serviceslicer.application.module.analysis.graph
+package cz.bodnor.serviceslicer.application.module.graph.service
 
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ParserConfiguration
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.github.javaparser.symbolsolver.JavaSymbolSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
-import cz.bodnor.serviceslicer.application.module.analysis.graph.ast.WeightedReference
-import cz.bodnor.serviceslicer.application.module.analysis.graph.ast.WeightedReferencedTypeCollector
+import cz.bodnor.serviceslicer.application.module.graph.service.WeightedReference
+import cz.bodnor.serviceslicer.application.module.graph.service.WeightedReferencedTypeCollector
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
-import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeDependency
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeType
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import org.springframework.stereotype.Component
@@ -37,19 +36,19 @@ class BuildDependencyGraph(
         val classNodes = classOrInterfaceTypeDeclarations.mapValues { it.value.toEmptyClassNode(projectId) }
 
         // Phase 3: Resolve references with weights and build the final graph
-        classNodes.forEach { (fqn, classNode) ->
+        classNodes.forEach { (nodeFqn, classNode) ->
             val declaration =
-                classOrInterfaceTypeDeclarations[fqn] ?: error("No ClassOrInterfaceTypeDeclaration found for $fqn")
+                classOrInterfaceTypeDeclarations[nodeFqn]
+                    ?: error("No ClassOrInterfaceTypeDeclaration found for $nodeFqn")
 
             val weightedRefs = mutableMapOf<String, WeightedReference>()
             try {
                 WeightedReferencedTypeCollector().visit(declaration, weightedRefs)
 
-                classNode.dependencies = weightedRefs
-                    .filter { (targetFqn, _) -> targetFqn != fqn } // remove self references
-                    .mapNotNull { (targetFqn, weights) ->
+                weightedRefs.filter { (targetFqn, _) -> targetFqn != nodeFqn } // remove self references
+                    .forEach { (targetFqn, weights) ->
                         classNodes[targetFqn]?.let { targetNode ->
-                            ClassNodeDependency(
+                            classNode.addDependency(
                                 target = targetNode,
                                 weight = weights.totalWeight,
                                 methodCalls = weights.methodCalls,

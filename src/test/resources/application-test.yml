@@ -2,3 +2,6 @@ spring:
   datasource:
     url: jdbc:tc:postgresql:17:///serviceslicer?serverTimezone=UTC&reWriteBatchedInserts=true
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  ai:
+    openai:
+      api-key: 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

@@ -5,11 +5,12 @@ import org.springframework.data.neo4j.core.schema.Id
 import org.springframework.data.neo4j.core.schema.Node
 import org.springframework.data.neo4j.core.schema.Relationship
 import org.springframework.data.neo4j.repository.Neo4jRepository
+import org.springframework.data.neo4j.repository.query.Query
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Node
-data class ClassNode(
+class ClassNode(
 
     @Id
     @GeneratedValue
@@ -28,7 +29,27 @@ data class ClassNode(
         type = "DEPENDS_ON",
         direction = Relationship.Direction.OUTGOING,
     )
-    var dependencies: List<ClassNodeDependency> = emptyList()
+    var dependencies: MutableList<ClassNodeDependency> = mutableListOf()
+
+    fun addDependency(
+        target: ClassNode,
+        weight: Int,
+        methodCalls: Int = 0,
+        fieldAccesses: Int = 0,
+        objectCreations: Int = 0,
+        typeReferences: Int = 0,
+    ) {
+        val dependency = ClassNodeDependency(
+            target = target,
+            weight = weight,
+            methodCalls = methodCalls,
+            fieldAccesses = fieldAccesses,
+            objectCreations = objectCreations,
+            typeReferences = typeReferences,
+        )
+
+        dependencies.add(dependency)
+    }
 }
 
 enum class ClassNodeType {
@@ -38,4 +59,7 @@ enum class ClassNodeType {
 }
 
 @Repository
-interface ClassNodeRepository : Neo4jRepository<ClassNode, String>
+interface ClassNodeRepository : Neo4jRepository<ClassNode, String> {
+
+    fun findAllByProjectId(projectId: UUID): List<ClassNode>
+}
