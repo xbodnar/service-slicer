@@ -1,9 +1,7 @@
 package cz.bodnor.serviceslicer.domain.analysis.graph
 
 import cz.bodnor.serviceslicer.IntegrationTest
-import cz.bodnor.serviceslicer.domain.project.ProjectRepository
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.UUID
 import kotlin.test.Test

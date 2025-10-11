@@ -3,7 +3,6 @@ package cz.bodnor.serviceslicer.adapter.out.ai
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection.CommunityDetectionStrategy
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.port.out.SuggestServiceBoundaryNames
-import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.ai.converter.BeanOutputConverter
@@ -11,7 +10,6 @@ import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.ai.openai.api.OpenAiApi
 import org.springframework.ai.openai.api.ResponseFormat
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 class SuggestServiceBoundaryNamesAi(

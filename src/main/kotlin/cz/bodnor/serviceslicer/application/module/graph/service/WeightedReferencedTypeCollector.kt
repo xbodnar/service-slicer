@@ -31,7 +31,8 @@ data class WeightedReference(
  * - objectCreations: new SomeType() calls
  * - fieldAccesses: Accessing fields of other types (e.g., obj.field)
  */
-class WeightedReferencedTypeCollector : com.github.javaparser.ast.visitor.VoidVisitorAdapter<MutableMap<String, WeightedReference>>() {
+class WeightedReferencedTypeCollector :
+    com.github.javaparser.ast.visitor.VoidVisitorAdapter<MutableMap<String, WeightedReference>>() {
 
     // Track extends/implements relationships
     override fun visit(

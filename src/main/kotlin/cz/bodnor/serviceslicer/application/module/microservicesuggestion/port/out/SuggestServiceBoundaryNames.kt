@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.microservicesuggestion.port.out
 
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection.CommunityDetectionStrategy
-import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
 import java.util.UUID
 
 interface SuggestServiceBoundaryNames {
