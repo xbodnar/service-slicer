@@ -89,8 +89,8 @@ class BuildDependencyGraph(
         val rootPackageDir = javaProjectRootDir.resolve("src/main/java")
 
         val combinedTypeSolver = CombinedTypeSolver()
-        combinedTypeSolver.add(ReflectionTypeSolver())  // Resolves JDK types
-        combinedTypeSolver.add(JavaParserTypeSolver(rootPackageDir))  // Resolves project types
+        combinedTypeSolver.add(ReflectionTypeSolver()) // Resolves JDK types
+        combinedTypeSolver.add(JavaParserTypeSolver(rootPackageDir)) // Resolves project types
 
         val javaSymbolSolver = JavaSymbolSolver(combinedTypeSolver)
         val parserConfig = ParserConfiguration()

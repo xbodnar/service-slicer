@@ -3,7 +3,6 @@ package cz.bodnor.serviceslicer.adapter.out.mock
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection.CommunityDetectionStrategy
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.port.out.SuggestServiceBoundaryNames
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.context.annotation.ComponentScan
 import org.springframework.stereotype.Component
 
 @Component
