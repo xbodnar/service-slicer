@@ -33,28 +33,5 @@ class FindJavaProjectRootDirCommandHandler(
             ?: project.projectRoot!!
 
         project.setJavaProjectRoot(javaProjectRoot)
-        // Search for project roots
-//        val javaSrcDirectories = mutableSetOf<Path>()
-//        Files.walk(project.projectRoot!!).use { stream ->
-//            stream.forEach { path ->
-//                if (path.name in PROJECT_BUILD_FILES) {
-//                    javaSrcDirectories.add(path.parent)
-//                }
-//            }
-//        }
-//
-//        when {
-//            javaSrcDirectories.isEmpty() -> error("No Java projects detected.")
-//
-//            javaSrcDirectories.size > 1 -> error(
-//                "Multiple Java projects detected:  ${javaSrcDirectories.joinToString { it.name }}",
-//            )
-//
-//            else -> project.setJavaProjectRoot(javaSrcDirectories.first())
-//        }
     }
-//
-//    companion object {
-//        private val PROJECT_BUILD_FILES = listOf("pom.xml", "build.gradle", "build.gradle.kts")
-//    }
 }
