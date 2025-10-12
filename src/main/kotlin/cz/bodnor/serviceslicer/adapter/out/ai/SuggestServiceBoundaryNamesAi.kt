@@ -9,9 +9,11 @@ import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.ai.openai.api.OpenAiApi
 import org.springframework.ai.openai.api.ResponseFormat
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 
 @Component
+@ConditionalOnProperty("integration.service-boundary-name-suggestor.mock", havingValue = "false", matchIfMissing = true)
 class SuggestServiceBoundaryNamesAi(
     chatClientBuilder: ChatClient.Builder,
     private val objectMapper: ObjectMapper,

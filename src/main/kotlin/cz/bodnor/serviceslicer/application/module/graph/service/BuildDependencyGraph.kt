@@ -4,7 +4,9 @@ import com.github.javaparser.JavaParser
 import com.github.javaparser.ParserConfiguration
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.github.javaparser.symbolsolver.JavaSymbolSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import cz.bodnor.serviceslicer.application.module.graph.service.WeightedReference
 import cz.bodnor.serviceslicer.application.module.graph.service.WeightedReferencedTypeCollector
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
@@ -85,7 +87,12 @@ class BuildDependencyGraph(
 
     private fun buildParser(javaProjectRootDir: Path): JavaParser {
         val rootPackageDir = javaProjectRootDir.resolve("src/main/java")
-        val javaSymbolSolver = JavaSymbolSolver(JavaParserTypeSolver(rootPackageDir))
+
+        val combinedTypeSolver = CombinedTypeSolver()
+        combinedTypeSolver.add(ReflectionTypeSolver())  // Resolves JDK types
+        combinedTypeSolver.add(JavaParserTypeSolver(rootPackageDir))  // Resolves project types
+
+        val javaSymbolSolver = JavaSymbolSolver(combinedTypeSolver)
         val parserConfig = ParserConfiguration()
         parserConfig.setSymbolResolver(javaSymbolSolver)
 

@@ -42,10 +42,10 @@ class ClassNodeCreateServiceTest(
         b.addDependency(target = c, weight = 3)
 
         // When
-        classNodeCreateService.save(listOf(a, b, c))
+        classNodeCreateService.create(listOf(a, b, c))
 
         // Then
-        val savedNodes = classNodeRepository.findAll()
+        val savedNodes = classNodeRepository.findAllByProjectId(projectId)
         savedNodes.size shouldBe 3
         savedNodes.find { it.simpleClassName == "ClassA" }?.dependencies?.size shouldBe 2
         savedNodes.find { it.simpleClassName == "ClassB" }?.dependencies?.size shouldBe 1

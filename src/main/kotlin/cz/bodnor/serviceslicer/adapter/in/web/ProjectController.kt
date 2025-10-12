@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.adapter.`in`.web
 
+import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependencyGraphCommand
 import cz.bodnor.serviceslicer.application.module.project.command.CreateProjectFromGitHubCommand
 import cz.bodnor.serviceslicer.application.module.project.command.CreateProjectFromZipCommand
 import cz.bodnor.serviceslicer.application.module.project.query.GetProjectQuery
@@ -43,6 +44,11 @@ class ProjectController(
     @GetMapping("/{projectId}")
     fun getProject(@PathVariable projectId: UUID): GetProjectQuery.Result =
         queryBus(GetProjectQuery(projectId = projectId))
+
+    @PostMapping("/{projectId}/graph")
+    fun rebuildGraph(@PathVariable projectId: UUID) {
+        commandBus(BuildDependencyGraphCommand(projectId = projectId))
+    }
 }
 
 data class CreateProjectFromGitHubRequest(

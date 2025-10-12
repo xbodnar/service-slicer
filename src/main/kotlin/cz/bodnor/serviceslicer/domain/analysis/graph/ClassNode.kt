@@ -5,6 +5,8 @@ import org.springframework.data.neo4j.core.schema.Id
 import org.springframework.data.neo4j.core.schema.Node
 import org.springframework.data.neo4j.core.schema.Relationship
 import org.springframework.data.neo4j.repository.Neo4jRepository
+import org.springframework.data.neo4j.repository.query.Query
+import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
@@ -12,8 +14,7 @@ import java.util.UUID
 class ClassNode(
 
     @Id
-    @GeneratedValue
-    val id: String? = null,
+    val id: UUID = UUID.randomUUID(),
 
     val type: ClassNodeType,
 
@@ -58,7 +59,7 @@ enum class ClassNodeType {
 }
 
 @Repository
-interface ClassNodeRepository : Neo4jRepository<ClassNode, String> {
-
-    fun findAllByProjectId(projectId: UUID): List<ClassNode>
+interface ClassNodeRepository : Neo4jRepository<ClassNode, UUID> {
+    fun findAllByProjectId(@Param("projectId") projectId: UUID): List<ClassNode>
+    fun deleteAllByProjectId(projectId: UUID)
 }

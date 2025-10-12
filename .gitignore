@@ -33,4 +33,4 @@ build/
 .vscode/
 
 ### Local Properties ###
-/src/main/resources/application-local.yml
+**/application-local.**

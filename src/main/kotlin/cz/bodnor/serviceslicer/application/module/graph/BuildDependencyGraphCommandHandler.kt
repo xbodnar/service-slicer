@@ -5,6 +5,7 @@ import cz.bodnor.serviceslicer.application.module.graph.service.BuildDependencyG
 import cz.bodnor.serviceslicer.application.module.graph.service.CollectCompilationUnits
 import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeCreateService
+import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.stereotype.Component
 
@@ -15,14 +16,20 @@ class BuildDependencyGraphCommandHandler(
     private val collectCompilationUnits: CollectCompilationUnits,
     private val buildDependencyGraph: BuildDependencyGraph,
 ) : CommandHandler<Unit, BuildDependencyGraphCommand> {
+
+    private val logger = logger()
+
     override val command = BuildDependencyGraphCommand::class
 
     override fun handle(command: BuildDependencyGraphCommand) {
+        logger.info("Building dependency graph for project: ${command.projectId}")
+
         val project = projectFinderService.getById(command.projectId)
         require(project.javaProjectRoot != null) { "Java project root dir is missing" }
 
         val graphNodes = buildDependencyGraph(projectId = project.id, javaProjectRootDir = project.javaProjectRoot!!)
 
-        classNodeCreateService.save(graphNodes.values.toList())
+        classNodeCreateService.replaceGraph(project.id, graphNodes.values.toList())
+        logger.info("Successfully created graph for project: ${command.projectId}")
     }
 }
