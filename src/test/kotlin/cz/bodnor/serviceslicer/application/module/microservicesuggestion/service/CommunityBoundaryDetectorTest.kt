@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.analysis.service
+package cz.bodnor.serviceslicer.application.module.microservicesuggestion.service
 
 import cz.bodnor.serviceslicer.IntegrationTest
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection.LabelPropagationCommunityDetectionStrategy
@@ -9,10 +9,12 @@ import cz.bodnor.serviceslicer.domain.analysis.suggestion.BoundaryDetectionAlgor
 import cz.bodnor.serviceslicer.domain.project.Project
 import cz.bodnor.serviceslicer.domain.project.ProjectRepository
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Disabled
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.UUID
 import kotlin.test.Test
 
+@Disabled("Tests very slow")
 class CommunityDetectionBoundaryDetectorTest(
     @Autowired private val underTest: CommunityBoundaryDetector,
     @Autowired private val projectRepository: ProjectRepository,

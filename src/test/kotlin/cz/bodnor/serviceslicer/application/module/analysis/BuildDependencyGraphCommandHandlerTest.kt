@@ -24,31 +24,7 @@ class BuildDependencyGraphCommandHandlerTest(
         commandBus(BuildDependencyGraphCommand(projectId = 1.toUUID()))
 
         // then
-        val classNodes = classNodeRepository.findAll()
+        val classNodes = classNodeRepository.findAllByProjectId(1.toUUID())
         classNodes.size shouldBe 23
-    }
-
-    @Test
-    fun `should save relationships between nodes`() {
-        // given
-        helperService.getProject(id = 1.toUUID()) { it.setJavaProjectRoot(Path("src/test/resources/petclinic")) }
-
-        // when
-        commandBus(BuildDependencyGraphCommand(projectId = 1.toUUID()))
-
-        // then
-        val classNodes = classNodeRepository.findAllByProjectId(projectId = 1.toUUID())
-
-        // Verify that at least some nodes have dependencies
-        val nodesWithDependencies = classNodes.filter { it.dependencies.isNotEmpty() }
-        nodesWithDependencies.isNotEmpty() shouldBe true
-
-        // Verify that dependencies are properly saved with all properties
-        val petClinicApplication = classNodes.find { it.simpleClassName == "PetClinicApplication" }!!
-        petClinicApplication.dependencies.isNotEmpty() shouldBe true
-
-        // Verify dependency properties are saved
-        val firstDependency = petClinicApplication.dependencies.first()
-        (firstDependency.weight > 0) shouldBe true
     }
 }

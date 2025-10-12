@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.analysis.graph
+package cz.bodnor.serviceslicer.application.module.graph
 
 import cz.bodnor.serviceslicer.IntegrationTest
 import cz.bodnor.serviceslicer.application.module.graph.service.BuildDependencyGraph
