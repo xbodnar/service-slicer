@@ -26,31 +26,6 @@ class Project(
     @Enumerated(EnumType.STRING)
     var status: ProjectStatus = ProjectStatus.CREATED
         private set
-
-    /**
-     * Path to the project root directory. May contain multiple subdirectories unrelated to the project being processed
-     */
-    @Convert(converter = PathHibernateConverter::class)
-    var projectRoot: Path? = null
-        private set
-
-    /**
-     * Path to the specific Java project root directory that is being processed (root project may contain multiple
-     * java projects, for example when provided through GitHub repository link)
-     */
-    @Convert(converter = PathHibernateConverter::class)
-    var javaProjectRoot: Path? = null
-        private set
-
-    fun setProjectRoot(path: Path) {
-        require(path.isDirectory()) { "Project root directory must be a directory, but was: $path" }
-        this.projectRoot = path
-    }
-
-    fun setJavaProjectRoot(path: Path) {
-        require(path.isDirectory()) { "Java project root directory must be a directory, but was: $path" }
-        this.javaProjectRoot = path
-    }
 }
 
 @Repository

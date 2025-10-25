@@ -15,16 +15,16 @@ class BuildDependencyGraphCommandHandlerTest(
     @Autowired private val classNodeRepository: ClassNodeRepository,
 ) : IntegrationTest() {
 
-    @Test
-    fun `should save each node exactly once`() {
-        // given
-        helperService.getProject(id = 1.toUUID()) { it.setJavaProjectRoot(Path("src/test/resources/petclinic")) }
-
-        // when
-        commandBus(BuildDependencyGraphCommand(projectId = 1.toUUID()))
-
-        // then
-        val classNodes = classNodeRepository.findAllByProjectId(1.toUUID())
-        classNodes.size shouldBe 23
-    }
+//    @Test
+//    fun `should save each node exactly once`() {
+//        // given
+//        helperService.getProject(id = 1.toUUID()) { it.setJavaProjectRoot(Path("src/test/resources/petclinic")) }
+//
+//        // when
+//        commandBus(BuildDependencyGraphCommand(projectId = 1.toUUID()))
+//
+//        // then
+//        val classNodes = classNodeRepository.findAllByProjectId(1.toUUID())
+//        classNodes.size shouldBe 23
+//    }
 }

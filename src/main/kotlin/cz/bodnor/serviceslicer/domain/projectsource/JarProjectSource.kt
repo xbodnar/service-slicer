@@ -1,25 +1,23 @@
 package cz.bodnor.serviceslicer.domain.projectsource
 
+import cz.bodnor.serviceslicer.domain.project.PathHibernateConverter
+import jakarta.persistence.Convert
 import jakarta.persistence.Entity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
+import java.nio.file.Path
 import java.util.UUID
 
 @Entity
-class GitHubProjectSource(
+class JarProjectSource(
     id: UUID = UUID.randomUUID(),
     projectId: UUID,
-    javaProjectRootRelativePath: String?,
-
-    val repositoryGitUri: String,
-
-    val branchName: String,
+    @Convert(converter = PathHibernateConverter::class)
+    val jarFilePath: Path,
 ) : ProjectSource(
     id = id,
     projectId = projectId,
-    javaProjectRootRelativePath = javaProjectRootRelativePath,
-    sourceType = SourceType.GITHUB_REPOSITORY,
-)
-
-@Repository
-interface GitHubProjectSourceRepository : JpaRepository<GitHubProjectSource, UUID>
+    sourceType = SourceType.JAR,
+) {
+    override fun isInitialized(): Boolean = true
+}

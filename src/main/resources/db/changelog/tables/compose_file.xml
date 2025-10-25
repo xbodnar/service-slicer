@@ -5,8 +5,8 @@
                    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <changeSet id="0" author="bodnar">
-        <createTable tableName="file">
-            <!-- Creatable entity -->
+        <createTable tableName="compose_file">
+            <!-- Updatable entity -->
             <column name="id" type="uuid">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
@@ -16,12 +16,18 @@
             <column name="created_at" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
-
-            <!-- Entity -->
-            <column name="original_file_name" type="text">
+            <column name="updated_at" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
-            <column name="extension" type="text">
+
+            <!-- Entity -->
+            <column name="project_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="health_check_url" type="text">
                 <constraints nullable="false"/>
             </column>
         </createTable>

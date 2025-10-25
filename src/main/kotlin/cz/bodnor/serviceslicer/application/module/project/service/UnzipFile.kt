@@ -1,23 +1,24 @@
 package cz.bodnor.serviceslicer.application.module.project.service
 
-import cz.bodnor.serviceslicer.application.module.file.FileService
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipInputStream
-import kotlin.io.path.exists
 import kotlin.io.path.extension
 
 @Component
-class ExtractZipFile(
-    private val fileService: FileService,
+class UnzipFile(
+    @Value("\${app.projects.working-dir}") private val projectWorkingDir: String,
 ) {
 
     operator fun invoke(
         source: Path,
         destination: Path,
-    ) {
+    ): Path {
+        val unzippedFolderPath = Path.of(projectWorkingDir).resolve(destination)
+
         require(source.extension == "zip") { "Invalid file format - must end with .zip" }
 
         // Create destination directory if it doesn't exist
@@ -51,5 +52,7 @@ class ExtractZipFile(
                 zipEntry = zipInputStream.nextEntry
             }
         }
+
+        return unzippedFolderPath.resolve(source.fileName)
     }
 }

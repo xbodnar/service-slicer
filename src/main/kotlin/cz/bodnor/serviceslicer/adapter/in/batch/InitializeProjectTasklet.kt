@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.adapter.`in`.batch
 
-import cz.bodnor.serviceslicer.application.module.analysis.command.FindJavaProjectRootDirCommand
-import cz.bodnor.serviceslicer.application.module.analysis.command.GetProjectSourceCodeCommand
+import cz.bodnor.serviceslicer.application.module.project.command.InitializeProjectCommand
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.batch.core.StepContribution
 import org.springframework.batch.core.configuration.annotation.JobScope
@@ -14,7 +13,7 @@ import java.util.UUID
 
 @Component
 @JobScope
-class GetProjectSourceCodeTasklet(
+class InitializeProjectTasklet(
     private val commandBus: CommandBus,
     @Value("#{jobParameters['PROJECT_ID']}") private val projectId: UUID,
 ) : Tasklet {
@@ -23,8 +22,7 @@ class GetProjectSourceCodeTasklet(
         contribution: StepContribution,
         chunkContext: ChunkContext,
     ): RepeatStatus? {
-        commandBus(GetProjectSourceCodeCommand(projectId))
-        commandBus(FindJavaProjectRootDirCommand(projectId))
+        commandBus(InitializeProjectCommand(projectId))
 
         return RepeatStatus.FINISHED
     }

@@ -6,24 +6,23 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
-import org.hibernate.annotations.Proxy
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@Proxy(lazy = false) // We don't need proxies since we do not use Hibernate for mapping references
-abstract class ProjectSource(
+sealed class ProjectSource(
     id: UUID,
-
-    val javaProjectRootRelativePath: String?,
 
     val projectId: UUID,
 
     @Enumerated(EnumType.STRING)
     val sourceType: SourceType,
-) : CreatableEntity(id)
+) : CreatableEntity(id) {
+
+    abstract fun isInitialized(): Boolean
+}
 
 @Repository
 interface ProjectSourceRepository : JpaRepository<ProjectSource, UUID> {
@@ -34,6 +33,7 @@ interface ProjectSourceRepository : JpaRepository<ProjectSource, UUID> {
  * Source type of the project
  */
 enum class SourceType {
-    ZIP_FILE,
-    GITHUB_REPOSITORY,
+    ZIP,
+    JAR,
+    GIT,
 }

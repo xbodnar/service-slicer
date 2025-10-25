@@ -1,8 +1,6 @@
 package cz.bodnor.serviceslicer.adapter.`in`.web
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependencyGraphCommand
-import cz.bodnor.serviceslicer.application.module.project.command.CreateProjectFromGitHubCommand
-import cz.bodnor.serviceslicer.application.module.project.command.CreateProjectFromZipCommand
 import cz.bodnor.serviceslicer.application.module.project.query.GetProjectQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryBus
@@ -24,22 +22,22 @@ class ProjectController(
     private val queryBus: QueryBus,
 ) {
 
-    @PostMapping("/upload")
-    fun createFromZip(
-        @RequestPart file: MultipartFile,
-        @RequestParam projectName: String,
-        @RequestParam javaProjectRoot: String?,
-    ): CreateProjectFromZipCommand.Result = commandBus(
-        CreateProjectFromZipCommand(
-            projectName = projectName,
-            javaProjectRoot = javaProjectRoot,
-            file = file,
-        ),
-    )
-
-    @PostMapping
-    fun createFromGithub(@RequestBody request: CreateProjectFromGitHubRequest): CreateProjectFromGitHubCommand.Result =
-        commandBus(request.toCommand())
+//    @PostMapping("/upload")
+//    fun createFromZip(
+//        @RequestPart file: MultipartFile,
+//        @RequestParam projectName: String,
+//        @RequestParam javaProjectRoot: String?,
+//    ): CreateProjectFromZipCommand.Result = commandBus(
+//        CreateProjectFromZipCommand(
+//            projectName = projectName,
+//            `val projectRootRelativePath` = javaProjectRoot,
+//            file = file,
+//        ),
+//    )
+//
+//    @PostMapping
+//    fun createFromGithub(@RequestBody request: CreateProjectFromGitHubRequest): CreateProjectFromGitCommand.Result =
+//        commandBus(request.toCommand())
 
     @GetMapping("/{projectId}")
     fun getProject(@PathVariable projectId: UUID): GetProjectQuery.Result =
@@ -50,15 +48,15 @@ class ProjectController(
         commandBus(BuildDependencyGraphCommand(projectId = projectId))
     }
 }
-
-data class CreateProjectFromGitHubRequest(
-    val projectName: String,
-    val gitHubUrl: String,
-    val javaProjectRoot: String?,
-) {
-    fun toCommand(): CreateProjectFromGitHubCommand = CreateProjectFromGitHubCommand(
-        projectName = projectName,
-        gitHubUrl = gitHubUrl,
-        javaProjectRoot = javaProjectRoot,
-    )
-}
+//
+// data class CreateProjectFromGitHubRequest(
+//    val projectName: String,
+//    val gitHubUrl: String,
+//    val javaProjectRoot: String?,
+// ) {
+//    fun toCommand(): CreateProjectFromGitCommand = CreateProjectFromGitCommand(
+//        projectName = projectName,
+//        gitUri = gitHubUrl,
+//        relativeProjectRootPath = javaProjectRoot,
+//    )
+// }

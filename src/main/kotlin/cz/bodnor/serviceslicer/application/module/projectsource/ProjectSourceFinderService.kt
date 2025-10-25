@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.project.projectsource
+package cz.bodnor.serviceslicer.application.module.projectsource
 
 import cz.bodnor.serviceslicer.application.common.BaseFinderService
 import cz.bodnor.serviceslicer.domain.projectsource.ProjectSource
