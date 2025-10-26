@@ -43,7 +43,7 @@ class CreateProjectCommandHandlerTest(
         projectSourceRepository.findAll().first().also {
             when (it) {
                 is GitProjectSource -> {
-                    it.projectRootRelativePath shouldBe "/api"
+                    it.projectRootRelativePath shouldBe Path.of("/api")
                     it.repositoryGitUri shouldBe "https://github.com/spring-projects/spring-petclinic.git"
                     it.branchName shouldBe "main"
                 }
@@ -74,8 +74,8 @@ class CreateProjectCommandHandlerTest(
         projectSourceRepository.findAll().first().also {
             when (it) {
                 is ZipFileProjectSource -> {
-                    it.projectRootRelativePath shouldBe "/api"
-                    it.zipFilePath shouldBe "src/test/resources/petclinic.zip"
+                    it.projectRootRelativePath shouldBe Path.of("/api")
+                    it.zipFilePath shouldBe Path.of("src/test/resources/petclinic.zip")
                 }
 
                 else -> error("Unknown project source type: $it")
@@ -103,7 +103,7 @@ class CreateProjectCommandHandlerTest(
         projectSourceRepository.findAll().first().also {
             when (it) {
                 is JarProjectSource -> {
-                    it.jarFilePath shouldBe "src/test/resources/petclinic.jar"
+                    it.jarFilePath shouldBe Path.of("src/test/resources/petclinic.jar")
                 }
 
                 else -> error("Unknown project source type: $it")
