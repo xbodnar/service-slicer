@@ -9,7 +9,7 @@ data class CreateProjectCommand private constructor(
     val projectName: String,
     val basePackageName: String,
     val file: Path? = null,
-    val projectRootRelativePath: Path = Path.of("/"),
+    val projectRootRelativePath: Path = Path.of(""),
     val gitUri: String? = null,
     val branchName: String? = null,
     val sourceType: SourceType,
@@ -24,7 +24,7 @@ data class CreateProjectCommand private constructor(
             projectName: String,
             basePackageName: String,
             file: Path,
-            projectRootRelativePath: Path = Path.of("/"),
+            projectRootRelativePath: Path = Path.of(""),
         ) = CreateProjectCommand(
             projectName = projectName,
             basePackageName = basePackageName,
@@ -37,7 +37,7 @@ data class CreateProjectCommand private constructor(
             projectName: String,
             basePackageName: String,
             gitUri: String,
-            projectRootRelativePath: Path = Path.of("/"),
+            projectRootRelativePath: Path = Path.of(""),
             branchName: String = "main",
         ) = CreateProjectCommand(
             projectName = projectName,
