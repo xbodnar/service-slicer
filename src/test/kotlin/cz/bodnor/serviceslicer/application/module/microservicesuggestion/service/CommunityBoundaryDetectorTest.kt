@@ -6,8 +6,6 @@ import cz.bodnor.serviceslicer.application.module.microservicesuggestion.communi
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.service.CommunityBoundaryDetector
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeRepository
 import cz.bodnor.serviceslicer.domain.analysis.suggestion.BoundaryDetectionAlgorithm
-import cz.bodnor.serviceslicer.domain.project.Project
-import cz.bodnor.serviceslicer.domain.project.ProjectRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.springframework.beans.factory.annotation.Autowired

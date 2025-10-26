@@ -1,6 +1,5 @@
 package cz.bodnor.serviceslicer.domain.compose
 
-import cz.bodnor.serviceslicer.domain.project.Project
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID

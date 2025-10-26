@@ -2,10 +2,7 @@ package cz.bodnor.serviceslicer.domain.projectsource
 
 import cz.bodnor.serviceslicer.domain.project.PathHibernateConverter
 import jakarta.persistence.Convert
-import jakarta.persistence.Converter
 import jakarta.persistence.Entity
-import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.stereotype.Repository
 import java.nio.file.Path
 import java.util.UUID
 

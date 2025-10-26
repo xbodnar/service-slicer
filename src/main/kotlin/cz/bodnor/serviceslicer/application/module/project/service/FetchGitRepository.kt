@@ -1,6 +1,5 @@
 package cz.bodnor.serviceslicer.application.module.project.service
 
-import cz.bodnor.serviceslicer.domain.projectsource.GitProjectSource
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import org.eclipse.jgit.api.Git
 import org.springframework.beans.factory.annotation.Value

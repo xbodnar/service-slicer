@@ -1,14 +1,9 @@
 package cz.bodnor.serviceslicer.application.module.analysis
 
 import cz.bodnor.serviceslicer.IntegrationTest
-import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependencyGraphCommand
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeRepository
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
-import cz.bodnor.serviceslicer.toUUID
-import io.kotest.matchers.shouldBe
-import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import kotlin.io.path.Path
 
 class BuildDependencyGraphCommandHandlerTest(
     @Autowired private val commandBus: CommandBus,

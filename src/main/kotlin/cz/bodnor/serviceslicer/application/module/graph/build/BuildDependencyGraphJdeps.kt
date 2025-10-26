@@ -8,18 +8,8 @@ import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeType
 import cz.bodnor.serviceslicer.domain.projectsource.JarProjectSource
 import cz.bodnor.serviceslicer.domain.projectsource.SourceType
-import org.jgrapht.graph.DefaultDirectedGraph
-import org.jgrapht.graph.DefaultEdge
-import org.jgrapht.nio.dot.DOTImporter
-import org.jgrapht.util.SupplierUtil
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
-import java.io.PrintWriter
-import java.nio.file.Files
-import java.nio.file.Path
 import java.util.UUID
-import java.util.function.Function
-import java.util.spi.ToolProvider
 
 @Component
 class BuildDependencyGraphJdeps(

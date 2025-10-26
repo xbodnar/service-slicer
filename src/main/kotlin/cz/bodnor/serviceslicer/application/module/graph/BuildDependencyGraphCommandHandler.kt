@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.application.module.graph
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependencyGraphCommand
 import cz.bodnor.serviceslicer.application.module.graph.build.BuildDependencyGraph
-import cz.bodnor.serviceslicer.application.module.graph.build.BuildDependencyGraphJavaParser
 import cz.bodnor.serviceslicer.application.module.graph.service.CollectCompilationUnits
 import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
 import cz.bodnor.serviceslicer.application.module.projectsource.ProjectSourceFinderService

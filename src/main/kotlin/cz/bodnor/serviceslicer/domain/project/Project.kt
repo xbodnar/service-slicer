@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.domain.project
 
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
-import jakarta.persistence.Convert
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -9,9 +8,7 @@ import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
-import java.nio.file.Path
 import java.util.UUID
-import kotlin.io.path.isDirectory
 
 /**
  * Represents a Java project that will be analyzed.

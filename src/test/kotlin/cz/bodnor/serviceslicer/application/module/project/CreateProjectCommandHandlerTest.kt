@@ -9,7 +9,6 @@ import cz.bodnor.serviceslicer.domain.projectsource.JarProjectSource
 import cz.bodnor.serviceslicer.domain.projectsource.ProjectSourceRepository
 import cz.bodnor.serviceslicer.domain.projectsource.ZipFileProjectSource
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
-import io.kotest.matchers.collections.shouldBeIn
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired

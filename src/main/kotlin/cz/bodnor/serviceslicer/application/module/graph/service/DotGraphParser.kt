@@ -1,7 +1,5 @@
 package cz.bodnor.serviceslicer.application.module.graph.service
 
-import org.jgrapht.Graph
-import org.jgrapht.Graphs
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.nio.dot.DOTImporter
