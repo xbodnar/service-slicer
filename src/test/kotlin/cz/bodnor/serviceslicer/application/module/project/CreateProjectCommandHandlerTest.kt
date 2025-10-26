@@ -26,6 +26,7 @@ class CreateProjectCommandHandlerTest(
         // given
         val command = CreateProjectCommand.fromGit(
             projectName = "Test Project",
+            basePackageName = "org.springframework.samples.petclinic",
             gitUri = "https://github.com/spring-projects/spring-petclinic.git",
             projectRootRelativePath = Path.of("/api"),
             branchName = "main",
@@ -57,6 +58,7 @@ class CreateProjectCommandHandlerTest(
         // given
         val command = CreateProjectCommand.fromZip(
             projectName = "Test Project",
+            basePackageName = "org.springframework.samples.petclinic",
             file = Path.of("src/test/resources/petclinic.zip"),
             projectRootRelativePath = Path.of("/api"),
         )
@@ -86,6 +88,7 @@ class CreateProjectCommandHandlerTest(
         // given
         val command = CreateProjectCommand.fromJar(
             projectName = "Test Project",
+            basePackageName = "org.springframework.samples.petclinic",
             file = Path.of("src/test/resources/petclinic.jar"),
         )
 

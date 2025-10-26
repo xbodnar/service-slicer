@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: ServiceSlicer
+  datasource:
+    url: jdbc:postgresql://localhost:5432/serviceslicer
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog.xml
+    default-schema: public
+  neo4j:
+    uri: bolt://localhost:7687
+    authentication:
+      username: neo4j
+      password: password
+    data:
+      database: neo4j
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+app:
+  workdir: /Users/noro/Workspace/service_slicer/ServiceSlicer/data
+
+logging:
+  level:
+    cz.bodnor.serviceslicer: INFO
+    org.springframework: INFO
+    org.hibernate: WARN
+    org.springframework.data.neo4j.cypher.deprecation: ERROR
+    org.springframework.data.neo4j.cypher.unrecognized: ERROR

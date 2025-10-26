@@ -89,6 +89,8 @@ class BuildDependencyGraphJavaParser(
         )
     }
 
+    override fun supportedSourceTypes(): Set<SourceType> = setOf(SourceType.ZIP, SourceType.GIT)
+
     private fun ClassOrInterfaceDeclaration.toEmptyClassNode(projectId: UUID): ClassNode {
         val referenceType = this.resolve()
         val fqn = referenceType.qualifiedName

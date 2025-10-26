@@ -12,11 +12,13 @@ class TestHelperService(
     fun getProject(
         id: UUID = UUID.randomUUID(),
         name: String = "test",
+        basePackageName: String = "cz.bodnor.serviceslicer",
         entityModifier: (Project) -> Unit = {},
     ): Project = projectRepository.save(
         Project(
             id = id,
             name = name,
+            basePackageName = basePackageName,
         ).also(entityModifier),
     )
 }

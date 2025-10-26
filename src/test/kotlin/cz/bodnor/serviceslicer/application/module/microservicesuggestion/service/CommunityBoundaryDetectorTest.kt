@@ -17,19 +17,17 @@ import kotlin.test.Test
 @Disabled("Tests very slow")
 class CommunityDetectionBoundaryDetectorTest(
     @Autowired private val underTest: CommunityBoundaryDetector,
-    @Autowired private val projectRepository: ProjectRepository,
     @Autowired private val classNodeRepository: ClassNodeRepository,
 ) : IntegrationTest() {
 
     @Test
     fun `Should detect boundaries using Label Propagation`() {
         // Given
-        projectRepository.save(
-            Project(
-                id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
-                name = "Test Project",
-            ),
+        helperService.getProject(
+            id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
+            name = "Test Project",
         )
+
         val classNodes = classNodeRepository.findAll()
 
         // when
@@ -50,11 +48,9 @@ class CommunityDetectionBoundaryDetectorTest(
     @Test
     fun `Should detect boundaries using Louvain`() {
         // Given
-        projectRepository.save(
-            Project(
-                id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
-                name = "Test Project",
-            ),
+        helperService.getProject(
+            id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
+            name = "Test Project",
         )
         val classNodes = classNodeRepository.findAll()
 
@@ -74,12 +70,11 @@ class CommunityDetectionBoundaryDetectorTest(
     @Test
     fun `Louvain should produce more balanced communities than Label Propagation`() {
         // Given
-        projectRepository.save(
-            Project(
-                id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
-                name = "Test Project",
-            ),
+        helperService.getProject(
+            id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
+            name = "Test Project",
         )
+
         val classNodes = classNodeRepository.findAll()
         val analysisJobId = UUID.randomUUID()
 

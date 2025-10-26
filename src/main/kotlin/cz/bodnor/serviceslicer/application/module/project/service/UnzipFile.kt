@@ -10,7 +10,7 @@ import kotlin.io.path.extension
 
 @Component
 class UnzipFile(
-    @Value("\${app.projects.working-dir}") private val projectWorkingDir: String,
+    @Value("\${app.workdir}") private val projectWorkingDir: String,
 ) {
 
     operator fun invoke(

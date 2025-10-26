@@ -9,7 +9,7 @@ import java.nio.file.Path
 
 @Component
 class FetchGitRepository(
-    @Value("\${app.projects.working-dir}") private val projectWorkingDir: String,
+    @Value("\${app.workdir}") private val projectWorkingDir: String,
 ) {
 
     private val logger = logger()

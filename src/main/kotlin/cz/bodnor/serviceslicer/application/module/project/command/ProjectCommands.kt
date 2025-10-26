@@ -7,6 +7,7 @@ import java.util.UUID
 
 data class CreateProjectCommand private constructor(
     val projectName: String,
+    val basePackageName: String,
     val file: Path? = null,
     val projectRootRelativePath: Path = Path.of("/"),
     val gitUri: String? = null,
@@ -21,10 +22,12 @@ data class CreateProjectCommand private constructor(
     companion object {
         fun fromZip(
             projectName: String,
+            basePackageName: String,
             file: Path,
             projectRootRelativePath: Path = Path.of("/"),
         ) = CreateProjectCommand(
             projectName = projectName,
+            basePackageName = basePackageName,
             file = file,
             projectRootRelativePath = projectRootRelativePath,
             sourceType = SourceType.ZIP,
@@ -32,11 +35,13 @@ data class CreateProjectCommand private constructor(
 
         fun fromGit(
             projectName: String,
+            basePackageName: String,
             gitUri: String,
             projectRootRelativePath: Path = Path.of("/"),
             branchName: String = "main",
         ) = CreateProjectCommand(
             projectName = projectName,
+            basePackageName = basePackageName,
             gitUri = gitUri,
             projectRootRelativePath = projectRootRelativePath,
             branchName = branchName,
@@ -45,9 +50,11 @@ data class CreateProjectCommand private constructor(
 
         fun fromJar(
             projectName: String,
+            basePackageName: String,
             file: Path,
         ) = CreateProjectCommand(
             projectName = projectName,
+            basePackageName = basePackageName,
             file = file,
             sourceType = SourceType.JAR,
         )

@@ -27,6 +27,7 @@ class CreateProjectCommandHandler(
         val project = projectRepository.save(
             Project(
                 name = command.projectName,
+                basePackageName = command.basePackageName,
             ),
         )
 
