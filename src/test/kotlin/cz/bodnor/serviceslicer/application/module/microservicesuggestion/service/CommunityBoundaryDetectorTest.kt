@@ -6,8 +6,6 @@ import cz.bodnor.serviceslicer.application.module.microservicesuggestion.communi
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.service.CommunityBoundaryDetector
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeRepository
 import cz.bodnor.serviceslicer.domain.analysis.suggestion.BoundaryDetectionAlgorithm
-import cz.bodnor.serviceslicer.domain.project.Project
-import cz.bodnor.serviceslicer.domain.project.ProjectRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.springframework.beans.factory.annotation.Autowired
@@ -17,19 +15,17 @@ import kotlin.test.Test
 @Disabled("Tests very slow")
 class CommunityDetectionBoundaryDetectorTest(
     @Autowired private val underTest: CommunityBoundaryDetector,
-    @Autowired private val projectRepository: ProjectRepository,
     @Autowired private val classNodeRepository: ClassNodeRepository,
 ) : IntegrationTest() {
 
     @Test
     fun `Should detect boundaries using Label Propagation`() {
         // Given
-        projectRepository.save(
-            Project(
-                id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
-                name = "Test Project",
-            ),
+        helperService.getProject(
+            id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
+            name = "Test Project",
         )
+
         val classNodes = classNodeRepository.findAll()
 
         // when
@@ -50,11 +46,9 @@ class CommunityDetectionBoundaryDetectorTest(
     @Test
     fun `Should detect boundaries using Louvain`() {
         // Given
-        projectRepository.save(
-            Project(
-                id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
-                name = "Test Project",
-            ),
+        helperService.getProject(
+            id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
+            name = "Test Project",
         )
         val classNodes = classNodeRepository.findAll()
 
@@ -74,12 +68,11 @@ class CommunityDetectionBoundaryDetectorTest(
     @Test
     fun `Louvain should produce more balanced communities than Label Propagation`() {
         // Given
-        projectRepository.save(
-            Project(
-                id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
-                name = "Test Project",
-            ),
+        helperService.getProject(
+            id = UUID.fromString("0235ec36-0975-490d-a4c6-3d3d68081b5b"),
+            name = "Test Project",
         )
+
         val classNodes = classNodeRepository.findAll()
         val analysisJobId = UUID.randomUUID()
 

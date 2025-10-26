@@ -54,6 +54,7 @@ enum class ClassNodeType {
     CLASS,
     INTERFACE,
     ENUM,
+    UNKNOWN,
 }
 
 @Repository

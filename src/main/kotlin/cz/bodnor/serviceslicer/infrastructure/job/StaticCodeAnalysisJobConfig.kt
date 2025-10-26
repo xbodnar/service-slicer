@@ -1,7 +1,7 @@
 package cz.bodnor.serviceslicer.infrastructure.job
 
 import cz.bodnor.serviceslicer.adapter.`in`.batch.BuildDependencyGraphTasklet
-import cz.bodnor.serviceslicer.adapter.`in`.batch.GetProjectSourceCodeTasklet
+import cz.bodnor.serviceslicer.adapter.`in`.batch.InitializeProjectTasklet
 import cz.bodnor.serviceslicer.adapter.`in`.batch.SuggestMicroserviceBoundariesTasklet
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.job.builder.JobBuilder
@@ -15,14 +15,14 @@ import org.springframework.transaction.PlatformTransactionManager
 class StaticCodeAnalysisJobConfig(
     private val jobRepository: JobRepository,
     private val txManager: PlatformTransactionManager,
-    private val getProjectSourceCodeTasklet: GetProjectSourceCodeTasklet,
+    private val initializeProjectTasklet: InitializeProjectTasklet,
     private val buildDependencyGraphTasklet: BuildDependencyGraphTasklet,
     private val suggestMicroserviceBoundariesTasklet: SuggestMicroserviceBoundariesTasklet,
 ) {
 
     @Bean
-    fun getProjectSourceCodeStep() = StepBuilder("GET_PROJECT_SOURCE_CODE_STEP", jobRepository)
-        .tasklet(getProjectSourceCodeTasklet, txManager)
+    fun initializeProjectStep() = StepBuilder("INITIALIZE_PROJECT_STEP", jobRepository)
+        .tasklet(initializeProjectTasklet, txManager)
         .build()
 
     @Bean
@@ -37,7 +37,7 @@ class StaticCodeAnalysisJobConfig(
 
     @Bean
     fun staticCodeAnalysisJob(): Job = JobBuilder(JobType.STATIC_CODE_ANALYSIS.name, jobRepository)
-        .start(getProjectSourceCodeStep())
+        .start(initializeProjectStep())
         .next(buildDependencyGraphStep())
         .next(suggestMicroserviceBoundariesStep())
         .build()

@@ -12,15 +12,7 @@ data class RunAnalysisJobCommand(
     )
 }
 
-data class GetProjectSourceCodeCommand(
-    val projectId: UUID,
-) : Command<Unit>
-
 data class BuildDependencyGraphCommand(
-    val projectId: UUID,
-) : Command<Unit>
-
-data class FindJavaProjectRootDirCommand(
     val projectId: UUID,
 ) : Command<Unit>
 

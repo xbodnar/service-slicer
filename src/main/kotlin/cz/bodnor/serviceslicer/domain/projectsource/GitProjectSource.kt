@@ -7,26 +7,26 @@ import java.nio.file.Path
 import java.util.UUID
 
 @Entity
-class ZipFileProjectSource(
+class GitProjectSource(
     id: UUID = UUID.randomUUID(),
     projectId: UUID,
     @Convert(PathHibernateConverter::class)
     val projectRootRelativePath: Path,
-    @Convert(PathHibernateConverter::class)
-    val zipFilePath: Path,
+    val repositoryGitUri: String,
+    val branchName: String,
 ) : ProjectSource(
     id = id,
     projectId = projectId,
-    sourceType = SourceType.ZIP,
+    sourceType = SourceType.GIT,
 ) {
 
-    // Path to the unzipped directory
+    // Path to the cloned repository
     @Convert(converter = PathHibernateConverter::class)
     var projectRootPath: Path? = null
         private set
 
     fun setProjectRoot(path: Path) {
-        projectRootPath = path
+        this.projectRootPath = path
     }
 
     override fun isInitialized(): Boolean = projectRootPath != null

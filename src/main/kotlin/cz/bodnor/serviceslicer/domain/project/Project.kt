@@ -1,15 +1,14 @@
 package cz.bodnor.serviceslicer.domain.project
 
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
-import jakarta.persistence.Convert
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
-import java.nio.file.Path
 import java.util.UUID
-import kotlin.io.path.isDirectory
 
 /**
  * Represents a Java project that will be analyzed.
@@ -17,7 +16,13 @@ import kotlin.io.path.isDirectory
 @Entity
 class Project(
     id: UUID = UUID.randomUUID(),
+    // Custom name to identify the project
     val name: String,
+    // Base package name used to identify which classes should be included in the analysis
+    val basePackageName: String,
+    // Used to exclude some packages from the final dependency graph, for example generated classes
+    @JdbcTypeCode(SqlTypes.JSON)
+    val excludePackages: List<String> = emptyList(),
 ) : UpdatableEntity(id) {
 
     /**
@@ -26,31 +31,6 @@ class Project(
     @Enumerated(EnumType.STRING)
     var status: ProjectStatus = ProjectStatus.CREATED
         private set
-
-    /**
-     * Path to the project root directory. May contain multiple subdirectories unrelated to the project being processed
-     */
-    @Convert(converter = PathHibernateConverter::class)
-    var projectRoot: Path? = null
-        private set
-
-    /**
-     * Path to the specific Java project root directory that is being processed (root project may contain multiple
-     * java projects, for example when provided through GitHub repository link)
-     */
-    @Convert(converter = PathHibernateConverter::class)
-    var javaProjectRoot: Path? = null
-        private set
-
-    fun setProjectRoot(path: Path) {
-        require(path.isDirectory()) { "Project root directory must be a directory, but was: $path" }
-        this.projectRoot = path
-    }
-
-    fun setJavaProjectRoot(path: Path) {
-        require(path.isDirectory()) { "Java project root directory must be a directory, but was: $path" }
-        this.javaProjectRoot = path
-    }
 }
 
 @Repository
