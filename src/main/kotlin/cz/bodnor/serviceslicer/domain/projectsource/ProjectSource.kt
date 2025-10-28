@@ -12,7 +12,7 @@ import java.util.UUID
 
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-sealed class ProjectSource(
+abstract class ProjectSource(
     id: UUID,
 
     val projectId: UUID,

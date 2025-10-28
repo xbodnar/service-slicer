@@ -1,40 +1,47 @@
 package cz.bodnor.serviceslicer.application.module.analysis
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.RunAnalysisJobCommand
-import cz.bodnor.serviceslicer.application.module.analysis.event.AnalysisJobCreatedEvent
-import cz.bodnor.serviceslicer.application.module.analysis.service.AnalysisJobFinderService
+import cz.bodnor.serviceslicer.application.module.analysis.service.JobLauncherService
 import cz.bodnor.serviceslicer.domain.analysis.job.AnalysisJobCreateService
+import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import cz.bodnor.serviceslicer.infrastructure.job.JobContainer
-import org.springframework.batch.core.launch.JobLauncher
-import org.springframework.context.ApplicationEventPublisher
+import cz.bodnor.serviceslicer.infrastructure.job.JobParameterLabel
+import cz.bodnor.serviceslicer.infrastructure.job.JobType
+import org.springframework.batch.core.JobParametersBuilder
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Component
 class RunAnalysisJobCommandHandler(
     private val analysisJobCreateService: AnalysisJobCreateService,
-    private val analysisJobFinderService: AnalysisJobFinderService,
     private val jobContainer: JobContainer,
-    private val jobLauncher: JobLauncher,
-    private val applicationEventPublisher: ApplicationEventPublisher,
+    private val jobLauncherService: JobLauncherService,
 ) : CommandHandler<RunAnalysisJobCommand.Result, RunAnalysisJobCommand> {
+
+    private val logger = logger()
+
     override val command = RunAnalysisJobCommand::class
 
-    @Transactional
     override fun handle(command: RunAnalysisJobCommand): RunAnalysisJobCommand.Result {
         val analysisJob = analysisJobCreateService.create(
             projectId = command.projectId,
         )
 
-        applicationEventPublisher.publishEvent(
-            AnalysisJobCreatedEvent(
-                analysisJobId = analysisJob.id,
-            ),
+        val batchJob = jobContainer[JobType.STATIC_CODE_ANALYSIS]
+
+        val jobParameters = JobParametersBuilder()
+            .addJobParameter(JobParameterLabel.PROJECT_ID, analysisJob.projectId, UUID::class.java)
+            .toJobParameters()
+
+        logger.info(
+            "Starting analysisJob with id=[${analysisJob.id}] for job ${batchJob.name} and project ${command.projectId}",
         )
 
+        jobLauncherService.launch(batchJob, jobParameters)
+
         return RunAnalysisJobCommand.Result(
-            analysisJobId = analysisJob.id,
+            projectId = command.projectId,
         )
     }
 }

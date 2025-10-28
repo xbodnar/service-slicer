@@ -28,9 +28,9 @@ abstract class IntegrationTest {
 
     companion object {
         private val neo4jContainer = Neo4jContainer("neo4j:5.18.0")
-            .withPlugins("apoc")
-            .withEnv("NEO4J_dbms_security_procedures_unrestricted", "apoc.*")
-            .withEnv("NEO4J_dbms_security_procedures_allowlist", "apoc.*")
+            .withPlugins("apoc", "graph-data-science")
+            .withEnv("NEO4J_dbms_security_procedures_unrestricted", "apoc.*,gds.*")
+            .withEnv("NEO4J_dbms_security_procedures_allowlist", "apoc.*,gds.*")
             .withEnv("NEO4J_apoc_import_file_enabled", "true")
             .withCopyFileToContainer(
                 MountableFile.forClasspathResource("all.cypher"),

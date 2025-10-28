@@ -4,6 +4,7 @@ import cz.bodnor.serviceslicer.application.common.BaseFinderService
 import cz.bodnor.serviceslicer.domain.analysis.job.AnalysisJob
 import cz.bodnor.serviceslicer.domain.analysis.job.AnalysisJobRepository
 import org.springframework.stereotype.Service
+import java.util.UUID
 
 @Service
 class AnalysisJobFinderService(
@@ -12,4 +13,7 @@ class AnalysisJobFinderService(
     override fun errorBlock(message: String) = error(message)
 
     override fun getEntityType() = AnalysisJob::class
+
+    fun getByProjectId(projectId: UUID) =
+        repository.findByProjectId(projectId) ?: error("Analysis job for project $projectId not found")
 }

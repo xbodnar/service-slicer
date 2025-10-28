@@ -8,7 +8,16 @@ data class RunAnalysisJobCommand(
 ) : Command<RunAnalysisJobCommand.Result> {
 
     data class Result(
-        val analysisJobId: UUID,
+        val projectId: UUID,
+    )
+}
+
+data class RestartFailedAnalysisCommand(
+    val projectId: UUID,
+) : Command<RestartFailedAnalysisCommand.Result> {
+
+    data class Result(
+        val projectId: UUID,
     )
 }
 

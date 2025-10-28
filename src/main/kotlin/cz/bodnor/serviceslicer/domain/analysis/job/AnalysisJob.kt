@@ -45,7 +45,9 @@ class AnalysisJob(
 }
 
 @Repository
-interface AnalysisJobRepository : JpaRepository<AnalysisJob, UUID>
+interface AnalysisJobRepository : JpaRepository<AnalysisJob, UUID> {
+    fun findByProjectId(projectId: UUID): AnalysisJob?
+}
 
 /**
  * Status of the analysis job
