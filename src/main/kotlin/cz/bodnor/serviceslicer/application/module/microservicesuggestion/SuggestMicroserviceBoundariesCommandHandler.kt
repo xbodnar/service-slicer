@@ -1,11 +1,9 @@
 package cz.bodnor.serviceslicer.application.module.microservicesuggestion
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.SuggestMicroserviceBoundariesCommand
-import cz.bodnor.serviceslicer.application.module.microservicesuggestion.service.CommunityBoundaryDetector
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.service.CommunityDetectionService
 import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeRepository
-import cz.bodnor.serviceslicer.domain.analysis.suggestion.MicroserviceSuggestionCreateService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

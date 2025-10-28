@@ -5,7 +5,6 @@ import cz.bodnor.serviceslicer.adapter.`in`.web.requests.CreateProjectFromJarReq
 import cz.bodnor.serviceslicer.adapter.`in`.web.requests.CreateProjectFromZipRequest
 import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependencyGraphCommand
 import cz.bodnor.serviceslicer.application.module.analysis.command.RestartFailedAnalysisCommand
-import cz.bodnor.serviceslicer.application.module.analysis.command.RunAnalysisJobCommand
 import cz.bodnor.serviceslicer.application.module.project.query.GetProjectQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryBus
