@@ -2,12 +2,12 @@ package cz.bodnor.serviceslicer.application.module.analysis
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.RunAnalysisJobCommand
 import cz.bodnor.serviceslicer.application.module.analysis.service.JobLauncherService
+import cz.bodnor.serviceslicer.application.module.job.JobContainer
 import cz.bodnor.serviceslicer.domain.analysis.job.AnalysisJobCreateService
+import cz.bodnor.serviceslicer.domain.job.JobParameterLabel
+import cz.bodnor.serviceslicer.domain.job.JobType
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
-import cz.bodnor.serviceslicer.infrastructure.job.JobContainer
-import cz.bodnor.serviceslicer.infrastructure.job.JobParameterLabel
-import cz.bodnor.serviceslicer.infrastructure.job.JobType
 import org.springframework.batch.core.JobParametersBuilder
 import org.springframework.stereotype.Component
 import java.util.UUID

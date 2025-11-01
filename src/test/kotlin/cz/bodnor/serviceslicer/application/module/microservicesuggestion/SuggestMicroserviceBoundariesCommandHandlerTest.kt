@@ -9,10 +9,12 @@ import cz.bodnor.serviceslicer.domain.projectsource.JarProjectSource
 import cz.bodnor.serviceslicer.domain.projectsource.ProjectSourceRepository
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import cz.bodnor.serviceslicer.toUUID
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import java.nio.file.Path
 
+@Disabled("Tests needs a JAR file")
 class SuggestMicroserviceBoundariesCommandHandlerTest(
     @Autowired private val projectRepository: ProjectRepository,
     @Autowired private val projectSourceRepository: ProjectSourceRepository,

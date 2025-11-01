@@ -3,11 +3,11 @@ package cz.bodnor.serviceslicer.application.module.analysis
 import cz.bodnor.serviceslicer.application.module.analysis.command.RestartFailedAnalysisCommand
 import cz.bodnor.serviceslicer.application.module.analysis.service.AnalysisJobFinderService
 import cz.bodnor.serviceslicer.application.module.analysis.service.JobLauncherService
+import cz.bodnor.serviceslicer.application.module.job.JobContainer
+import cz.bodnor.serviceslicer.domain.job.JobParameterLabel
+import cz.bodnor.serviceslicer.domain.job.JobType
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
-import cz.bodnor.serviceslicer.infrastructure.job.JobContainer
-import cz.bodnor.serviceslicer.infrastructure.job.JobParameterLabel
-import cz.bodnor.serviceslicer.infrastructure.job.JobType
 import org.springframework.batch.core.BatchStatus
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.JobParameters

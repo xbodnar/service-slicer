@@ -243,6 +243,12 @@
             <artifactId>org.eclipse.jgit</artifactId>
             <version>7.2.0.202503040940-r</version>
         </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>1.4.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

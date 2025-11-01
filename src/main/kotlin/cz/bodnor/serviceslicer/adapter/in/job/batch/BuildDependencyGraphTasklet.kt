@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.adapter.`in`.batch
+package cz.bodnor.serviceslicer.adapter.`in`.job.batch
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependencyGraphCommand
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
