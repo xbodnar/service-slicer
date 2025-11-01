@@ -1,5 +1,6 @@
-package cz.bodnor.serviceslicer.infrastructure.job
+package cz.bodnor.serviceslicer.application.module.job
 
+import cz.bodnor.serviceslicer.domain.job.JobType
 import org.springframework.batch.core.Job
 import org.springframework.stereotype.Component
 

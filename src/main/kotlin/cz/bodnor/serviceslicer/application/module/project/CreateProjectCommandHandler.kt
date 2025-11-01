@@ -10,6 +10,7 @@ import cz.bodnor.serviceslicer.domain.projectsource.ProjectSourceRepository
 import cz.bodnor.serviceslicer.domain.projectsource.SourceType
 import cz.bodnor.serviceslicer.domain.projectsource.ZipFileProjectSource
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
+import jakarta.transaction.Transactional
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -23,11 +24,13 @@ class CreateProjectCommandHandler(
 
     override val command = CreateProjectCommand::class
 
+    @Transactional
     override fun handle(command: CreateProjectCommand): CreateProjectCommand.CreateProjectResult {
         val project = projectRepository.save(
             Project(
                 name = command.projectName,
                 basePackageName = command.basePackageName,
+                excludePackages = command.excludePackages,
             ),
         )
 

@@ -103,19 +103,6 @@
             <artifactId>tika-core</artifactId>
             <version>2.9.2</version>
         </dependency>
-        <!-- Core graph structures + algorithms (includes clustering) -->
-        <dependency>
-            <groupId>org.jgrapht</groupId>
-            <artifactId>jgrapht-core</artifactId>
-            <version>1.5.2</version>
-        </dependency>
-        <!-- Import/export support (DOT, GML, GraphML, JSON, etc.) -->
-        <dependency>
-            <groupId>org.jgrapht</groupId>
-            <artifactId>jgrapht-io</artifactId>
-            <version>1.5.2</version>
-        </dependency>
-
         <!-- For Java AST parsing -->
         <dependency>
             <groupId>com.github.javaparser</groupId>
@@ -244,11 +231,23 @@
             <artifactId>jgrapht-core</artifactId>
             <version>1.5.2</version>
         </dependency>
+        <!-- Import/export support (DOT, GML, GraphML, JSON, etc.) -->
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-io</artifactId>
+            <version>1.5.2</version>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/org.eclipse.jgit/org.eclipse.jgit -->
         <dependency>
             <groupId>org.eclipse.jgit</groupId>
             <artifactId>org.eclipse.jgit</artifactId>
             <version>7.2.0.202503040940-r</version>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>1.4.1</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

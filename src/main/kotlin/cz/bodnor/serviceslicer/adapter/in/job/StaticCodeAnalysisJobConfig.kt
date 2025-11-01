@@ -1,8 +1,9 @@
-package cz.bodnor.serviceslicer.infrastructure.job
+package cz.bodnor.serviceslicer.adapter.`in`.job
 
-import cz.bodnor.serviceslicer.adapter.`in`.batch.BuildDependencyGraphTasklet
-import cz.bodnor.serviceslicer.adapter.`in`.batch.InitializeProjectTasklet
-import cz.bodnor.serviceslicer.adapter.`in`.batch.SuggestMicroserviceBoundariesTasklet
+import cz.bodnor.serviceslicer.adapter.`in`.job.batch.BuildDependencyGraphTasklet
+import cz.bodnor.serviceslicer.adapter.`in`.job.batch.InitializeProjectTasklet
+import cz.bodnor.serviceslicer.adapter.`in`.job.batch.SuggestMicroserviceBoundariesTasklet
+import cz.bodnor.serviceslicer.domain.job.JobType
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.job.builder.JobBuilder
 import org.springframework.batch.core.repository.JobRepository

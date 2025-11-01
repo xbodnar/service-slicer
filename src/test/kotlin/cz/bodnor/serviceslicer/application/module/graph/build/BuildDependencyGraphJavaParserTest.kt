@@ -26,6 +26,7 @@ class BuildDependencyGraphJavaParserTest(
                 id = 1.toUUID(),
                 name = "PetClinic",
                 basePackageName = "java.org.springframework.samples.petclinic",
+                excludePackages = listOf(),
             ),
         )
         projectSourceRepository.save(
@@ -51,6 +52,7 @@ class BuildDependencyGraphJavaParserTest(
                 id = 1.toUUID(),
                 name = "PetClinic",
                 basePackageName = "java.org.springframework.samples.petclinic",
+                excludePackages = listOf(),
             ),
         )
         projectSourceRepository.save(
@@ -101,6 +103,7 @@ class BuildDependencyGraphJavaParserTest(
                 id = 1.toUUID(),
                 name = "PetClinic",
                 basePackageName = "java.org.springframework.samples.petclinic",
+                excludePackages = listOf(),
             ),
         )
         projectSourceRepository.save(

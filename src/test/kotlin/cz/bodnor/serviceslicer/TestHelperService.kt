@@ -19,6 +19,7 @@ class TestHelperService(
             id = id,
             name = name,
             basePackageName = basePackageName,
+            excludePackages = emptyList(),
         ).also(entityModifier),
     )
 }

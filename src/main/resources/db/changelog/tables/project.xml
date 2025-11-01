@@ -36,4 +36,7 @@
             </column>
         </createTable>
     </changeSet>
+    <changeSet id="1" author="norbert-bodnar">
+        <dropColumn tableName="project" columnName="status"/>
+    </changeSet>
 </databaseChangeLog>

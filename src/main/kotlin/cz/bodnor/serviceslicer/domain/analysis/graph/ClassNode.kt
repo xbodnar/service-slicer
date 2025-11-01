@@ -23,6 +23,12 @@ class ClassNode(
     val projectId: UUID,
 ) {
 
+    var communityLeiden: Long? = null
+
+    var communityLouvain: Long? = null
+
+    var communityLabelPropagation: Long? = null
+
     @Relationship(
         type = "DEPENDS_ON",
         direction = Relationship.Direction.OUTGOING,

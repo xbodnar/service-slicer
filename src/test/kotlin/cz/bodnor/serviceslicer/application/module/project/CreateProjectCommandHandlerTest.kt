@@ -3,7 +3,6 @@ package cz.bodnor.serviceslicer.application.module.project
 import cz.bodnor.serviceslicer.IntegrationTest
 import cz.bodnor.serviceslicer.application.module.project.command.CreateProjectCommand
 import cz.bodnor.serviceslicer.domain.project.ProjectRepository
-import cz.bodnor.serviceslicer.domain.project.ProjectStatus
 import cz.bodnor.serviceslicer.domain.projectsource.GitProjectSource
 import cz.bodnor.serviceslicer.domain.projectsource.JarProjectSource
 import cz.bodnor.serviceslicer.domain.projectsource.ProjectSourceRepository
@@ -26,6 +25,7 @@ class CreateProjectCommandHandlerTest(
         val command = CreateProjectCommand.fromGit(
             projectName = "Test Project",
             basePackageName = "org.springframework.samples.petclinic",
+            excludePackages = listOf(),
             gitUri = "https://github.com/spring-projects/spring-petclinic.git",
             projectRootRelativePath = Path.of("/api"),
             branchName = "main",
@@ -37,7 +37,6 @@ class CreateProjectCommandHandlerTest(
         // then
         projectRepository.findAll().first().apply {
             name shouldBe "Test Project"
-            status shouldBe ProjectStatus.CREATED
         }
         projectSourceRepository.findAll().first().also {
             when (it) {
@@ -58,6 +57,7 @@ class CreateProjectCommandHandlerTest(
         val command = CreateProjectCommand.fromZip(
             projectName = "Test Project",
             basePackageName = "org.springframework.samples.petclinic",
+            excludePackages = listOf(),
             file = Path.of("src/test/resources/petclinic.zip"),
             projectRootRelativePath = Path.of("/api"),
         )
@@ -68,7 +68,6 @@ class CreateProjectCommandHandlerTest(
         // then
         projectRepository.findAll().first().apply {
             name shouldBe "Test Project"
-            status shouldBe ProjectStatus.CREATED
         }
         projectSourceRepository.findAll().first().also {
             when (it) {
@@ -88,6 +87,7 @@ class CreateProjectCommandHandlerTest(
         val command = CreateProjectCommand.fromJar(
             projectName = "Test Project",
             basePackageName = "org.springframework.samples.petclinic",
+            excludePackages = listOf(),
             file = Path.of("src/test/resources/petclinic.jar"),
         )
 
@@ -97,7 +97,6 @@ class CreateProjectCommandHandlerTest(
         // then
         projectRepository.findAll().first().apply {
             name shouldBe "Test Project"
-            status shouldBe ProjectStatus.CREATED
         }
         projectSourceRepository.findAll().first().also {
             when (it) {

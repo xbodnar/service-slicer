@@ -1,6 +1,6 @@
-package cz.bodnor.serviceslicer.adapter.`in`.batch
+package cz.bodnor.serviceslicer.adapter.`in`.job.batch
 
-import cz.bodnor.serviceslicer.application.module.analysis.command.SuggestMicroserviceBoundariesCommand
+import cz.bodnor.serviceslicer.application.module.project.command.InitializeProjectCommand
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.batch.core.StepContribution
 import org.springframework.batch.core.configuration.annotation.JobScope
@@ -13,7 +13,7 @@ import java.util.UUID
 
 @Component
 @JobScope
-class SuggestMicroserviceBoundariesTasklet(
+class InitializeProjectTasklet(
     private val commandBus: CommandBus,
     @Value("#{jobParameters['PROJECT_ID']}") private val projectId: UUID,
 ) : Tasklet {
@@ -22,7 +22,7 @@ class SuggestMicroserviceBoundariesTasklet(
         contribution: StepContribution,
         chunkContext: ChunkContext,
     ): RepeatStatus? {
-        commandBus(SuggestMicroserviceBoundariesCommand(projectId))
+        commandBus(InitializeProjectCommand(projectId))
 
         return RepeatStatus.FINISHED
     }
