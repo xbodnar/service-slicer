@@ -8,10 +8,12 @@ import cz.bodnor.serviceslicer.domain.projectsource.ZipFileProjectSource
 import cz.bodnor.serviceslicer.toUUID
 import io.kotest.inspectors.shouldForAll
 import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import java.nio.file.Path
 
+@Disabled("Tests require a project directory")
 class BuildDependencyGraphJavaParserTest(
     @Autowired private val graphBuilder: BuildDependencyGraphJavaParser,
     @Autowired private val projectRepository: ProjectRepository,

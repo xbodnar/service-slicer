@@ -4,10 +4,12 @@ import com.github.javaparser.JavaParser
 import cz.bodnor.serviceslicer.IntegrationTest
 import cz.bodnor.serviceslicer.application.module.graph.service.CollectCompilationUnits
 import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import kotlin.io.path.Path
 
+@Disabled("Tests require a project directory")
 class CollectSourcesTest(
     @Autowired private val underTest: CollectCompilationUnits,
 ) : IntegrationTest() {
