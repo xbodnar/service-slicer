@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.analysis.service
+package cz.bodnor.serviceslicer.application.module.job
 
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.JobParameters
