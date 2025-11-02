@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.project.service
+package cz.bodnor.serviceslicer.application.module.projectsource.service
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component

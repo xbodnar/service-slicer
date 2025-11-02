@@ -15,12 +15,15 @@ import java.util.UUID
 @Entity
 class File(
     id: UUID = UUID.randomUUID(),
+    // An empty string for directories
     val filename: String,
-    val mimeType: String,
     val expectedSize: Long,
     val contentHash: String,
-    val storageKey: String,
+    val mimeType: String,
 ) : UpdatableEntity(id) {
+
+    val storageKey: String = generateStorageKey(id, filename)
+
     @Enumerated(EnumType.STRING)
     var status: FileStatus = FileStatus.PENDING
         private set
@@ -33,6 +36,16 @@ class File(
     fun markAsFailed() {
         require(status == FileStatus.PENDING) { "File must be in PENDING status to mark as FAILED" }
         this.status = FileStatus.FAILED
+    }
+
+    companion object {
+        private fun generateStorageKey(
+            fileId: UUID,
+            filename: String,
+        ): String {
+            val sanitizedFilename = filename.replace("[^a-zA-Z0-9._-]".toRegex(), "_")
+            return "$fileId/$sanitizedFilename"
+        }
     }
 }
 

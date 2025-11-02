@@ -6,7 +6,7 @@ import cz.bodnor.serviceslicer.domain.project.ProjectRepository
 import org.springframework.stereotype.Service
 
 @Service
-class ProjectFinderService(
+class ProjectReadService(
     private val repository: ProjectRepository,
 ) : BaseFinderService<Project>(repository) {
 

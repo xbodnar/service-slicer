@@ -2,7 +2,7 @@ package cz.bodnor.serviceslicer.application.module.project
 
 import cz.bodnor.serviceslicer.application.module.analysis.service.AnalysisJobFinderService
 import cz.bodnor.serviceslicer.application.module.project.query.GetProjectQuery
-import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
+import cz.bodnor.serviceslicer.application.module.project.service.ProjectReadService
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeRepository
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryHandler
@@ -10,14 +10,14 @@ import org.springframework.stereotype.Component
 
 @Component
 class GetProjectQueryHandler(
-    private val projectFinderService: ProjectFinderService,
+    private val projectReadService: ProjectReadService,
     private val analysisJobFinderService: AnalysisJobFinderService,
     private val classNodeRepository: ClassNodeRepository,
 ) : QueryHandler<GetProjectQuery.Result, GetProjectQuery> {
     override val query = GetProjectQuery::class
 
     override fun handle(query: GetProjectQuery): GetProjectQuery.Result {
-        val project = projectFinderService.getById(query.projectId)
+        val project = projectReadService.getById(query.projectId)
 
         val analysisJob = analysisJobFinderService.getByProjectId(query.projectId)
 

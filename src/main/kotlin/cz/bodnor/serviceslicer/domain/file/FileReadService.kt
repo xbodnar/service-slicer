@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.domain.file
 
 import cz.bodnor.serviceslicer.application.common.BaseFinderService
 import org.springframework.stereotype.Service
-import kotlin.reflect.KClass
 
 @Service
 class FileReadService(

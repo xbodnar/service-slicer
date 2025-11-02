@@ -22,9 +22,6 @@
             <column name="expected_size" type="bigint">
                 <constraints nullable="false"/>
             </column>
-            <column name="actual_size" type="bigint">
-                <constraints nullable="true"/>
-            </column>
             <column name="storage_key" type="varchar(512)">
                 <constraints nullable="false" unique="true"/>
             </column>
@@ -49,10 +46,6 @@
         <createIndex indexName="idx_file_storage_key" tableName="file">
             <column name="storage_key"/>
         </createIndex>
-    </changeSet>
-
-    <changeSet id="drop-actual-size-column" author="Norbert Bodnar">
-        <dropColumn tableName="actual_size"/>
     </changeSet>
 
 </databaseChangeLog>

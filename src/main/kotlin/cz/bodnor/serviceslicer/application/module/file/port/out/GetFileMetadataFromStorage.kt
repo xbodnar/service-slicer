@@ -1,7 +1,5 @@
 package cz.bodnor.serviceslicer.application.module.file.port.out
 
-import java.util.UUID
-
 interface GetFileMetadataFromStorage {
 
     data class Result(

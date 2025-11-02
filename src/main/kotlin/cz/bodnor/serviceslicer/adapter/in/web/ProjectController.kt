@@ -1,8 +1,6 @@
 package cz.bodnor.serviceslicer.adapter.`in`.web
 
-import cz.bodnor.serviceslicer.adapter.`in`.web.requests.CreateProjectFromGitRequest
-import cz.bodnor.serviceslicer.adapter.`in`.web.requests.CreateProjectFromJarRequest
-import cz.bodnor.serviceslicer.adapter.`in`.web.requests.CreateProjectFromZipRequest
+import cz.bodnor.serviceslicer.adapter.`in`.web.requests.CreateProjectRequest
 import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependencyGraphCommand
 import cz.bodnor.serviceslicer.application.module.analysis.command.RestartFailedAnalysisCommand
 import cz.bodnor.serviceslicer.application.module.project.query.GetProjectQuery
@@ -22,15 +20,8 @@ class ProjectController(
     private val commandBus: CommandBus,
     private val queryBus: QueryBus,
 ) {
-
-    @PostMapping("/zip")
-    fun createFromZip(@RequestBody request: CreateProjectFromZipRequest) = commandBus(request.toCommand())
-
-    @PostMapping("/git")
-    fun createFromGit(@RequestBody request: CreateProjectFromGitRequest) = commandBus(request.toCommand())
-
-    @PostMapping("/jar")
-    fun createFromJar(@RequestBody request: CreateProjectFromJarRequest) = commandBus(request.toCommand())
+    @PostMapping
+    fun createProject(@RequestBody body: CreateProjectRequest) = commandBus(body.toCommand())
 
     @GetMapping("/{projectId}")
     fun getProject(@PathVariable projectId: UUID): GetProjectQuery.Result =

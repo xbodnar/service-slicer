@@ -3,12 +3,8 @@ package cz.bodnor.serviceslicer.application.module.file
 import cz.bodnor.serviceslicer.application.module.file.command.CompleteFileUploadCommand
 import cz.bodnor.serviceslicer.application.module.file.port.out.GetFileMetadataFromStorage
 import cz.bodnor.serviceslicer.domain.file.FileReadService
-import cz.bodnor.serviceslicer.domain.file.FileRepository
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
-import io.minio.MinioClient
-import io.minio.StatObjectArgs
 import jakarta.transaction.Transactional
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
 
 @Component

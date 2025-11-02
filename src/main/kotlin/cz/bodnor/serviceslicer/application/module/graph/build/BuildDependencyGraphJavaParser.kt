@@ -10,14 +10,10 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
 import cz.bodnor.serviceslicer.application.module.graph.service.CollectCompilationUnits
 import cz.bodnor.serviceslicer.application.module.graph.service.WeightedReference
 import cz.bodnor.serviceslicer.application.module.graph.service.WeightedReferencedTypeCollector
-import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
-import cz.bodnor.serviceslicer.application.module.projectsource.ProjectSourceFinderService
+import cz.bodnor.serviceslicer.application.module.project.service.ProjectReadService
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeType
-import cz.bodnor.serviceslicer.domain.projectsource.GitProjectSource
-import cz.bodnor.serviceslicer.domain.projectsource.ProjectSource
-import cz.bodnor.serviceslicer.domain.projectsource.SourceType
-import cz.bodnor.serviceslicer.domain.projectsource.ZipFileProjectSource
+import cz.bodnor.serviceslicer.domain.projectsource.ProjectSourceReadService
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import org.springframework.stereotype.Component
 import java.nio.file.Path
@@ -26,25 +22,18 @@ import java.util.UUID
 @Component
 class BuildDependencyGraphJavaParser(
     private val collectCompilationUnits: CollectCompilationUnits,
-    private val projectFinderService: ProjectFinderService,
-    private val projectSourceFinderService: ProjectSourceFinderService,
+    private val projectReadService: ProjectReadService,
+    private val projectSourceReadService: ProjectSourceReadService,
 ) : BuildDependencyGraph {
 
     private val logger = logger()
 
     override fun invoke(projectId: UUID): BuildDependencyGraph.Graph {
-        val project = projectFinderService.getById(projectId)
-        val projectSource = projectSourceFinderService.getByProjectId(project.id)
+        val project = projectReadService.getById(projectId)
+        val projectSource = projectSourceReadService.getById(project.projectSourceId)
 
-        require(projectSource.isInitialized()) {
-            "Project source must be initialized before building dependency graph (projectId: $projectId)"
-        }
-
-        require(projectSource.sourceType in setOf(SourceType.ZIP, SourceType.GIT)) {
-            "Only ZIP and GitHub projects are supported (projectId: $projectId)"
-        }
-
-        val projectRoot = projectSource.getProjectRoot()
+        // TODO: Download project source to tmp dir
+        val projectRoot = Path.of("src/test/resources/petclinic")
 
         val javaParser = buildParser(projectRoot)
 
@@ -89,8 +78,6 @@ class BuildDependencyGraphJavaParser(
         )
     }
 
-    override fun supportedSourceTypes(): Set<SourceType> = setOf(SourceType.ZIP, SourceType.GIT)
-
     private fun ClassOrInterfaceDeclaration.toEmptyClassNode(projectId: UUID): ClassNode {
         val referenceType = this.resolve()
         val fqn = referenceType.qualifiedName
@@ -120,15 +107,5 @@ class BuildDependencyGraphJavaParser(
         parserConfig.setSymbolResolver(javaSymbolSolver)
 
         return JavaParser(parserConfig)
-    }
-
-    private fun ProjectSource.getProjectRoot(): Path = when (this) {
-        is ZipFileProjectSource -> this.projectRootPath!!.resolve(this.projectRootRelativePath)
-
-        is GitProjectSource -> this.projectRootPath!!.resolve(this.projectRootRelativePath)
-
-        else -> error(
-            "JAR projects are not supported for building with JavaParser dependency graph (projectId: $projectId)",
-        )
     }
 }

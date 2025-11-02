@@ -1,31 +1,36 @@
 package cz.bodnor.serviceslicer.application.module.graph.build
 
+import cz.bodnor.serviceslicer.application.module.file.port.out.DownloadFileFromStorage
 import cz.bodnor.serviceslicer.application.module.graph.service.DotGraphParser
 import cz.bodnor.serviceslicer.application.module.graph.service.JdepsService
-import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
-import cz.bodnor.serviceslicer.application.module.projectsource.ProjectSourceFinderService
+import cz.bodnor.serviceslicer.application.module.project.service.ProjectReadService
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeType
-import cz.bodnor.serviceslicer.domain.projectsource.JarProjectSource
-import cz.bodnor.serviceslicer.domain.projectsource.SourceType
+import cz.bodnor.serviceslicer.domain.file.FileReadService
+import cz.bodnor.serviceslicer.domain.projectsource.ProjectSourceReadService
 import org.springframework.stereotype.Component
 import java.util.UUID
 
 @Component
 class BuildDependencyGraphJdeps(
-    private val projectFinderService: ProjectFinderService,
-    private val projectSourceFinderService: ProjectSourceFinderService,
+    private val projectReadService: ProjectReadService,
+    private val projectSourceReadService: ProjectSourceReadService,
+    private val fileReadService: FileReadService,
+    private val downloadFileFromStorage: DownloadFileFromStorage,
     private val jdepsService: JdepsService,
 ) : BuildDependencyGraph {
 
     override fun invoke(projectId: UUID): BuildDependencyGraph.Graph {
-        val project = projectFinderService.getById(projectId)
-        val projectSource = projectSourceFinderService.getByProjectId(projectId)
-        require(projectSource is JarProjectSource) { "Only JAR projects are supported for jdeps analysis" }
+        val project = projectReadService.getById(projectId)
+        val projectSource = projectSourceReadService.getById(project.projectSourceId)
+        val jarFile = fileReadService.getById(projectSource.jarFileId)
+
+        // TODO: Donwload JAR file to tmp dir
+        val jarFilePath = downloadFileFromStorage(jarFile.storageKey)
 
         // Run jdeps on the JAR file and get the output .dot file
         val dotFile = jdepsService.execute(
-            jarFile = projectSource.jarFilePath,
+            jarFile = jarFilePath,
             basePackageName = project.basePackageName,
             excludePackages = project.excludePackages,
         )
@@ -52,6 +57,4 @@ class BuildDependencyGraphJdeps(
             nodes = nodes.values.toList(),
         )
     }
-
-    override fun supportedSourceTypes(): Set<SourceType> = setOf(SourceType.JAR)
 }

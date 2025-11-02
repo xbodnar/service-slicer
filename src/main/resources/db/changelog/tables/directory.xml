@@ -4,11 +4,13 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <changeSet id="0" author="bodnar">
-        <createTable tableName="project_source">
-            <!-- Creatable entity -->
+    <changeSet id="create-table" author="Norbert Bodnar">
+        <createTable tableName="directory">
             <column name="id" type="uuid">
                 <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="storage_key" type="varchar(512)">
+                <constraints nullable="false" unique="true"/>
             </column>
             <column name="version" type="int">
                 <constraints nullable="false"/>
@@ -16,12 +18,6 @@
             <column name="created_at" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
-
-            <!-- Entity -->
-            <column name="jar_file_id" type="uuid">
-                <constraints nullable="false"/>
-            </column>
-            <column name="project_dir_id" type="uuid"/>
         </createTable>
     </changeSet>
 </databaseChangeLog>

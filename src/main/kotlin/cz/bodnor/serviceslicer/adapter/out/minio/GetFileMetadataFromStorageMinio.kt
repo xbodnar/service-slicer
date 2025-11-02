@@ -1,10 +1,7 @@
 package cz.bodnor.serviceslicer.adapter.out.minio
 
 import cz.bodnor.serviceslicer.application.module.file.port.out.GetFileMetadataFromStorage
-import cz.bodnor.serviceslicer.domain.file.FileReadService
-import io.minio.StatObjectArgs
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 class GetFileMetadataFromStorageMinio(

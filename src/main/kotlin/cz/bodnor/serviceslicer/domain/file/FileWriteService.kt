@@ -13,7 +13,6 @@ class FileWriteService(
         mimeType: String,
         expectedSize: Long,
         contentHash: String,
-        storageKey: String,
     ): File = repository.save(
         File(
             id = UUID.randomUUID(),
@@ -21,7 +20,6 @@ class FileWriteService(
             mimeType = mimeType,
             expectedSize = expectedSize,
             contentHash = contentHash,
-            storageKey = storageKey,
         ),
     )
 }
