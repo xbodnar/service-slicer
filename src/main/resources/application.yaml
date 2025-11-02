@@ -29,6 +29,13 @@ spring:
 app:
   workdir: data
 
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket-name: serviceslicer
+  presigned-url-expiration: 3600
+
 logging:
   level:
     cz.bodnor.serviceslicer: INFO
