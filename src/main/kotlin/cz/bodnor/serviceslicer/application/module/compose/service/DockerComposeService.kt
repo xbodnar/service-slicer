@@ -4,18 +4,25 @@ import cz.bodnor.serviceslicer.infrastructure.config.logger
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestClient
 import java.nio.file.Path
+import java.time.Clock
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds
 
 @Service
 class DockerComposeService {
 
-    private val restClient = RestClient.create()
+    private val restClient = RestClient.builder().baseUrl("http://localhost:9090").build()
+
+    private val clock = Clock.systemUTC()
+
+    private val retryInterval = 5.seconds
 
     private val log = logger()
 
     fun runAndValidate(
         composeFilePath: Path,
         healthCheckUrl: String,
+        startupTimeoutSeconds: Int,
     ): Boolean {
         val composeDir = composeFilePath.parent
         val composeFileName = composeFilePath.fileName.toString()
@@ -28,21 +35,26 @@ class DockerComposeService {
                 command = listOf("docker", "compose", "-f", composeFileName, "up", "-d"),
             )
 
-            // Wait for services to start
-            Thread.sleep(5000)
+            val startTime = clock.instant().epochSecond
+            var isHealthy = false
+            // Try health until timeout is reached
+            do {
+                Thread.sleep(retryInterval.inWholeMilliseconds)
 
-            // Check health
-            log.info("Checking health at $healthCheckUrl")
-            val isHealthy = try {
-                val response = restClient.get()
-                    .uri(healthCheckUrl)
-                    .retrieve()
-                    .toBodilessEntity()
-                response.statusCode.is2xxSuccessful
-            } catch (e: Exception) {
-                log.error("Health check failed", e)
-                false
-            }
+                val timeElapsed = clock.instant().epochSecond - startTime
+
+                log.info("Checking health at $healthCheckUrl after $timeElapsed seconds")
+                isHealthy = try {
+                    val response = restClient.get()
+                        .uri(healthCheckUrl)
+                        .retrieve()
+                        .toBodilessEntity()
+                    response.statusCode.is2xxSuccessful
+                } catch (e: Exception) {
+                    false
+                }
+                log.info("Health check result: $isHealthy")
+            } while (!isHealthy && timeElapsed < startupTimeoutSeconds)
 
             return isHealthy
         } finally {

@@ -2,6 +2,7 @@ package cz.bodnor.serviceslicer.application.module.compose.command
 
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import org.springframework.web.multipart.MultipartFile
+import java.nio.file.Path
 import java.util.UUID
 
 data class UploadComposeFileCommand(
@@ -16,7 +17,9 @@ data class UploadComposeFileCommand(
 }
 
 data class RunAndValidateComposeCommand(
-    val composeFileId: UUID,
+    val composeFilePath: Path,
+    val healthCheckUrl: String,
+    val startupTimeoutSeconds: Int,
 ) : Command<RunAndValidateComposeCommand.Result> {
 
     data class Result(
