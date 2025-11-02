@@ -15,11 +15,10 @@ class RunAndValidateComposeCommandHandler(
     override val command = RunAndValidateComposeCommand::class
 
     override fun handle(command: RunAndValidateComposeCommand): RunAndValidateComposeCommand.Result {
-        val composeFile = composeFileFinderService.getById(command.composeFileId)
-
         val isHealthy = dockerComposeService.runAndValidate(
-            composeFilePath = TODO(),
-            healthCheckUrl = composeFile.healthCheckUrl,
+            composeFilePath = command.composeFilePath,
+            healthCheckUrl = command.healthCheckUrl,
+            startupTimeoutSeconds = command.startupTimeoutSeconds,
         )
 
         return RunAndValidateComposeCommand.Result(
