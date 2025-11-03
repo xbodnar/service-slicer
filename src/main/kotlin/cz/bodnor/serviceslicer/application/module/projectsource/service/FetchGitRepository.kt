@@ -3,14 +3,10 @@ package cz.bodnor.serviceslicer.application.module.projectsource.service
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.apache.juli.logging.Log
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.TextProgressMonitor
 import org.springframework.stereotype.Component
-import java.io.OutputStreamWriter
-import java.io.PrintWriter
 import java.io.Writer
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
