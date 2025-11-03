@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,6 +19,42 @@ jobs:
           java-version: 21
           cache: maven
 
-      # If your repo has the Maven Wrapper, prefer it:
+      - name: Compile source code
+        run: ./mvnw -B -ntp clean compile
+
+      - name: Run ktlint check
+        run: ./mvnw -B -ntp ktlint:check
+
+  build-tests:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Compile test sources
+        run: ./mvnw -B -ntp test-compile
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
       - name: Run tests
-        run: ./mvnw -B -ntp -DskipITs=false test
+        run: ./mvnw -B -ntp test
