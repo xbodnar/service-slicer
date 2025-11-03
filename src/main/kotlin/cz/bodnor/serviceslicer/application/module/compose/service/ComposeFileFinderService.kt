@@ -1,6 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.compose.service
 
-import cz.bodnor.serviceslicer.application.common.BaseFinderService
+import cz.bodnor.serviceslicer.domain.common.BaseFinderService
 import cz.bodnor.serviceslicer.domain.compose.ComposeFile
 import cz.bodnor.serviceslicer.domain.compose.ComposeFileRepository
 import org.springframework.stereotype.Service

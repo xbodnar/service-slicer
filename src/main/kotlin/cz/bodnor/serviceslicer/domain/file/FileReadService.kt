@@ -1,6 +1,6 @@
 package cz.bodnor.serviceslicer.domain.file
 
-import cz.bodnor.serviceslicer.application.common.BaseFinderService
+import cz.bodnor.serviceslicer.domain.common.BaseFinderService
 import org.springframework.stereotype.Service
 
 @Service
