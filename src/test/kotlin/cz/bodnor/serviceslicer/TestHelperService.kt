@@ -11,6 +11,7 @@ class TestHelperService(
 ) {
     fun getProject(
         id: UUID = UUID.randomUUID(),
+        projectSourceId: UUID = UUID.randomUUID(),
         name: String = "test",
         basePackageName: String = "cz.bodnor.serviceslicer",
         entityModifier: (Project) -> Unit = {},
@@ -20,6 +21,7 @@ class TestHelperService(
             name = name,
             basePackageName = basePackageName,
             excludePackages = emptyList(),
+            projectSourceId = UUID.randomUUID(),
         ).also(entityModifier),
     )
 }

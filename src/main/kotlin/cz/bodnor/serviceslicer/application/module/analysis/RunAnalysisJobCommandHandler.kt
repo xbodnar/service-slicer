@@ -1,8 +1,8 @@
 package cz.bodnor.serviceslicer.application.module.analysis
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.RunAnalysisJobCommand
-import cz.bodnor.serviceslicer.application.module.analysis.service.JobLauncherService
 import cz.bodnor.serviceslicer.application.module.job.JobContainer
+import cz.bodnor.serviceslicer.application.module.job.JobLauncherService
 import cz.bodnor.serviceslicer.domain.analysis.job.AnalysisJobCreateService
 import cz.bodnor.serviceslicer.domain.job.JobParameterLabel
 import cz.bodnor.serviceslicer.domain.job.JobType

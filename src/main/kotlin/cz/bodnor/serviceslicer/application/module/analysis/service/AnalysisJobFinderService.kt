@@ -1,8 +1,8 @@
 package cz.bodnor.serviceslicer.application.module.analysis.service
 
-import cz.bodnor.serviceslicer.application.common.BaseFinderService
 import cz.bodnor.serviceslicer.domain.analysis.job.AnalysisJob
 import cz.bodnor.serviceslicer.domain.analysis.job.AnalysisJobRepository
+import cz.bodnor.serviceslicer.domain.common.BaseFinderService
 import org.springframework.stereotype.Service
 import java.util.UUID
 

@@ -21,6 +21,8 @@ class Project(
     // Used to exclude some packages from the final dependency graph, for example generated classes
     @JdbcTypeCode(SqlTypes.JSON)
     val excludePackages: List<String>,
+    // ID of the project source
+    val projectSourceId: UUID,
 ) : UpdatableEntity(id)
 
 @Repository

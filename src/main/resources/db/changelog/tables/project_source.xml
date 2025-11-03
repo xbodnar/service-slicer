@@ -18,27 +18,10 @@
             </column>
 
             <!-- Entity -->
-            <column name="source_type" type="text">
+            <column name="jar_file_id" type="uuid">
                 <constraints nullable="false"/>
             </column>
-            <column name="project_id" type="uuid">
-                <constraints nullable="false"/>
-            </column>
-            <column name="dtype" type="text">
-                <constraints nullable="false"/>
-            </column>
-            <column name="project_root_relative_path" type="text"/>
-            <column name="project_root_path" type="text"/>
-
-            <!-- GitHubProjectSource -->
-            <column name="repository_git_uri" type="text"/>
-            <column name="branch_name" type="text"/>
-
-            <!-- ZipFileProjectSource -->
-            <column name="zip_file_path" type="text"/>
-
-            <!-- JarProjectSource -->
-            <column name="jar_file_path" type="text"/>
+            <column name="project_dir_id" type="uuid"/>
         </createTable>
     </changeSet>
 </databaseChangeLog>

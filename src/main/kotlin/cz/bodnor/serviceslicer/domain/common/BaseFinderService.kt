@@ -1,6 +1,5 @@
-package cz.bodnor.serviceslicer.application.common
+package cz.bodnor.serviceslicer.domain.common
 
-import cz.bodnor.serviceslicer.domain.common.DomainEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.repository.NoRepositoryBean
 import org.springframework.data.repository.findByIdOrNull

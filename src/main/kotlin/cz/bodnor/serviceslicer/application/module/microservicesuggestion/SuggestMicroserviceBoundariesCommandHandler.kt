@@ -2,7 +2,7 @@ package cz.bodnor.serviceslicer.application.module.microservicesuggestion
 
 import cz.bodnor.serviceslicer.application.module.analysis.command.SuggestMicroserviceBoundariesCommand
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.service.CommunityDetectionService
-import cz.bodnor.serviceslicer.application.module.project.service.ProjectFinderService
+import cz.bodnor.serviceslicer.application.module.project.service.ProjectReadService
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeRepository
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.slf4j.LoggerFactory
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class SuggestMicroserviceBoundariesCommandHandler(
-    private val projectFinderService: ProjectFinderService,
+    private val projectReadService: ProjectReadService,
     private val classNodeRepository: ClassNodeRepository,
     private val communityDetectionService: CommunityDetectionService,
 ) : CommandHandler<Unit, SuggestMicroserviceBoundariesCommand> {
@@ -20,7 +20,7 @@ class SuggestMicroserviceBoundariesCommandHandler(
     override val command = SuggestMicroserviceBoundariesCommand::class
 
     override fun handle(command: SuggestMicroserviceBoundariesCommand) {
-        val project = projectFinderService.getById(command.projectId)
+        val project = projectReadService.getById(command.projectId)
         val projectGraph = classNodeRepository.findAllByProjectId(command.projectId)
 
         require(projectGraph.size > 10) { "Project must have at least 10 classes" }

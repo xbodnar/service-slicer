@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.graph.build
 
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
-import cz.bodnor.serviceslicer.domain.projectsource.SourceType
 import java.util.UUID
 
 interface BuildDependencyGraph {
@@ -11,6 +10,4 @@ interface BuildDependencyGraph {
     )
 
     operator fun invoke(projectId: UUID): Graph
-
-    fun supportedSourceTypes(): Set<SourceType>
 }
