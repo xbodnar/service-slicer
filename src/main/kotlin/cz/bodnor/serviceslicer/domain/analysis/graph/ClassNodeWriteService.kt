@@ -1,17 +1,13 @@
 package cz.bodnor.serviceslicer.domain.analysis.graph
 
 import cz.bodnor.serviceslicer.infrastructure.config.logger
-import org.springframework.data.neo4j.core.Neo4jClient
-import org.springframework.data.neo4j.core.Neo4jTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
-class ClassNodeCreateService(
+class ClassNodeWriteService(
     private val repository: ClassNodeRepository,
-    private val neo4jTemplate: Neo4jTemplate,
-    private val neo4jClient: Neo4jClient,
 ) {
 
     private val logger = logger()
@@ -29,5 +25,10 @@ class ClassNodeCreateService(
         repository.deleteAllByProjectId(projectId)
 
         this.create(classNodes)
+    }
+
+    @Transactional
+    fun update(node: ClassNode) {
+        repository.save(node)
     }
 }

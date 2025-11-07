@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.domain.analysis.suggestion
+package cz.bodnor.serviceslicer.domain.analysis.decomposition
 
 import jakarta.persistence.Embeddable
 

@@ -7,7 +7,7 @@ import java.util.UUID
 import kotlin.test.Test
 
 class ClassNodeCreateServiceTest(
-    @Autowired val classNodeCreateService: ClassNodeCreateService,
+    @Autowired val classNodeWriteService: ClassNodeWriteService,
     @Autowired val classNodeRepository: ClassNodeRepository,
 ) : IntegrationTest() {
 
@@ -42,7 +42,7 @@ class ClassNodeCreateServiceTest(
         b.addDependency(target = c, weight = 3)
 
         // When
-        classNodeCreateService.create(listOf(a, b, c))
+        classNodeWriteService.create(listOf(a, b, c))
 
         // Then
         val savedNodes = classNodeRepository.findAllByProjectId(projectId)

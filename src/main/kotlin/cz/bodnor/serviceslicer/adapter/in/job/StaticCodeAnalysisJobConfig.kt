@@ -1,7 +1,9 @@
 package cz.bodnor.serviceslicer.adapter.`in`.job
 
+import cz.bodnor.serviceslicer.adapter.`in`.job.batch.ActorDrivenDecompositionTasklet
 import cz.bodnor.serviceslicer.adapter.`in`.job.batch.BuildDependencyGraphTasklet
-import cz.bodnor.serviceslicer.adapter.`in`.job.batch.SuggestMicroserviceBoundariesTasklet
+import cz.bodnor.serviceslicer.adapter.`in`.job.batch.DetectGraphCommunitiesTasklet
+import cz.bodnor.serviceslicer.adapter.`in`.job.batch.DomainDrivenDecompositionTasklet
 import cz.bodnor.serviceslicer.domain.job.JobType
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.job.builder.JobBuilder
@@ -16,7 +18,9 @@ class StaticCodeAnalysisJobConfig(
     private val jobRepository: JobRepository,
     private val txManager: PlatformTransactionManager,
     private val buildDependencyGraphTasklet: BuildDependencyGraphTasklet,
-    private val suggestMicroserviceBoundariesTasklet: SuggestMicroserviceBoundariesTasklet,
+    private val detectGraphCommunitiesTasklet: DetectGraphCommunitiesTasklet,
+    private val domainDrivenDecompositionTasklet: DomainDrivenDecompositionTasklet,
+    private val actorDrivenDecompositionTasklet: ActorDrivenDecompositionTasklet,
 ) {
 
     @Bean
@@ -25,13 +29,25 @@ class StaticCodeAnalysisJobConfig(
         .build()
 
     @Bean
-    fun suggestMicroserviceBoundariesStep() = StepBuilder("SUGGEST_MICROSERVICE_BOUNDARIES_STEP", jobRepository)
-        .tasklet(suggestMicroserviceBoundariesTasklet, txManager)
+    fun detectGraphCommunitiesStep() = StepBuilder("DETECT_GRAPH_COMMUNITIES_STEP", jobRepository)
+        .tasklet(detectGraphCommunitiesTasklet, txManager)
+        .build()
+
+    @Bean
+    fun domainDrivenDecompositionStep() = StepBuilder("DOMAIN_DRIVEN_DECOMPOSITION_STEP", jobRepository)
+        .tasklet(domainDrivenDecompositionTasklet, txManager)
+        .build()
+
+    @Bean
+    fun actorDrivenDecompositionStep() = StepBuilder("ACTOR_DRIVEN_DECOMPOSITION_STEP", jobRepository)
+        .tasklet(actorDrivenDecompositionTasklet, txManager)
         .build()
 
     @Bean
     fun staticCodeAnalysisJob(): Job = JobBuilder(JobType.STATIC_CODE_ANALYSIS.name, jobRepository)
         .start(buildDependencyGraphStep())
-        .next(suggestMicroserviceBoundariesStep())
+        .next(detectGraphCommunitiesStep())
+        .next(domainDrivenDecompositionStep())
+        .next(actorDrivenDecompositionStep())
         .build()
 }

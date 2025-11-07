@@ -1,6 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.microservicesuggestion
 
-import cz.bodnor.serviceslicer.application.module.analysis.command.SuggestMicroserviceBoundariesCommand
+import cz.bodnor.serviceslicer.application.module.analysis.command.DetectGraphCommunitiesCommand
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.service.CommunityDetectionService
 import cz.bodnor.serviceslicer.application.module.project.service.ProjectReadService
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeRepository
@@ -9,17 +9,17 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
-class SuggestMicroserviceBoundariesCommandHandler(
+class DetectGraphCommunitiesCommandHandler(
     private val projectReadService: ProjectReadService,
     private val classNodeRepository: ClassNodeRepository,
     private val communityDetectionService: CommunityDetectionService,
-) : CommandHandler<Unit, SuggestMicroserviceBoundariesCommand> {
+) : CommandHandler<Unit, DetectGraphCommunitiesCommand> {
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    override val command = SuggestMicroserviceBoundariesCommand::class
+    override val command = DetectGraphCommunitiesCommand::class
 
-    override fun handle(command: SuggestMicroserviceBoundariesCommand) {
+    override fun handle(command: DetectGraphCommunitiesCommand) {
         val project = projectReadService.getById(command.projectId)
         val projectGraph = classNodeRepository.findAllByProjectId(command.projectId)
 

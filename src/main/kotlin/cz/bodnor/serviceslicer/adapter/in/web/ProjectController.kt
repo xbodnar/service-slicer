@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.adapter.`in`.web
 
 import cz.bodnor.serviceslicer.adapter.`in`.web.requests.CreateProjectRequest
 import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependencyGraphCommand
-import cz.bodnor.serviceslicer.application.module.analysis.command.RestartFailedAnalysisCommand
 import cz.bodnor.serviceslicer.application.module.project.query.GetProjectQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryBus
@@ -31,8 +30,4 @@ class ProjectController(
     fun rebuildGraph(@PathVariable projectId: UUID) {
         commandBus(BuildDependencyGraphCommand(projectId = projectId))
     }
-
-    @PostMapping("/{projectId}/analysis/restart")
-    fun restartFailedJob(@PathVariable projectId: UUID): RestartFailedAnalysisCommand.Result =
-        commandBus(RestartFailedAnalysisCommand(projectId = projectId))
 }
