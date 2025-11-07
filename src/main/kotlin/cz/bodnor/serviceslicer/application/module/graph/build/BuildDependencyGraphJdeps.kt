@@ -26,7 +26,7 @@ class BuildDependencyGraphJdeps(
         val jarFile = fileReadService.getById(projectSource.jarFileId)
 
         // TODO: Donwload JAR file to tmp dir
-        val jarFilePath = downloadFileFromStorage(jarFile.storageKey)
+        val jarFilePath = downloadFileFromStorage(jarFile.storageKey, ".jar")
 
         // Run jdeps on the JAR file and get the output .dot file
         val dotFile = jdepsService.execute(

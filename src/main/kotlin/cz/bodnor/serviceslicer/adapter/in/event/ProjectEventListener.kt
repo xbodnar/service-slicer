@@ -1,7 +1,8 @@
 package cz.bodnor.serviceslicer.adapter.`in`.event
 
-import cz.bodnor.serviceslicer.application.module.analysis.command.RunAnalysisJobCommand
+import cz.bodnor.serviceslicer.application.module.analysis.command.RunJobCommand
 import cz.bodnor.serviceslicer.application.module.project.event.ProjectCreatedEvent
+import cz.bodnor.serviceslicer.domain.job.JobType
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
@@ -16,6 +17,11 @@ class ProjectEventListener(
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun onProjectCreatedEvent(event: ProjectCreatedEvent) {
-        commandBus(RunAnalysisJobCommand(event.projectId))
+        commandBus(
+            RunJobCommand(
+                projectId = event.projectId,
+                jobType = JobType.STATIC_CODE_ANALYSIS, // Start with static analysis
+            ),
+        )
     }
 }

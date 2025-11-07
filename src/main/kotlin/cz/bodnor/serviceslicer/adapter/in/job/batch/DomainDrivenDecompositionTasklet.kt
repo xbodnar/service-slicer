@@ -1,6 +1,7 @@
 package cz.bodnor.serviceslicer.adapter.`in`.job.batch
 
-import cz.bodnor.serviceslicer.application.module.analysis.command.SuggestMicroserviceBoundariesCommand
+import cz.bodnor.serviceslicer.application.module.analysis.DomainDecompositionType
+import cz.bodnor.serviceslicer.application.module.analysis.command.DomainExpertDecompositionCommand
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.batch.core.StepContribution
 import org.springframework.batch.core.configuration.annotation.JobScope
@@ -13,7 +14,7 @@ import java.util.UUID
 
 @Component
 @JobScope
-class SuggestMicroserviceBoundariesTasklet(
+class DomainDrivenDecompositionTasklet(
     private val commandBus: CommandBus,
     @Value("#{jobParameters['PROJECT_ID']}") private val projectId: UUID,
 ) : Tasklet {
@@ -21,8 +22,8 @@ class SuggestMicroserviceBoundariesTasklet(
     override fun execute(
         contribution: StepContribution,
         chunkContext: ChunkContext,
-    ): RepeatStatus? {
-        commandBus(SuggestMicroserviceBoundariesCommand(projectId))
+    ): RepeatStatus {
+        commandBus(DomainExpertDecompositionCommand(projectId, DomainDecompositionType.DOMAIN_DRIVEN))
 
         return RepeatStatus.FINISHED
     }

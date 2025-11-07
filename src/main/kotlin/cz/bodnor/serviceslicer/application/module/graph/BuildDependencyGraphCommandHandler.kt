@@ -4,7 +4,7 @@ import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependen
 import cz.bodnor.serviceslicer.application.module.graph.build.BuildDependencyGraphJdeps
 import cz.bodnor.serviceslicer.application.module.graph.service.CollectCompilationUnits
 import cz.bodnor.serviceslicer.application.module.project.service.ProjectReadService
-import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeCreateService
+import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeWriteService
 import cz.bodnor.serviceslicer.domain.projectsource.ProjectSourceReadService
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component
 class BuildDependencyGraphCommandHandler(
     private val projectReadService: ProjectReadService,
     private val projectSourceReadService: ProjectSourceReadService,
-    private val classNodeCreateService: ClassNodeCreateService,
+    private val classNodeWriteService: ClassNodeWriteService,
     private val collectCompilationUnits: CollectCompilationUnits,
     private val buildDependencyGraphJdeps: BuildDependencyGraphJdeps,
 ) : CommandHandler<Unit, BuildDependencyGraphCommand> {
@@ -30,7 +30,7 @@ class BuildDependencyGraphCommandHandler(
 
         val graph = buildDependencyGraphJdeps(projectId = command.projectId)
 
-        classNodeCreateService.replaceGraph(command.projectId, graph.nodes)
+        classNodeWriteService.replaceGraph(command.projectId, graph.nodes)
 
         logger.info("Successfully created graph for project: ${command.projectId}")
     }

@@ -36,12 +36,9 @@ class SuggestServiceBoundaryNamesAi(
         )
 
         val response = chatClient.prompt(prompt).call()
-        val content = response.content() ?: throw IllegalStateException("No OpenAI response: ${response.content()}")
+        val content = response.content() ?: throw IllegalStateException("No AI response: ${response.content()}")
 
-        val result =
-            outputConverter.convert(content) ?: throw NullPointerException("Couldn't deserialize OpenAI response")
-
-        return result
+        return outputConverter.convert(content) ?: error("Couldn't deserialize OpenAI response")
     }
 }
 

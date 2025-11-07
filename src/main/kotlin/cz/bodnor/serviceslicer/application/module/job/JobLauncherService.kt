@@ -15,7 +15,7 @@ class JobLauncherService(
 
     @Async
     @Transactional(propagation = Propagation.NEVER)
-    fun launch(
+    fun launchAsync(
         job: Job,
         parameters: JobParameters,
     ) {

@@ -1,7 +1,6 @@
-package cz.bodnor.serviceslicer.domain.analysis.suggestion
+package cz.bodnor.serviceslicer.domain.analysis.decomposition
 
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
-import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -14,19 +13,19 @@ import java.util.UUID
  * Represents a microservice boundary suggestion generated from graph analysis
  */
 @Entity
-class MicroserviceSuggestion(
+class MonolithDecomposition(
     id: UUID = UUID.randomUUID(),
 
     /**
-     * The analysis job that generated this suggestion
+     * ID of the project this decomposition belongs to
      */
-    val analysisJobId: UUID,
+    val projectId: UUID,
 
     /**
      * The algorithm used to generate this suggestion
      */
     @Enumerated(EnumType.STRING)
-    val algorithm: BoundaryDetectionAlgorithm,
+    val algorithm: DecompositionApproach,
 
     /**
      * Overall modularity score for the entire decomposition (0.0 to 1.0)
@@ -35,33 +34,20 @@ class MicroserviceSuggestion(
     val modularityScore: Double,
 ) : UpdatableEntity(id) {
 
-    /**
-     * The suggested service boundaries
-     */
-    @OneToMany(mappedBy = "suggestion", cascade = [CascadeType.ALL], orphanRemoval = true)
-    var boundaries: MutableList<ServiceBoundary> = mutableListOf()
+    @OneToMany(mappedBy = "monolithDecompositionId")
+    var serviceBoundaries: MutableList<ServiceBoundary> = mutableListOf()
         private set
-
-    fun addBoundary(boundary: ServiceBoundary) {
-        boundaries.add(boundary)
-        boundary.suggestion = this
-    }
 }
 
 @Repository
-interface MicroserviceSuggestionRepository : JpaRepository<MicroserviceSuggestion, UUID> {
-    fun findByAnalysisJobId(analysisJobId: UUID): List<MicroserviceSuggestion>
+interface MonolithDecompositionRepository : JpaRepository<MonolithDecomposition, UUID> {
+    fun findByProjectId(projectId: UUID): List<MonolithDecomposition>
 }
 
 /**
  * Algorithm used to detect microservice boundaries
  */
-enum class BoundaryDetectionAlgorithm {
-    /**
-     * Groups classes by package structure
-     */
-    PACKAGE_BASED,
-
+enum class DecompositionApproach {
     /**
      * Label Propagation - Fast but non-deterministic community detection
      */
@@ -73,7 +59,22 @@ enum class BoundaryDetectionAlgorithm {
     COMMUNITY_DETECTION_LOUVAIN,
 
     /**
+     * Leiden - Similar to Louvain, but with additional optimizations
+     */
+    COMMUNITY_DETECTION_LEIDEN,
+
+    /**
      * Applies DDD heuristics to identify bounded contexts
      */
-    DOMAIN_DRIVEN_DESIGN,
+    DOMAIN_DRIVEN_DECOMPOSITION,
+
+    /**
+     * Applies actor-centered decomposition to identify user journeys
+     */
+    ACTOR_DRIVEN_DECOMPOSITION,
+
+    /**
+     * Custom/manual decomposition approach
+     */
+    CUSTOM,
 }

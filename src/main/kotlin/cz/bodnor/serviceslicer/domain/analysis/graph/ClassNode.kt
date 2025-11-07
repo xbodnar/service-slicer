@@ -29,6 +29,10 @@ class ClassNode(
 
     var communityLabelPropagation: Long? = null
 
+    var domainDrivenClusterId: String? = null
+
+    var actorDrivenClusterId: String? = null
+
     @Relationship(
         type = "DEPENDS_ON",
         direction = Relationship.Direction.OUTGOING,

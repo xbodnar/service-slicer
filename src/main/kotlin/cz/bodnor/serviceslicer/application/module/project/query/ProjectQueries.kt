@@ -1,6 +1,5 @@
 package cz.bodnor.serviceslicer.application.module.project.query
 
-import cz.bodnor.serviceslicer.domain.analysis.job.AnalysisJobStatus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.Query
 import java.util.UUID
 
@@ -13,8 +12,6 @@ data class GetProjectQuery(val projectId: UUID) : Query<GetProjectQuery.Result> 
     )
 
     data class AnalysisJobResult(
-        val analysisJobId: UUID,
-        val status: AnalysisJobStatus,
         val staticAnalysis: StaticAnalysisResult,
     )
 
@@ -23,6 +20,8 @@ data class GetProjectQuery(val projectId: UUID) : Query<GetProjectQuery.Result> 
         val labelPropagationAlgorithm: DecompositionResults,
         val louvainAlgorithm: DecompositionResults,
         val leidenAlgorithm: DecompositionResults,
+        val domainDrivenDecomposition: DecompositionResults,
+        val actorDrivenDecomposition: DecompositionResults,
     )
 
     data class GraphSummary(
@@ -32,6 +31,6 @@ data class GetProjectQuery(val projectId: UUID) : Query<GetProjectQuery.Result> 
 
     data class DecompositionResults(
 //        val metrics: CommunityMetrics? = null,        // e.g., modularity, iterations
-        val communities: Map<Long, List<String>>, // (communityId -> class FQN)
+        val communities: Map<String, List<String>>, // (communityId -> class FQN)
     )
 }

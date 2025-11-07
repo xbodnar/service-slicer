@@ -1,8 +1,8 @@
 package cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection
 
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.service.GraphAnalysisUtils
+import cz.bodnor.serviceslicer.domain.analysis.decomposition.DecompositionApproach
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
-import cz.bodnor.serviceslicer.domain.analysis.suggestion.BoundaryDetectionAlgorithm
 import org.jgrapht.alg.clustering.LabelPropagationClustering
 import org.jgrapht.graph.AsUndirectedGraph
 import kotlin.math.sqrt
@@ -13,7 +13,7 @@ class LabelPropagationCommunityDetectionStrategy(
     private val targetServiceCount: Int? = null,
 ) : CommunityDetectionStrategy {
 
-    override val algorithm = BoundaryDetectionAlgorithm.COMMUNITY_DETECTION_LABEL_PROPAGATION
+    override val algorithm = DecompositionApproach.COMMUNITY_DETECTION_LABEL_PROPAGATION
 
     override fun detect(classNodes: List<ClassNode>): CommunityDetectionStrategy.Result {
         // Auto-calculate target service count if not specified

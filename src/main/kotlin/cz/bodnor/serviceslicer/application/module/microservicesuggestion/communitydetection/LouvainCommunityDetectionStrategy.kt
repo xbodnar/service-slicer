@@ -1,8 +1,8 @@
 package cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection
 
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.service.GraphAnalysisUtils
+import cz.bodnor.serviceslicer.domain.analysis.decomposition.DecompositionApproach
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
-import cz.bodnor.serviceslicer.domain.analysis.suggestion.BoundaryDetectionAlgorithm
 import org.jgrapht.Graph
 import org.jgrapht.graph.AsUndirectedGraph
 import org.jgrapht.graph.DefaultEdge
@@ -28,7 +28,7 @@ class LouvainCommunityDetectionStrategy(
     private val resolution: Double = 1.0,
 ) : CommunityDetectionStrategy {
 
-    override val algorithm = BoundaryDetectionAlgorithm.COMMUNITY_DETECTION_LOUVAIN
+    override val algorithm = DecompositionApproach.COMMUNITY_DETECTION_LOUVAIN
 
     override fun detect(classNodes: List<ClassNode>): CommunityDetectionStrategy.Result {
         val directedGraph = GraphAnalysisUtils.toJGraphT(classNodes)
