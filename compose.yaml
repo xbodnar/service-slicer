@@ -33,5 +33,34 @@ services:
     volumes:
       - minio-data:/data
 
+  prometheus:
+    image: 'prom/prometheus:v3.0.1'
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-remote-write-receiver'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: 'grafana/grafana:11.3.1'
+    environment:
+      - 'GF_AUTH_ANONYMOUS_ENABLED=true'
+      - 'GF_AUTH_ANONYMOUS_ORG_ROLE=Admin'
+      - 'GF_AUTH_DISABLE_LOGIN_FORM=true'
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   minio-data:
+  grafana-data:
+  prometheus-data:
