@@ -3,6 +3,7 @@ package cz.bodnor.serviceslicer.application.module.file
 import cz.bodnor.serviceslicer.application.module.file.command.ExtractZipFileCommand
 import cz.bodnor.serviceslicer.application.module.file.port.out.DownloadFileFromStorage
 import cz.bodnor.serviceslicer.application.module.file.port.out.UploadDirectoryToStorage
+import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
 import cz.bodnor.serviceslicer.application.module.file.service.UnzipFile
 import cz.bodnor.serviceslicer.domain.file.DirectoryWriteService
 import cz.bodnor.serviceslicer.domain.file.FileReadService
@@ -12,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.deleteIfExists
 import kotlin.io.path.deleteRecursively
 
 @Component
@@ -22,6 +22,7 @@ class ExtractZipFileCommandHandler(
     private val downloadFileFromStorage: DownloadFileFromStorage,
     private val uploadDirectoryToStorage: UploadDirectoryToStorage,
     private val unzipFile: UnzipFile,
+    private val diskOperations: DiskOperations,
 ) :
     CommandHandler<ExtractZipFileCommand.Result, ExtractZipFileCommand> {
 
@@ -32,30 +33,26 @@ class ExtractZipFileCommandHandler(
     override fun handle(command: ExtractZipFileCommand): ExtractZipFileCommand.Result {
         val zipFile = fileReadService.getById(command.zipFileId)
 
-        var zipPath: Path? = null
-        var unzippedDir: Path? = null
+        return diskOperations.withFile(command.zipFileId) {
+            var unzippedDir: Path? = null
+            try {
+                // 1. Create directory to DB
+                val directory = directoryWriteService.create()
 
-        try {
-            // Create directory to DB
-            val directory = directoryWriteService.create()
+                // 2. Unzip to tmp dir
+                unzippedDir = Files.createTempDirectory("unzipped-${directory.id}")
+                unzipFile(it, unzippedDir)
 
-            // 1. Download ZIP file to tmp dir
-            zipPath = downloadFileFromStorage(zipFile.storageKey, ".zip")
+                // 3. Upload unzipped folder to MinIO
+                uploadDirectoryToStorage(unzippedDir, directory.storageKey)
 
-            // 2. Unzip to tmp dir
-            unzippedDir = Files.createTempDirectory("unzipped-${directory.id}")
-            unzipFile(zipPath, unzippedDir)
-
-            // 3. Upload unzipped folder to MinIO
-            uploadDirectoryToStorage(unzippedDir, directory.storageKey)
-
-            return ExtractZipFileCommand.Result(
-                dirId = directory.id,
-            )
-        } finally {
-            // 5. Delete zip and unzipped folder from tmp dir
-            zipPath?.deleteIfExists()
-            unzippedDir?.deleteRecursively()
+                return@withFile ExtractZipFileCommand.Result(
+                    dirId = directory.id,
+                )
+            } finally {
+                // 5. Delete unzipped folder from tmp dir
+                unzippedDir?.deleteRecursively()
+            }
         }
     }
 }
