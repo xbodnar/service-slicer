@@ -19,3 +19,22 @@ data class InitiateFileUploadCommand(
 data class CompleteFileUploadCommand(
     val fileId: UUID,
 ) : Command<Unit>
+
+data class ExtractZipFileCommand(
+    val zipFileId: UUID,
+) : Command<ExtractZipFileCommand.Result> {
+
+    data class Result(
+        val dirId: UUID,
+    )
+}
+
+data class FetchGitRepositoryCommand(
+    val repositoryUrl: String,
+    val branch: String,
+) : Command<FetchGitRepositoryCommand.Result> {
+
+    data class Result(
+        val dirId: UUID,
+    )
+}

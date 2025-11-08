@@ -1,10 +1,9 @@
-package cz.bodnor.serviceslicer.application.module.projectsource
+package cz.bodnor.serviceslicer.application.module.file
 
+import cz.bodnor.serviceslicer.application.module.file.command.FetchGitRepositoryCommand
 import cz.bodnor.serviceslicer.application.module.file.port.out.UploadDirectoryToStorage
-import cz.bodnor.serviceslicer.application.module.projectsource.command.CreateGitProjectSourceCommand
-import cz.bodnor.serviceslicer.application.module.projectsource.service.FetchGitRepository
+import cz.bodnor.serviceslicer.application.module.file.service.FetchGitRepository
 import cz.bodnor.serviceslicer.domain.file.DirectoryWriteService
-import cz.bodnor.serviceslicer.domain.projectsource.ProjectSourceWriteService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -13,19 +12,18 @@ import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.deleteRecursively
 
 @Component
-class CreateGitProjectSourceCommandHandler(
+class FetchGitRepositoryCommandHandler(
     private val fetchGitRepository: FetchGitRepository,
     private val directoryWriteService: DirectoryWriteService,
     private val uploadDirectoryToStorage: UploadDirectoryToStorage,
-    private val projectSourceWriteService: ProjectSourceWriteService,
 ) :
-    CommandHandler<CreateGitProjectSourceCommand.Result, CreateGitProjectSourceCommand> {
+    CommandHandler<FetchGitRepositoryCommand.Result, FetchGitRepositoryCommand> {
 
-    override val command = CreateGitProjectSourceCommand::class
+    override val command = FetchGitRepositoryCommand::class
 
     @OptIn(ExperimentalPathApi::class)
     @Transactional
-    override fun handle(command: CreateGitProjectSourceCommand): CreateGitProjectSourceCommand.Result {
+    override fun handle(command: FetchGitRepositoryCommand): FetchGitRepositoryCommand.Result {
         var gitRepoDir: Path? = null
 
         try {
@@ -41,14 +39,8 @@ class CreateGitProjectSourceCommandHandler(
             // 3. Upload git folder to MinIO
             uploadDirectoryToStorage(gitRepoDir, directory.storageKey)
 
-            // 4. Create project source to DB
-            val projectSource = projectSourceWriteService.create(
-                jarFileId = command.jarFileId,
-                projectDirId = directory.id,
-            )
-
-            return CreateGitProjectSourceCommand.Result(
-                projectSourceId = projectSource.id,
+            return FetchGitRepositoryCommand.Result(
+                dirId = directory.id,
             )
         } finally {
             // 5. Delete git folder from tmp dir

@@ -3,11 +3,13 @@ package cz.bodnor.serviceslicer.adapter.out.minio
 import cz.bodnor.serviceslicer.infrastructure.config.MinioProperties
 import io.minio.GetObjectArgs
 import io.minio.GetPresignedObjectUrlArgs
+import io.minio.ListObjectsArgs
 import io.minio.MinioClient
 import io.minio.PutObjectArgs
 import io.minio.StatObjectArgs
 import io.minio.StatObjectResponse
 import io.minio.http.Method
+import io.minio.messages.Item
 import org.springframework.stereotype.Component
 import java.io.InputStream
 import java.nio.file.Files
@@ -63,4 +65,12 @@ class MinioConnector(
             )
         }
     }
+
+    fun listObjects(prefix: String): Iterable<Item> = minioClient.listObjects(
+        ListObjectsArgs.builder()
+            .bucket(minioProperties.bucketName)
+            .prefix(prefix)
+            .recursive(true)
+            .build(),
+    ).map { it.get() }
 }

@@ -12,13 +12,15 @@ class ProjectWriteService(
         name: String,
         basePackageName: String,
         excludePackages: List<String>,
-        projectSourceId: UUID,
+        jarFileId: UUID,
+        projectDirId: UUID?,
     ): Project = repository.save(
         Project(
             name = name,
             basePackageName = basePackageName,
             excludePackages = excludePackages,
-            projectSourceId = projectSourceId,
+            jarFileId = jarFileId,
+            projectDirId = projectDirId,
         ),
     )
 }

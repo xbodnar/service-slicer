@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 15s
+  external_labels:
+    env: local
+
+scrape_configs:
+  # Scrape Prometheus itself
+  - job_name: prometheus
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  # Scrape your Spring Boot app(s) under test (Actuator Prometheus endpoint)
+  # If you're running multiple services, add more targets or separate jobs.
+  - job_name: service-slicer
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["host.docker.internal:8080"]

@@ -7,13 +7,14 @@ import com.github.javaparser.symbolsolver.JavaSymbolSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
+import cz.bodnor.serviceslicer.application.module.file.port.out.DownloadDirectoryFromStorage
 import cz.bodnor.serviceslicer.application.module.graph.service.CollectCompilationUnits
 import cz.bodnor.serviceslicer.application.module.graph.service.WeightedReference
 import cz.bodnor.serviceslicer.application.module.graph.service.WeightedReferencedTypeCollector
 import cz.bodnor.serviceslicer.application.module.project.service.ProjectReadService
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNode
 import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeType
-import cz.bodnor.serviceslicer.domain.projectsource.ProjectSourceReadService
+import cz.bodnor.serviceslicer.domain.file.DirectoryReadService
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import org.springframework.stereotype.Component
 import java.nio.file.Path
@@ -22,18 +23,20 @@ import java.util.UUID
 @Component
 class BuildDependencyGraphJavaParser(
     private val collectCompilationUnits: CollectCompilationUnits,
+    private val downloadDirectoryFromStorage: DownloadDirectoryFromStorage,
+    private val directoryReadService: DirectoryReadService,
     private val projectReadService: ProjectReadService,
-    private val projectSourceReadService: ProjectSourceReadService,
 ) : BuildDependencyGraph {
 
     private val logger = logger()
 
     override fun invoke(projectId: UUID): BuildDependencyGraph.Graph {
         val project = projectReadService.getById(projectId)
-        val projectSource = projectSourceReadService.getById(project.projectSourceId)
+        require(project.projectDirId != null) { "Project must have a project directory" }
 
-        // TODO: Download project source to tmp dir
-        val projectRoot = Path.of("src/test/resources/petclinic")
+        val projectDir = directoryReadService.getById(project.projectDirId)
+
+        val projectRoot = downloadDirectoryFromStorage(projectDir.storageKey)
 
         val javaParser = buildParser(projectRoot)
 

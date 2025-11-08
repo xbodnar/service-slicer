@@ -31,8 +31,11 @@
             <column name="exclude_packages" type="jsonb">
                 <constraints nullable="false"/>
             </column>
-            <column name="project_source_id" type="uuid">
+            <column name="jar_file_id" type="uuid">
                 <constraints nullable="false"/>
+            </column>
+            <column name="project_dir_id" type="uuid">
+                <constraints nullable="true"/>
             </column>
         </createTable>
     </changeSet>

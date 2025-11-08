@@ -1,7 +1,5 @@
 package cz.bodnor.serviceslicer.domain.analysis.decomposition
 
-import cz.bodnor.serviceslicer.domain.common.CreatableEntity
-import cz.bodnor.serviceslicer.domain.common.DomainEntity
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import jakarta.persistence.Embedded
 import jakarta.persistence.Entity
