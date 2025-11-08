@@ -7,7 +7,8 @@ data class CreateProjectCommand(
     val projectName: String,
     val basePackageName: String,
     val excludePackages: List<String>,
-    val projectSourceId: UUID,
+    val jarFileId: UUID,
+    val projectDirId: UUID?,
 ) : Command<CreateProjectCommand.CreateProjectResult> {
 
     data class CreateProjectResult(

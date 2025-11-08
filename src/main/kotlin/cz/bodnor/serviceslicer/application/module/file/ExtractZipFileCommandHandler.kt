@@ -1,12 +1,11 @@
-package cz.bodnor.serviceslicer.application.module.projectsource
+package cz.bodnor.serviceslicer.application.module.file
 
+import cz.bodnor.serviceslicer.application.module.file.command.ExtractZipFileCommand
 import cz.bodnor.serviceslicer.application.module.file.port.out.DownloadFileFromStorage
 import cz.bodnor.serviceslicer.application.module.file.port.out.UploadDirectoryToStorage
-import cz.bodnor.serviceslicer.application.module.projectsource.command.CreateZipProjectSourceCommand
-import cz.bodnor.serviceslicer.application.module.projectsource.service.UnzipFile
+import cz.bodnor.serviceslicer.application.module.file.service.UnzipFile
 import cz.bodnor.serviceslicer.domain.file.DirectoryWriteService
 import cz.bodnor.serviceslicer.domain.file.FileReadService
-import cz.bodnor.serviceslicer.domain.projectsource.ProjectSourceWriteService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -17,21 +16,20 @@ import kotlin.io.path.deleteIfExists
 import kotlin.io.path.deleteRecursively
 
 @Component
-class CreateZipProjectSourceCommandHandler(
-    private val projectSourceWriteService: ProjectSourceWriteService,
+class ExtractZipFileCommandHandler(
     private val fileReadService: FileReadService,
     private val directoryWriteService: DirectoryWriteService,
     private val downloadFileFromStorage: DownloadFileFromStorage,
     private val uploadDirectoryToStorage: UploadDirectoryToStorage,
     private val unzipFile: UnzipFile,
 ) :
-    CommandHandler<CreateZipProjectSourceCommand.Result, CreateZipProjectSourceCommand> {
+    CommandHandler<ExtractZipFileCommand.Result, ExtractZipFileCommand> {
 
-    override val command = CreateZipProjectSourceCommand::class
+    override val command = ExtractZipFileCommand::class
 
     @OptIn(ExperimentalPathApi::class)
     @Transactional
-    override fun handle(command: CreateZipProjectSourceCommand): CreateZipProjectSourceCommand.Result {
+    override fun handle(command: ExtractZipFileCommand): ExtractZipFileCommand.Result {
         val zipFile = fileReadService.getById(command.zipFileId)
 
         var zipPath: Path? = null
@@ -51,14 +49,8 @@ class CreateZipProjectSourceCommandHandler(
             // 3. Upload unzipped folder to MinIO
             uploadDirectoryToStorage(unzippedDir, directory.storageKey)
 
-            // 4. Create project source to DB
-            val projectSource = projectSourceWriteService.create(
-                jarFileId = command.jarFileId,
-                projectDirId = directory.id,
-            )
-
-            return CreateZipProjectSourceCommand.Result(
-                projectSourceId = projectSource.id,
+            return ExtractZipFileCommand.Result(
+                dirId = directory.id,
             )
         } finally {
             // 5. Delete zip and unzipped folder from tmp dir

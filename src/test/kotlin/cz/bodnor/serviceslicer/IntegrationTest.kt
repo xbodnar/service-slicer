@@ -18,9 +18,6 @@ abstract class IntegrationTest {
     @Autowired
     internal lateinit var jdbcTemplate: JdbcTemplate
 
-    @Autowired
-    internal lateinit var helperService: TestHelperService
-
     @BeforeEach
     fun setup() {
         jdbcTemplate.execute(TRUNCATE_ALL_TABLES_SQL)

@@ -7,12 +7,14 @@ data class CreateProjectRequest(
     val projectName: String,
     val basePackageName: String,
     val excludePackages: List<String>,
-    val projectSourceId: UUID,
+    val jarFileId: UUID,
+    val projectDirId: UUID?,
 ) {
     fun toCommand(): CreateProjectCommand = CreateProjectCommand(
         projectName = projectName,
         basePackageName = basePackageName,
         excludePackages = excludePackages,
-        projectSourceId = projectSourceId,
+        jarFileId = jarFileId,
+        projectDirId = projectDirId,
     )
 }

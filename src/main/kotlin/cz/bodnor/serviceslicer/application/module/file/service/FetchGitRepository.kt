@@ -1,6 +1,5 @@
-package cz.bodnor.serviceslicer.application.module.projectsource.service
+package cz.bodnor.serviceslicer.application.module.file.service
 
-import cz.bodnor.serviceslicer.infrastructure.config.logger
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.eclipse.jgit.api.Git
