@@ -18,6 +18,7 @@
     <properties>
         <java.version>21</java.version>
         <kotlin.version>2.1.0</kotlin.version>
+        <jooq.version>3.20.8</jooq.version>
 
         <!-- Java 17 enforces strong encapsulation, ktlint needs to access some classes though -->
         <argLine>
@@ -87,6 +88,16 @@
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq</artifactId>
+            <version>${jooq.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jooq</groupId>
+            <artifactId>jooq-codegen</artifactId>
+            <version>${jooq.version}</version>
+        </dependency>
 
         <!-- Static Code Analysis -->
         <!-- JavaParser for parsing Java source code into a dependency graph -->
@@ -125,6 +136,12 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.16.1</version>
+        </dependency>
+        <!-- Swagger parser for parsing OpenAPI specs -->
+        <dependency>
+            <groupId>io.swagger.parser.v3</groupId>
+            <artifactId>swagger-parser-v3</artifactId>
+            <version>2.1.22</version>
         </dependency>
 
         <!-- MinIO (S3-compatible object storage) -->
@@ -300,6 +317,122 @@
                         <goals>
                             <goal>check</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>groovy-maven-plugin</artifactId>
+                <version>2.1.1</version>
+                <executions>
+                    <execution>
+                        <!-- Start the container in any phase before the actual code
+                             generation is required, i.e. at the latest in
+                             generate-sources -->
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <source>
+                                import org.testcontainers.containers.PostgreSQLContainer
+
+                                container = new PostgreSQLContainer("postgres:latest")
+                                        .withUsername("postgres")
+                                        .withDatabaseName("postgres")
+                                        .withPassword("postgres")
+
+                                container.start()
+
+                                project.properties.setProperty('db.url', container.getJdbcUrl())
+                                project.properties.setProperty('db.username', container.getUsername())
+                                project.properties.setProperty('db.password', container.getPassword())
+                            </source>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.testcontainers</groupId>
+                        <artifactId>postgresql</artifactId>
+                        <version>${testcontainers.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <groupId>org.liquibase</groupId>
+                <artifactId>liquibase-maven-plugin</artifactId>
+                <configuration>
+                    <driver>org.postgresql.Driver</driver>
+                    <url>${db.url}</url>
+                    <username>${db.username}</username>
+                    <password>${db.password}</password>
+                    <databaseChangeLogTableName>DATABASECHANGELOG</databaseChangeLogTableName>
+                    <databaseChangeLogLockTableName>DATABASECHANGELOGLOCK</databaseChangeLogLockTableName>
+                    <changelogCatalogName>public</changelogCatalogName>
+                    <changeLogFile>db/changelog/db.changelog.xml</changeLogFile>
+                    <changeLogDirectory>src/main/resources/</changeLogDirectory>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>jakarta.xml.bind</groupId>
+                        <artifactId>jakarta.xml.bind-api</artifactId>
+                        <version>4.0.2</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>update</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq-codegen-maven</artifactId>
+                <version>${jooq.version}</version>
+                <executions>
+                    <execution>
+                        <id>jooq-codegen</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <jdbc>
+                                <driver>org.postgresql.Driver</driver>
+                                <url>${db.url}</url>
+                                <user>${db.username}</user>
+                                <password>${db.password}</password>
+                            </jdbc>
+                            <generator>
+                                <name>org.jooq.codegen.JavaGenerator</name>
+                                <database>
+                                    <name>org.jooq.meta.postgres.PostgresDatabase</name>
+                                    <includes>.*</includes>
+                                    <inputSchema>public</inputSchema>
+                                    <forcedTypes>
+                                        <forcedType>
+                                            <name>INSTANT</name>
+                                            <includeTypes>(?i:TIMESTAMP)</includeTypes>
+                                            <includeTypes>(?i:TIMESTAMPTZ)</includeTypes>
+                                        </forcedType>
+                                    </forcedTypes>
+                                </database>
+                                <generate>
+                                    <pojos>true</pojos>
+                                    <pojosEqualsAndHashCode>true</pojosEqualsAndHashCode>
+                                    <javaTimeTypes>true</javaTimeTypes>
+                                    <fluentSetters>true</fluentSetters>
+                                </generate>
+                                <target>
+                                    <packageName>cz.bodnor.serviceslicer</packageName>
+                                    <directory>target/generated-sources/jooq</directory>
+                                </target>
+                            </generator>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

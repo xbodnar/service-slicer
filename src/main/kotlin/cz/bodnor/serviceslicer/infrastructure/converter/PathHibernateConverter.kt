@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.domain.project
+package cz.bodnor.serviceslicer.infrastructure.converter
 
 import jakarta.persistence.AttributeConverter
 import jakarta.persistence.Converter
