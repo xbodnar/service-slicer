@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.loadtest.service
+package cz.bodnor.serviceslicer.application.module.loadtestconfig.service
 
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
 import cz.bodnor.serviceslicer.domain.apiop.ApiOperation

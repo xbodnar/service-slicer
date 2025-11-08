@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.domain.loadtest
+package cz.bodnor.serviceslicer.domain.loadtestconfig
 
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import jakarta.persistence.Column

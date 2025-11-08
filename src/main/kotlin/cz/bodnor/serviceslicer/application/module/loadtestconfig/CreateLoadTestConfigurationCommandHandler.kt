@@ -1,12 +1,11 @@
-package cz.bodnor.serviceslicer.application.module.loadtest
+package cz.bodnor.serviceslicer.application.module.loadtestconfig
 
-import cz.bodnor.serviceslicer.application.module.loadtest.command.CreateLoadTestConfigurationCommand
-import cz.bodnor.serviceslicer.application.module.loadtest.port.out.GenerateBehaviorModels
-import cz.bodnor.serviceslicer.application.module.loadtest.port.out.SaveApiOperations
-import cz.bodnor.serviceslicer.application.module.loadtest.service.OpenApiParsingService
-import cz.bodnor.serviceslicer.domain.apiop.ApiOperationWriteService
-import cz.bodnor.serviceslicer.domain.loadtest.BehaviorModel
-import cz.bodnor.serviceslicer.domain.loadtest.LoadTestConfigWriteService
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.port.out.GenerateBehaviorModels
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.port.out.SaveApiOperations
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.service.OpenApiParsingService
+import cz.bodnor.serviceslicer.domain.loadtestconfig.BehaviorModel
+import cz.bodnor.serviceslicer.domain.loadtestconfig.LoadTestConfigWriteService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -17,12 +16,12 @@ class CreateLoadTestConfigurationCommandHandler(
     private val openApiParsingService: OpenApiParsingService,
     private val generateBehaviorModels: GenerateBehaviorModels,
     private val saveApiOperations: SaveApiOperations,
-) : CommandHandler<CreateLoadTestConfigurationCommand.Result, CreateLoadTestConfigurationCommand> {
+) : CommandHandler<CreateLoadTestConfigCommand.Result, CreateLoadTestConfigCommand> {
 
-    override val command = CreateLoadTestConfigurationCommand::class
+    override val command = CreateLoadTestConfigCommand::class
 
     @Transactional
-    override fun handle(command: CreateLoadTestConfigurationCommand): CreateLoadTestConfigurationCommand.Result {
+    override fun handle(command: CreateLoadTestConfigCommand): CreateLoadTestConfigCommand.Result {
         validateInput(command)
 
         // Parse OpenAPI file and persist ApiOperations
@@ -59,10 +58,10 @@ class CreateLoadTestConfigurationCommandHandler(
             k6Configuration = null,
         )
 
-        return CreateLoadTestConfigurationCommand.Result(loadTestConfig)
+        return CreateLoadTestConfigCommand.Result(loadTestConfig.id)
     }
 
-    private fun validateInput(command: CreateLoadTestConfigurationCommand) {
+    private fun validateInput(command: CreateLoadTestConfigCommand) {
         if (command.behaviorModels.isNotEmpty()) {
             require(command.behaviorModels.sumOf { it.behaviorProbability } == 1.0) {
                 "Sum of behavior probabilities must be 1.0"

@@ -1,18 +1,17 @@
-package cz.bodnor.serviceslicer.application.module.loadtest.command
+package cz.bodnor.serviceslicer.application.module.loadtestconfig.command
 
-import cz.bodnor.serviceslicer.domain.loadtest.LoadTestConfig
-import cz.bodnor.serviceslicer.domain.loadtest.OperationalProfile
+import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import java.util.UUID
 
-data class CreateLoadTestConfigurationCommand(
+data class CreateLoadTestConfigCommand(
     val openApiFileId: UUID,
     val name: String,
-    val behaviorModels: List<UserBehaviorModel> = emptyList(),
+    val behaviorModels: List<CreateUserBehaviorModelDto> = emptyList(),
     val operationalProfile: OperationalProfile? = null,
-) : Command<CreateLoadTestConfigurationCommand.Result> {
+) : Command<CreateLoadTestConfigCommand.Result> {
 
-    data class UserBehaviorModel(
+    data class CreateUserBehaviorModelDto(
         val id: String,
         // Name of the actor persona this behavior model represents
         val actor: String,
@@ -26,6 +25,6 @@ data class CreateLoadTestConfigurationCommand(
     )
 
     data class Result(
-        val loadTestConfig: LoadTestConfig,
+        val loadTestConfigId: UUID,
     )
 }

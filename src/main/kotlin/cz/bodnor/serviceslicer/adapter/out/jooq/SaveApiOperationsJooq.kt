@@ -2,14 +2,13 @@ package cz.bodnor.serviceslicer.adapter.out.jooq
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.Tables.API_OPERATION
-import cz.bodnor.serviceslicer.application.module.loadtest.port.out.SaveApiOperations
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.port.out.SaveApiOperations
 import cz.bodnor.serviceslicer.domain.apiop.ApiOperation
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.impl.DSL
 import org.springframework.stereotype.Component
 import java.time.Instant
-import java.util.UUID
 
 @Component
 class SaveApiOperationsJooq(
