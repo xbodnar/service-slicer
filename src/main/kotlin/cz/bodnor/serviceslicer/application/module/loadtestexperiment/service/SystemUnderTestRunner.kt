@@ -24,9 +24,6 @@ class SystemUnderTestRunner(
         val project: String,
         val sutService: String,
         var state: RunState,
-        var exitCode: Int? = null,
-        var logsTail: String? = null,
-        var summaryJson: String? = null,
     )
 
     enum class RunState { QUEUED, STARTING, WAITING_HEALTHY, RUNNING, FAILED }
