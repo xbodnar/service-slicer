@@ -10,7 +10,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.time.Duration
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 
 @Service
 class SystemUnderTestRunner(
@@ -32,17 +32,24 @@ class SystemUnderTestRunner(
     enum class RunState { QUEUED, STARTING, WAITING_HEALTHY, RUNNING, FAILED }
 
     private val logger = KotlinLogging.logger {}
-    private val runs = ConcurrentHashMap<UUID, RunInfo>()
+    private val currentRun = AtomicReference<RunInfo?>(null)
 
     @Async
     fun startSUT(systemUnderTestId: UUID) {
         val sut = sutRepository.findById(systemUnderTestId).orElseThrow { IllegalStateException("SUT not found") }
 
-        diskOperations.withFile(sut.composeFileId) { composeFilePath ->
-            val project = "ss_run_$systemUnderTestId" // compose project name
-            val info = RunInfo(systemUnderTestId, project, sut.name, RunState.QUEUED)
-            runs[systemUnderTestId] = info
+        val project = "ss_run_$systemUnderTestId" // compose project name
+        val info = RunInfo(systemUnderTestId, project, sut.name, RunState.QUEUED)
 
+        // Check if there's already an active run
+        if (!currentRun.compareAndSet(null, info)) {
+            val activeRun = currentRun.get()
+            throw IllegalStateException(
+                "Cannot start SUT $systemUnderTestId: Another SUT is already running (${activeRun?.id}, state=${activeRun?.state})",
+            )
+        }
+
+        diskOperations.withFile(sut.composeFileId) { composeFilePath ->
             logger.info { "Starting SUT from docker-compose file: ${composeFilePath.toFile().absolutePath}" }
 
             try {
@@ -72,16 +79,20 @@ class SystemUnderTestRunner(
                 info.state = RunState.RUNNING
             } catch (t: Throwable) {
                 logger.error(t) { "Failed to start SUT" }
-                info.state = RunState.FAILED
-                info.logsTail = t.message
+
+                // If the run failed or finished, allow cleanup only if it's still the current run
+                if (info.state == RunState.FAILED) {
+                    currentRun.compareAndSet(info, null)
+                }
             }
         }
     }
 
-    fun status(systemUnderTestId: UUID) = runs[systemUnderTestId]
+    fun status(): RunInfo? = currentRun.get()
 
-    fun stopSUT(systemUnderTestId: UUID) {
-        val info = runs[systemUnderTestId] ?: return
+    @PreDestroy
+    fun stopSUT() {
+        val info = currentRun.get() ?: return
 
         runCatching {
             commandExecutor.execute(
@@ -90,14 +101,7 @@ class SystemUnderTestRunner(
             )
         }
 
-        runs.remove(systemUnderTestId)
-    }
-
-    @PreDestroy
-    fun stopAll() {
-        runs.forEach { (id, _) ->
-            stopSUT(id)
-        }
+        currentRun.set(null)
     }
 
     data class SUTContainer(
