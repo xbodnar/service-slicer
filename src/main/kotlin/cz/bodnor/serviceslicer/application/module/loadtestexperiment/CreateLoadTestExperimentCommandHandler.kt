@@ -26,7 +26,8 @@ class CreateLoadTestExperimentCommandHandler(
     override fun handle(command: CreateLoadTestExperimentCommand): CreateLoadTestExperimentCommand.Result {
         val loadTestConfig = commandBus(command.loadTestConfig.toCommand())
 
-        // TODO: Assign random free ports to services and rewire
+        // TODO: Check that app port is on 8080
+        // TODO: Setup fixed resources for the SUTs
 
         val experiment = loadTestExperimentWriteService.create(
             loadTestConfigId = loadTestConfig.loadTestConfigId,

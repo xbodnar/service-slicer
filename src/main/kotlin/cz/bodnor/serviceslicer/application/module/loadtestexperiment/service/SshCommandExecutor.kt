@@ -68,6 +68,7 @@ class SshCommandExecutor(
         localFile: Path,
         remotePath: String,
     ): Path {
+        val remotePath = "${remoteProperties.workDir}/$remotePath"
         logger.info { "Transferring file from $localFile to ${remoteProperties.host}:$remotePath" }
 
         withSession { session ->

@@ -26,7 +26,7 @@ class SystemUnderTestRunner(
         var state: RunState,
     )
 
-    enum class RunState { QUEUED, STARTING, WAITING_HEALTHY, RUNNING, FAILED }
+    enum class RunState { STARTING, WAITING_HEALTHY, RUNNING }
 
     private val logger = KotlinLogging.logger {}
     private val currentRun = AtomicReference<RunInfo?>(null)
@@ -36,7 +36,7 @@ class SystemUnderTestRunner(
         val sut = sutRepository.findById(systemUnderTestId).orElseThrow { IllegalStateException("SUT not found") }
 
         val project = "ss_run_$systemUnderTestId" // compose project name
-        val info = RunInfo(systemUnderTestId, project, sut.name, RunState.QUEUED)
+        val info = RunInfo(systemUnderTestId, project, sut.name, RunState.STARTING)
 
         // Check if there's already an active run
         if (!currentRun.compareAndSet(null, info)) {
@@ -53,7 +53,7 @@ class SystemUnderTestRunner(
                 // 1) Transfer compose file to execution environment (if remote)
                 val remoteComposePath = commandExecutor.transferFile(
                     composeFilePath,
-                    "/tmp/serviceslicer/$project/compose.yaml",
+                    "$project/compose.yaml",
                 )
                 val remoteComposeFile = remoteComposePath.toFile()
                 val workDir = remoteComposeFile.parentFile
@@ -67,20 +67,19 @@ class SystemUnderTestRunner(
                     throw IllegalStateException("compose up failed (exit=${result.exitCode})\n${result.output}")
                 }
 
-                logger.info { "SUT started" }
+                logger.info { "SUT started, checking health..." }
 
                 // 3) Wait for SUT healthy
                 info.state = RunState.WAITING_HEALTHY
                 waitHealthy(sut.appPort, sut.healthCheckPath, timeout = Duration.ofSeconds(sut.startupTimeoutSeconds))
 
+                logger.info { "SUT is healthy, ready to run tests" }
+
                 info.state = RunState.RUNNING
             } catch (t: Throwable) {
                 logger.error(t) { "Failed to start SUT" }
 
-                // If the run failed or finished, allow cleanup only if it's still the current run
-                if (info.state == RunState.FAILED) {
-                    currentRun.compareAndSet(info, null)
-                }
+                currentRun.set(null)
             }
         }
     }
