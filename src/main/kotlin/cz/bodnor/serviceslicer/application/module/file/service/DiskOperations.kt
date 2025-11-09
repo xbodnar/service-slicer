@@ -4,6 +4,7 @@ import cz.bodnor.serviceslicer.application.module.file.port.out.DownloadDirector
 import cz.bodnor.serviceslicer.application.module.file.port.out.DownloadFileFromStorage
 import cz.bodnor.serviceslicer.domain.file.DirectoryReadService
 import cz.bodnor.serviceslicer.domain.file.FileReadService
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.nio.file.Path
 import java.util.UUID
@@ -19,6 +20,8 @@ class DiskOperations(
     private val downloadDirectoryFromStorage: DownloadDirectoryFromStorage,
 ) {
 
+    private val logger = KotlinLogging.logger {}
+
     fun <T> withFile(
         fileId: UUID,
         block: (Path) -> T,
@@ -30,6 +33,7 @@ class DiskOperations(
 
             return block(filePath)
         } finally {
+            logger.info { "Deleting file: $filePath" }
             filePath?.deleteIfExists()
         }
     }
