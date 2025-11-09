@@ -36,5 +36,8 @@ data class CreateLoadTestExperimentCommand(
         val composeFileId: UUID,
         val jarFileId: UUID,
         val description: String? = null,
+        val healthCheckPath: String = "/actuator/health",
+        val appPort: Int = 9090,
+        val startupTimeoutSeconds: Long = 180,
     )
 }

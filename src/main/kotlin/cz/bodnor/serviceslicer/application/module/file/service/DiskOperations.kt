@@ -33,7 +33,6 @@ class DiskOperations(
 
             return block(filePath)
         } finally {
-            logger.info { "Deleting file: $filePath" }
             filePath?.deleteIfExists()
         }
     }

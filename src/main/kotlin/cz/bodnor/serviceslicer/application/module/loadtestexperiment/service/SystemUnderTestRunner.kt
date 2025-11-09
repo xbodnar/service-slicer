@@ -3,12 +3,11 @@ package cz.bodnor.serviceslicer.application.module.loadtestexperiment.service
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTestRepository
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.annotation.PreDestroy
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
-import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.nio.file.Path
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -17,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 class SystemUnderTestRunner(
     private val sutRepository: SystemUnderTestRepository,
     private val diskOperations: DiskOperations,
+    private val commandExecutor: CommandExecutor,
 ) {
 
     data class RunInfo(
@@ -35,37 +35,39 @@ class SystemUnderTestRunner(
     private val runs = ConcurrentHashMap<UUID, RunInfo>()
 
     @Async
-    fun startSUT(
-        systemUnderTestId: UUID,
-        healthCheckPath: String = "/actuator/health",
-        startupTimeout: Duration = Duration.ofMinutes(2),
-    ) {
+    fun startSUT(systemUnderTestId: UUID) {
         val sut = sutRepository.findById(systemUnderTestId).orElseThrow { IllegalStateException("SUT not found") }
-
-        val systemPort = 9090
 
         diskOperations.withFile(sut.composeFileId) { composeFilePath ->
             val project = "ss_run_$systemUnderTestId" // compose project name
             val info = RunInfo(systemUnderTestId, project, sut.name, RunState.QUEUED)
             runs[systemUnderTestId] = info
 
-            val composeFile = composeFilePath.toFile()
-            val workDir = composeFile.parentFile
-
-            logger.info { "Starting SUT from docker-compose file: ${composeFile.absolutePath}" }
+            logger.info { "Starting SUT from docker-compose file: ${composeFilePath.toFile().absolutePath}" }
 
             try {
-                // 1) Compose up (detached, unique project)
-                sh(
-                    listOf("docker", "compose", "-f", composeFile.absolutePath, "-p", project, "up", "-d"),
+                // 1) Transfer compose file to execution environment (if remote)
+                val remoteComposePath = commandExecutor.transferFile(
+                    composeFilePath,
+                    "/tmp/serviceslicer/$project/compose.yaml",
+                )
+                val remoteComposeFile = remoteComposePath.toFile()
+                val workDir = remoteComposeFile.parentFile
+
+                // 2) Compose up (detached, unique project)
+                val result = commandExecutor.execute(
+                    listOf("docker", "compose", "-f", remoteComposeFile.absolutePath, "-p", project, "up", "-d"),
                     workDir,
-                ).throwIfFail("compose up failed")
+                )
+                if (result.exitCode != 0) {
+                    throw IllegalStateException("compose up failed (exit=${result.exitCode})\n${result.output}")
+                }
 
                 logger.info { "SUT started" }
 
-                // 2) Wait for SUT healthy
+                // 3) Wait for SUT healthy
                 info.state = RunState.WAITING_HEALTHY
-                waitHealthy(systemPort, healthCheckPath, timeout = Duration.ofMinutes(3))
+                waitHealthy(sut.appPort, sut.healthCheckPath, timeout = Duration.ofSeconds(sut.startupTimeoutSeconds))
 
                 info.state = RunState.RUNNING
             } catch (t: Throwable) {
@@ -78,21 +80,24 @@ class SystemUnderTestRunner(
 
     fun status(systemUnderTestId: UUID) = runs[systemUnderTestId]
 
-    fun stopSUT(
-        systemUnderTestId: UUID,
-        composeFile: Path,
-    ) {
-        // 4) Compose down (remove volumes too)
+    fun stopSUT(systemUnderTestId: UUID) {
         val info = runs[systemUnderTestId] ?: return
 
         runCatching {
-            sh(
-                listOf("docker", "compose", "-f", composeFile.toFile().absolutePath, "-p", info.project, "down", "-v"),
-                composeFile.toFile().parentFile,
+            commandExecutor.execute(
+                listOf("docker", "compose", "-p", info.project, "down", "-v"),
+                null,
             )
         }
 
         runs.remove(systemUnderTestId)
+    }
+
+    @PreDestroy
+    fun stopAll() {
+        runs.forEach { (id, _) ->
+            stopSUT(id)
+        }
     }
 
     data class SUTContainer(
@@ -103,32 +108,14 @@ class SystemUnderTestRunner(
 
     // --- helpers ---
 
-    private data class ShResult(val code: Int, val out: String)
-
-    private fun sh(
-        cmd: List<String>,
-        dir: File?,
-    ): ShResult {
-        val pb = ProcessBuilder(cmd)
-        if (dir != null) pb.directory(dir)
-        pb.redirectErrorStream(true)
-        val p = pb.start()
-        val out = p.inputStream.bufferedReader().readText()
-        val code = p.waitFor()
-        return ShResult(code, out)
-    }
-
-    private fun ShResult.throwIfFail(msg: String) {
-        if (code != 0) throw IllegalStateException("$msg (exit=$code)\n$out")
-    }
-
     private fun waitHealthy(
         port: Int,
         healthCheckPath: String,
         timeout: Duration,
     ) {
         val deadline = System.currentTimeMillis() + timeout.toMillis()
-        val url = URL("http://localhost:$port$healthCheckPath")
+        val targetHost = commandExecutor.getTargetHost()
+        val url = URL("http://$targetHost:$port$healthCheckPath")
 
         while (System.currentTimeMillis() < deadline) {
             try {
