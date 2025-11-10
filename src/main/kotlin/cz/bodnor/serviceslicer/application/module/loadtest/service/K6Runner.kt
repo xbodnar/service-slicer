@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.application.module.loadtest.service
 
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.service.LocalCommandExecutor
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
-import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.nio.file.Path
