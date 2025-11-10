@@ -2,6 +2,7 @@ package cz.bodnor.serviceslicer.application.module.loadtestexperiment.service
 
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTestRepository
+import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PreDestroy
 import org.springframework.scheduling.annotation.Async
@@ -16,8 +17,11 @@ import java.util.concurrent.atomic.AtomicReference
 class SystemUnderTestRunner(
     private val sutRepository: SystemUnderTestRepository,
     private val diskOperations: DiskOperations,
-    private val commandExecutor: CommandExecutor,
+    private val remoteProperties: RemoteExecutionProperties,
+    localCommandExecutor: LocalCommandExecutor,
+    sshCommandExecutor: SshCommandExecutor,
 ) {
+    val commandExecutor = if (remoteProperties.enabled) sshCommandExecutor else localCommandExecutor
 
     data class RunInfo(
         val id: UUID,

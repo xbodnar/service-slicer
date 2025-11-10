@@ -6,7 +6,7 @@ import java.nio.file.Path
 /**
  * Interface for executing shell commands either locally or remotely via SSH.
  */
-interface CommandExecutor {
+sealed interface CommandExecutor {
     /**
      * Result of a shell command execution.
      */

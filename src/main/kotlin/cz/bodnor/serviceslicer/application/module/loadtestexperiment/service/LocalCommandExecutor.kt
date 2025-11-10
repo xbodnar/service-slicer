@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.loadtestexperiment.service
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import java.io.File
 import java.nio.file.Path
@@ -10,7 +9,6 @@ import java.nio.file.Path
  * Executes commands locally on the same machine where the Spring Boot app is running.
  */
 @Service
-@ConditionalOnProperty(name = ["loadtest.remote.enabled"], havingValue = "false", matchIfMissing = true)
 class LocalCommandExecutor : CommandExecutor {
 
     private val logger = KotlinLogging.logger {}

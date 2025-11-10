@@ -6,7 +6,10 @@ export const options = {
   duration: "1s",
 };
 
+const BASE_URL = __ENV.BASE_URL;
+
 export default function () {
-  http.get("http://localhost:9090/articles");
+  http.get(`${BASE_URL}/articles`);
+  http.get(`${BASE_URL}/articles`);
   sleep(1);
 }
