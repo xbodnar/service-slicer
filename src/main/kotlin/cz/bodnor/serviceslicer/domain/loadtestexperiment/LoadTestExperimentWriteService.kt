@@ -28,6 +28,9 @@ class LoadTestExperimentWriteService(
                 composeFileId = sut.composeFileId,
                 jarFileId = sut.jarFileId,
                 description = sut.description,
+                healthCheckPath = sut.healthCheckPath,
+                appPort = sut.appPort,
+                startupTimeoutSeconds = sut.startupTimeoutSeconds,
             )
             experiment.addSystemUnderTest(systemUnderTest)
         }
@@ -40,5 +43,8 @@ class LoadTestExperimentWriteService(
         val composeFileId: UUID,
         val jarFileId: UUID,
         val description: String? = null,
+        val healthCheckPath: String = "/actuator/health",
+        val appPort: Int = 9090,
+        val startupTimeoutSeconds: Long = 180,
     )
 }

@@ -36,6 +36,9 @@ class CreateLoadTestExperimentCommandHandler(
                     composeFileId = sut.composeFileId,
                     jarFileId = sut.jarFileId,
                     description = sut.description,
+                    healthCheckPath = sut.healthCheckPath,
+                    appPort = sut.appPort,
+                    startupTimeoutSeconds = sut.startupTimeoutSeconds,
                 )
             },
         )

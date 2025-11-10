@@ -23,6 +23,12 @@ class SystemUnderTest(
     val jarFileId: UUID,
     // Description of this system configuration (e.g., "Baseline monolith", "3-service decomposition")
     val description: String? = null,
+    // Health check endpoint path (e.g., "/actuator/health")
+    val healthCheckPath: String,
+    // Port on which the application is exposed (based on docker-compose)
+    val appPort: Int,
+    // Startup timeout in seconds
+    val startupTimeoutSeconds: Long,
 ) : UpdatableEntity(id)
 
 @Repository

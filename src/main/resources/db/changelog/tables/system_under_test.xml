@@ -50,4 +50,18 @@
             <column name="jar_file_id"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="add-health-check-and-port-fields-to-system-under-test" author="Norbert Bodnar">
+        <addColumn tableName="system_under_test">
+            <column name="health_check_path" type="varchar(255)" defaultValue="/actuator/health">
+                <constraints nullable="false"/>
+            </column>
+            <column name="app_port" type="int" defaultValue="9090">
+                <constraints nullable="false"/>
+            </column>
+            <column name="startup_timeout_seconds" type="bigint" defaultValue="180">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>
