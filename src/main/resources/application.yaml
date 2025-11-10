@@ -41,6 +41,12 @@ management:
 app:
   workdir: data
 
+k6:
+  docker-image: grafana/k6:latest
+  scripts-dir: ${app.workdir}/k6-scripts
+  prometheus:
+    remote-write-url: # Optional: http://localhost:9090/api/v1/write
+
 minio:
   endpoint: http://localhost:9000
   access-key: minioadmin

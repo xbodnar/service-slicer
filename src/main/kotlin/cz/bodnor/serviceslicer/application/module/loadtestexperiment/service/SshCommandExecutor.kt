@@ -6,7 +6,6 @@ import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -18,7 +17,6 @@ import kotlin.io.path.pathString
  * Executes commands remotely via SSH on a dedicated test server.
  */
 @Service
-@ConditionalOnProperty(name = ["loadtest.remote.enabled"], havingValue = "true")
 class SshCommandExecutor(
     private val remoteProperties: RemoteExecutionProperties,
 ) : CommandExecutor {
