@@ -1,43 +1,64 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+/**
+ * Experiment hooks - now using Orval-generated API client
+ * This file re-exports generated hooks for backward compatibility
+ *
+ * Note: The backend doesn't properly export response DTOs for OpenAPI,
+ * so we keep the manual types temporarily and cast the generated responses.
+ */
+
 import {
-  createExperiment,
-  listExperiments,
-  getExperiment,
-} from '@/api/experiments'
-import type { CreateLoadTestExperimentRequest } from '@/types/api'
+  useListExperiments as useListExperimentsGenerated,
+  useGetExperiment as useGetExperimentGenerated,
+  useCreateExperiment as useCreateExperimentGenerated,
+} from '@/api/generated/load-test-experiments-controller/load-test-experiments-controller'
+import { useQueryClient } from '@tanstack/react-query'
+import type {
+  ListLoadTestExperimentsResponse,
+  GetLoadTestExperimentResponse,
+  CreateLoadTestExperimentRequest,
+} from '@/types/api'
 
 /**
  * Query hook for listing all experiments
  */
 export function useExperimentsList() {
-  return useQuery({
-    queryKey: ['experiments'],
-    queryFn: listExperiments,
-  })
+  const result = useListExperimentsGenerated()
+  return {
+    ...result,
+    data: result.data as unknown as ListLoadTestExperimentsResponse,
+  }
 }
 
 /**
  * Query hook for getting a single experiment
  */
 export function useExperiment(experimentId: string) {
-  return useQuery({
-    queryKey: ['experiments', experimentId],
-    queryFn: () => getExperiment(experimentId),
-    enabled: !!experimentId,
+  const result = useGetExperimentGenerated(experimentId, {
+    query: {
+      enabled: !!experimentId,
+    },
   })
+  return {
+    ...result,
+    data: result.data as unknown as GetLoadTestExperimentResponse,
+  }
 }
 
 /**
  * Mutation hook for creating an experiment
+ * Wraps the generated hook to handle cache invalidation
  */
 export function useCreateExperiment() {
   const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: (request: CreateLoadTestExperimentRequest) =>
-      createExperiment(request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['experiments'] })
+  return useCreateExperimentGenerated({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/load-tests/experiments'] })
+      },
     },
   })
 }
+
+// Re-export type for convenience
+export type { CreateLoadTestExperimentRequest }

@@ -14,7 +14,7 @@ export function ProjectDetailPage() {
 
   const handleRebuildGraph = async () => {
     try {
-      await rebuildGraph.mutateAsync(projectId!)
+      await rebuildGraph.mutateAsync({ projectId: projectId! })
       toast({
         title: 'Graph rebuild started',
         description: 'The dependency graph is being rebuilt.',
@@ -39,7 +39,7 @@ export function ProjectDetailPage() {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-destructive">Error loading project: {error?.message || 'Unknown error'}</p>
+        <p className="text-destructive">Error loading project: {(error as Error)?.message || 'Unknown error'}</p>
       </div>
     )
   }
@@ -50,7 +50,7 @@ export function ProjectDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link to="/projects">
-          <Button variant="ghost" size="icon">
+          <Button variant="outline" size="icon" className="h-9 w-9 flex-shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>

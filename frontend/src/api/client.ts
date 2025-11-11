@@ -1,8 +1,9 @@
-import axios from 'axios'
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
-export const apiClient = axios.create({
+// Create axios instance
+const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
@@ -10,7 +11,7 @@ export const apiClient = axios.create({
 })
 
 // Response interceptor for error handling
-apiClient.interceptors.response.use(
+axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     // Optionally log or transform errors
@@ -18,3 +19,17 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+// Orval mutator function - used by generated code
+export const apiClient = <T>(
+  config: AxiosRequestConfig,
+  options?: AxiosRequestConfig,
+): Promise<T> => {
+  return axiosInstance({
+    ...config,
+    ...options,
+  }).then(({ data }: AxiosResponse<T>) => data)
+}
+
+// Export the axios instance for manual API calls (backward compatibility)
+export { axiosInstance }

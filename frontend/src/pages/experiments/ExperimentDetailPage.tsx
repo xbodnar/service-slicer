@@ -1,8 +1,27 @@
 import { useParams, Link } from 'react-router-dom'
 import { useExperiment } from '@/hooks/useExperiments'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, ArrowLeft } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import {
+  Loader2,
+  ArrowLeft,
+  FileCode,
+  Server,
+  Package,
+  Activity,
+  FileArchive,
+  Users
+} from 'lucide-react'
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+}
 
 export function ExperimentDetailPage() {
   const { experimentId } = useParams<{ experimentId: string }>()
@@ -20,7 +39,7 @@ export function ExperimentDetailPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <p className="text-destructive">
-          Error loading experiment: {error?.message || 'Unknown error'}
+          Error loading experiment: {(error as Error)?.message || 'Unknown error'}
         </p>
       </div>
     )
@@ -28,114 +47,175 @@ export function ExperimentDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      {/* Header */}
+      <div className="flex items-start gap-4">
         <Link to="/experiments">
-          <Button variant="ghost" size="icon">
+          <Button variant="outline" size="icon" className="h-9 w-9 flex-shrink-0 mt-1">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">{data.name}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight">{data.name}</h1>
           {data.description && (
-            <p className="text-muted-foreground mt-2">{data.description}</p>
+            <p className="text-muted-foreground mt-1.5">{data.description}</p>
           )}
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Load Test Configuration</CardTitle>
-          <CardDescription>{data.loadTestConfig.name}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm font-medium">OpenAPI File ID</p>
-            <p className="text-sm text-muted-foreground font-mono">
-              {data.loadTestConfig.openApiFileId}
-            </p>
-          </div>
-          {data.loadTestConfig.behaviorModels.length > 0 && (
-            <div>
-              <p className="text-sm font-medium mb-2">Behavior Models</p>
-              <div className="space-y-2">
-                {data.loadTestConfig.behaviorModels.map((model) => (
-                  <Card key={model.id}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">
-                        {model.id} - {model.actor}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-sm space-y-1">
-                      <p>Usage Profile: {(model.usageProfile * 100).toFixed(0)}%</p>
-                      <p>Steps: {model.steps.join(' → ')}</p>
-                      <p>Think Time: {model.thinkFrom}-{model.thinkTo}ms</p>
-                    </CardContent>
-                  </Card>
-                ))}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Load Test Configuration */}
+        <Card className="border-2 transition-shadow hover:shadow-md">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Activity className="h-5 w-5 text-primary" />
+              </div>
+              <CardTitle>Load Test Configuration</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* OpenAPI File */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <FileCode className="h-4 w-4" />
+                <span>OpenAPI Specification</span>
+              </div>
+              <div className="flex items-center gap-2 pl-6">
+                <span className="font-medium">{data.loadTestConfig.openApiFile.filename}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {formatFileSize(data.loadTestConfig.openApiFile.fileSize)}
+                </Badge>
               </div>
             </div>
-          )}
-          {data.loadTestConfig.operationalProfile && (
-            <div>
-              <p className="text-sm font-medium mb-2">Operational Profile</p>
-              <Card>
-                <CardContent className="pt-6 text-sm">
-                  <p>Loads: {data.loadTestConfig.operationalProfile.loads.join(', ')}</p>
+
+            {/* Behavior Models */}
+            {data.loadTestConfig.behaviorModels.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>Behavior Models</span>
+                  </div>
+                  <Badge variant="outline">{data.loadTestConfig.behaviorModels.length}</Badge>
+                </div>
+                <div className="space-y-2 pl-6">
+                  {data.loadTestConfig.behaviorModels.map((model) => (
+                    <div key={model.id} className="p-3 rounded-lg bg-muted/50 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{model.id}</span>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-sm text-muted-foreground">{model.actor}</span>
+                        <Badge variant="secondary" className="ml-auto">
+                          {(model.usageProfile * 100).toFixed(0)}%
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {model.steps.join(' → ')} • Think: {model.thinkFrom}-{model.thinkTo}ms
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Operational Profile */}
+            {data.loadTestConfig.operationalProfile && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Activity className="h-4 w-4" />
+                  <span>Operational Profile</span>
+                </div>
+                <div className="pl-6 text-sm space-y-1">
+                  <p><span className="text-muted-foreground">Loads:</span> {data.loadTestConfig.operationalProfile.loads.join(', ')}</p>
                   <p>
-                    Frequencies:{' '}
+                    <span className="text-muted-foreground">Frequencies:</span>{' '}
                     {data.loadTestConfig.operationalProfile.freq
                       .map((f) => (f * 100).toFixed(0) + '%')
                       .join(', ')}
                   </p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Systems Under Test</CardTitle>
-          <CardDescription>
-            {data.systemsUnderTest.length} system{data.systemsUnderTest.length !== 1 ? 's' : ''}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {data.systemsUnderTest.map((system) => (
-              <Card key={system.systemUnderTestId}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{system.name}</CardTitle>
+        {/* Systems Under Test */}
+        <Card className="border-2 transition-shadow hover:shadow-md">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Server className="h-5 w-5 text-primary" />
+              </div>
+              <CardTitle className="flex items-center gap-2">
+                Systems Under Test
+                <Badge variant="outline">{data.systemsUnderTest.length}</Badge>
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {data.systemsUnderTest.map((system, idx) => (
+              <div
+                key={system.systemUnderTestId}
+                className={cn(
+                  'space-y-3 p-4 rounded-lg bg-muted/50 transition-colors hover:bg-muted',
+                  idx > 0 && 'mt-4'
+                )}
+              >
+                <div>
+                  <h4 className="font-semibold">{system.name}</h4>
                   {system.description && (
-                    <CardDescription>{system.description}</CardDescription>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {system.description}
+                    </p>
                   )}
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="font-medium">Docker Compose</p>
-                      <p className="text-muted-foreground font-mono">{system.composeFileId}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">JAR File</p>
-                      <p className="text-muted-foreground font-mono">{system.jarFileId}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">Health Check Path</p>
-                      <p className="text-muted-foreground">{system.healthCheckPath}</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">App Port</p>
-                      <p className="text-muted-foreground">{system.appPort}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5">
+                  {/* Docker Compose */}
+                  <div className="flex items-start gap-2">
+                    <FileArchive className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Docker Compose</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm truncate">{system.composeFile.filename}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {formatFileSize(system.composeFile.fileSize)}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+
+                  {/* JAR File */}
+                  <div className="flex items-start gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Application JAR</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm truncate">{system.jarFile.filename}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {formatFileSize(system.jarFile.fileSize)}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Health & Port */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Health Check</p>
+                      <p className="font-mono text-sm">{system.healthCheckPath}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Port</p>
+                      <p className="text-sm font-medium">{system.appPort}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ))}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

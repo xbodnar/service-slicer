@@ -1,4 +1,17 @@
-import { apiClient } from './client'
+/**
+ * File API - now using Orval-generated API client
+ * This file wraps generated functions for backward compatibility
+ *
+ * Note: The backend doesn't properly export response DTOs for OpenAPI,
+ * so we keep the manual types and cast the generated responses.
+ */
+
+import {
+  initiateUpload,
+  completeUpload,
+  extractZipFile as extractZipFileGenerated,
+  fetchGitRepository as fetchGitRepositoryGenerated,
+} from '@/api/generated/file-controller/file-controller'
 import type {
   InitiateFileUploadRequest,
   InitiateFileUploadResponse,
@@ -14,12 +27,13 @@ import axios from 'axios'
 export const initiateFileUpload = async (
   request: InitiateFileUploadRequest
 ): Promise<InitiateFileUploadResponse> => {
-  const { data } = await apiClient.post<InitiateFileUploadResponse>('/files', request)
-  return data
+  const result = await initiateUpload(request)
+  return result as unknown as InitiateFileUploadResponse
 }
 
 /**
  * Upload file to the presigned URL
+ * This doesn't go through our backend, so we use axios directly
  */
 export const uploadFileToUrl = async (
   uploadUrl: string,
@@ -36,15 +50,15 @@ export const uploadFileToUrl = async (
  * Mark the file upload as complete
  */
 export const completeFileUpload = async (fileId: string): Promise<void> => {
-  await apiClient.post(`/files/${fileId}/complete`)
+  await completeUpload(fileId)
 }
 
 /**
  * Extract a ZIP file
  */
 export const extractZipFile = async (fileId: string): Promise<ExtractZipFileResponse> => {
-  const { data } = await apiClient.post<ExtractZipFileResponse>(`/files/${fileId}/extract`)
-  return data
+  const result = await extractZipFileGenerated(fileId)
+  return result as unknown as ExtractZipFileResponse
 }
 
 /**
@@ -53,8 +67,8 @@ export const extractZipFile = async (fileId: string): Promise<ExtractZipFileResp
 export const fetchGitRepository = async (
   request: FetchGitRepositoryRequest
 ): Promise<FetchGitRepositoryResponse> => {
-  const { data } = await apiClient.post<FetchGitRepositoryResponse>('/files/git', request)
-  return data
+  const result = await fetchGitRepositoryGenerated(request)
+  return result as unknown as FetchGitRepositoryResponse
 }
 
 /**

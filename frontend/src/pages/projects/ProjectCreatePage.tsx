@@ -8,10 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { FileInput } from '@/components/ui/file-input'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
 import { useFileUpload, type UploadedFile } from '@/hooks/useFileUpload'
 import { useCreateProject } from '@/hooks/useProjects'
-import { ArrowLeft, Loader2, FileArchive, Package } from 'lucide-react'
+import { ArrowLeft, Loader2, FileArchive, Package, CheckCircle2 } from 'lucide-react'
 
 const projectSchema = z.object({
   projectName: z.string().min(1, 'Project name is required'),
@@ -77,14 +79,16 @@ export function ProjectCreatePage() {
 
     try {
       const result = await createProject.mutateAsync({
-        projectName: data.projectName,
-        basePackageName: data.basePackageName,
-        excludePackages: data.excludePackages
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean),
-        jarFileId: jarFile.fileId,
-        projectDirId: extractedDirId,
+        data: {
+          projectName: data.projectName,
+          basePackageName: data.basePackageName,
+          excludePackages: data.excludePackages
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean),
+          jarFileId: jarFile.fileId,
+          projectDirId: extractedDirId || undefined,
+        },
       })
 
       toast({
@@ -129,42 +133,48 @@ export function ProjectCreatePage() {
             {/* JAR Upload */}
             <div className="space-y-2">
               <Label htmlFor="jar-file">JAR File (required)</Label>
-              <div className="flex items-center gap-4">
-                <Input
-                  id="jar-file"
-                  type="file"
-                  accept=".jar"
-                  onChange={handleJarUpload}
-                  disabled={isUploading}
-                />
-                {jarFile && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Package className="h-4 w-4" />
-                    {jarFile.filename}
-                  </div>
-                )}
-              </div>
+              <FileInput
+                id="jar-file"
+                accept=".jar"
+                onChange={handleJarUpload}
+                disabled={isUploading}
+              />
+              {jarFile && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                  <Package className="h-4 w-4 text-primary flex-shrink-0" />
+                  <span className="text-sm font-medium flex-1 truncate">{jarFile.filename}</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {(jarFile.size / 1024 / 1024).toFixed(2)} MB
+                  </Badge>
+                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                </div>
+              )}
             </div>
 
             {/* Source ZIP Upload */}
             <div className="space-y-2">
               <Label htmlFor="source-zip">Source ZIP (optional)</Label>
-              <div className="flex items-center gap-4">
-                <Input
-                  id="source-zip"
-                  type="file"
-                  accept=".zip"
-                  onChange={handleSourceZipUpload}
-                  disabled={isUploading}
-                />
-                {sourceZipFile && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <FileArchive className="h-4 w-4" />
-                    {sourceZipFile.filename}
-                    {extractedDirId && ' (extracted)'}
-                  </div>
-                )}
-              </div>
+              <FileInput
+                id="source-zip"
+                accept=".zip"
+                onChange={handleSourceZipUpload}
+                disabled={isUploading}
+              />
+              {sourceZipFile && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                  <FileArchive className="h-4 w-4 text-primary flex-shrink-0" />
+                  <span className="text-sm font-medium flex-1 truncate">{sourceZipFile.filename}</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {(sourceZipFile.size / 1024 / 1024).toFixed(2)} MB
+                  </Badge>
+                  {extractedDirId && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Extracted
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
 
             {isUploading && (

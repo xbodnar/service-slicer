@@ -19,13 +19,11 @@ data class CreateLoadTestExperimentCommand(
 
     data class CreateLoadTestConfigDto(
         val openApiFileId: UUID,
-        val name: String,
         val behaviorModels: List<CreateUserBehaviorModelDto> = emptyList(),
         val operationalProfile: OperationalProfile? = null,
     ) {
         fun toCommand(): CreateLoadTestConfigCommand = CreateLoadTestConfigCommand(
             openApiFileId = openApiFileId,
-            name = name,
             behaviorModels = behaviorModels,
             operationalProfile = operationalProfile,
         )

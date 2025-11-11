@@ -1,6 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { MainLayout } from '@/components/layout/MainLayout'
+import { LandingPage } from '@/pages/LandingPage'
 import { ProjectListPage } from '@/pages/projects/ProjectListPage'
 import { ProjectDetailPage } from '@/pages/projects/ProjectDetailPage'
 import { ProjectCreatePage } from '@/pages/projects/ProjectCreatePage'
@@ -13,7 +14,7 @@ function App() {
     <>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<Navigate to="/projects" replace />} />
+          <Route index element={<LandingPage />} />
 
           {/* Projects */}
           <Route path="projects" element={<ProjectListPage />} />

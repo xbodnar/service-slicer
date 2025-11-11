@@ -19,8 +19,6 @@ class LoadTestConfig(
     id: UUID = UUID.randomUUID(),
     // Reference to the OpenAPI specification file
     val openApiFileId: UUID,
-    // Custom name to identify this configuration
-    val name: String,
     // Behavior models representing user flows/scenarios
     @JdbcTypeCode(SqlTypes.JSON)
     val behaviorModels: List<BehaviorModel> = emptyList(),

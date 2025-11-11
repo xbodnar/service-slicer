@@ -52,7 +52,6 @@ class CreateLoadTestConfigurationCommandHandler(
 
         val loadTestConfig = loadTestConfigWriteService.create(
             openApiFileId = command.openApiFileId,
-            name = command.name,
             behaviorModels = behaviorModels,
             operationalProfile = command.operationalProfile,
             k6Configuration = null,

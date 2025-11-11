@@ -87,10 +87,16 @@ export interface DecompositionResults {
 // Load Test Experiment API Types
 // ============================================================================
 
+export interface FileDto {
+  fileId: string
+  filename: string
+  fileSize: number
+}
+
 export interface BehaviorModel {
   id: string
   actor: string
-  usageProfile: number
+  behaviorProbability: number
   steps: string[]
   thinkFrom: number
   thinkTo: number
@@ -103,7 +109,6 @@ export interface OperationalProfile {
 
 export interface CreateLoadTestConfigDto {
   openApiFileId: string
-  name: string
   behaviorModels?: BehaviorModel[]
   operationalProfile?: OperationalProfile | null
 }
@@ -142,8 +147,7 @@ export interface ListLoadTestExperimentsResponse {
 
 export interface LoadTestConfigDto {
   loadTestConfigId: string
-  name: string
-  openApiFileId: string
+  openApiFile: FileDto
   behaviorModels: BehaviorModel[]
   operationalProfile: OperationalProfile | null
 }
@@ -151,8 +155,8 @@ export interface LoadTestConfigDto {
 export interface SystemUnderTestDto {
   systemUnderTestId: string
   name: string
-  composeFileId: string
-  jarFileId: string
+  composeFile: FileDto
+  jarFile: FileDto
   description: string | null
   healthCheckPath: string
   appPort: number

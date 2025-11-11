@@ -5,6 +5,12 @@ import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.Query
 import java.util.UUID
 
+data class FileDto(
+    val fileId: UUID,
+    val filename: String,
+    val fileSize: Long,
+)
+
 data class ListLoadTestExperimentsQuery(val dummy: Unit = Unit) : Query<ListLoadTestExperimentsQuery.Result> {
 
     data class Result(
@@ -33,8 +39,7 @@ data class GetLoadTestExperimentQuery(val experimentId: UUID) : Query<GetLoadTes
 
     data class LoadTestConfigDto(
         val loadTestConfigId: UUID,
-        val name: String,
-        val openApiFileId: UUID,
+        val openApiFile: FileDto,
         val behaviorModels: List<BehaviorModel>,
         val operationalProfile: OperationalProfile?,
     )
@@ -42,8 +47,8 @@ data class GetLoadTestExperimentQuery(val experimentId: UUID) : Query<GetLoadTes
     data class SystemUnderTestDto(
         val systemUnderTestId: UUID,
         val name: String,
-        val composeFileId: UUID,
-        val jarFileId: UUID,
+        val composeFile: FileDto,
+        val jarFile: FileDto,
         val description: String?,
         val healthCheckPath: String,
         val appPort: Int,

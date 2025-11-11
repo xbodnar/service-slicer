@@ -42,4 +42,8 @@
             <column name="open_api_file_id"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="drop-name-column-from-load-test-config" author="Norbert Bodnar">
+        <dropColumn tableName="load_test_config" columnName="name"/>
+    </changeSet>
 </databaseChangeLog>
