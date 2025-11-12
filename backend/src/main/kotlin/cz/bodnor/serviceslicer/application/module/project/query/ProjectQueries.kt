@@ -41,6 +41,13 @@ data class GetProjectQuery(val projectId: UUID) : Query<GetProjectQuery.Result> 
     data class GraphSummary(
         val nodeCount: Int,
         val edgeCount: Int,
+        val nodes: List<ClassNodeDto>,
+    )
+
+    data class ClassNodeDto(
+        val simpleClassName: String,
+        val fullyQualifiedClassName: String,
+        val dependencies: List<String>, // List of FQNs that this class depends on
     )
 
     data class DecompositionResults(

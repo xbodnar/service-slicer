@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Loader2, ArrowLeft, RefreshCw } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
+import { DependencyGraphVisualization } from '@/components/graph/DependencyGraphVisualization'
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -66,9 +67,9 @@ export function ProjectDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle>Dependency Graph</CardTitle>
-          <CardDescription>Static analysis results</CardDescription>
+          <CardDescription>Interactive visualization of class dependencies</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Nodes</p>
@@ -79,6 +80,30 @@ export function ProjectDetailPage() {
               <p className="text-2xl font-bold">{staticAnalysis.dependencyGraph.edgeCount}</p>
             </div>
           </div>
+
+          <DependencyGraphVisualization
+            nodes={staticAnalysis.dependencyGraph.nodes}
+            onNodeClick={(node) => {
+              toast({
+                title: node.simpleClassName,
+                description: (
+                  <div className="space-y-2">
+                    <p className="text-sm font-mono">{node.fullyQualifiedClassName}</p>
+                    {node.dependencies.length > 0 && (
+                      <div>
+                        <p className="text-sm font-semibold mb-1">Dependencies ({node.dependencies.length}):</p>
+                        <ul className="text-xs space-y-1 max-h-40 overflow-y-auto">
+                          {node.dependencies.map((dep, idx) => (
+                            <li key={idx} className="font-mono">{dep}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ),
+              })
+            }}
+          />
         </CardContent>
       </Card>
 

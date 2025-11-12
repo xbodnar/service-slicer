@@ -77,6 +77,13 @@ export interface StaticAnalysisResult {
 export interface GraphSummary {
   nodeCount: number
   edgeCount: number
+  nodes: ClassNodeDto[]
+}
+
+export interface ClassNodeDto {
+  simpleClassName: string
+  fullyQualifiedClassName: string
+  dependencies: string[] // List of FQNs that this class depends on
 }
 
 export interface DecompositionResults {

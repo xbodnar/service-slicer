@@ -57,3 +57,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Neo4j NVL Graph Styles */
+.nvl-wrapper,
+.nvl-wrapper > div,
+.nvl-wrapper canvas {
+  pointer-events: auto !important;
+  touch-action: none !important;
+  cursor: grab !important;
+}
+
+.nvl-wrapper:active,
+.nvl-wrapper:active canvas {
+  cursor: grabbing !important;
+}
