@@ -39,14 +39,26 @@ export function DependencyGraphVisualization({
   nodes: classNodes,
   onNodeClick,
 }: DependencyGraphVisualizationProps) {
-  const nvlRef = useRef<any>(null)
+  const nvlRef = useRef<NVL | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const setNvlRef = useCallback((instance: any) => {
+  const setNvlRef = useCallback((instance: NVL | null) => {
     if (instance && !nvlRef.current) {
-      console.log('Setting NVL ref for the first time')
       nvlRef.current = instance
     }
+  }, [])
+
+  // Prevent page scrolling when using mouse wheel on graph
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    return () => container.removeEventListener('wheel', handleWheel)
   }, [])
 
   // Transform data to NVL format
@@ -91,27 +103,21 @@ export function DependencyGraphVisualization({
     return { nvlNodes, nvlRelationships, classNodeMap }
   }, [classNodes])
 
-  // Setup interaction handlers manually
+  // Setup interaction handlers
   useEffect(() => {
     if (!nvlRef.current) return
 
-    const nvl = nvlRef.current as NVL
-    console.log('Setting up manual interaction handlers')
-
+    const nvl = nvlRef.current
     let panHandler: any
     let zoomHandler: any
     let clickHandler: any
 
-    // Import and setup interaction handlers
     import('@neo4j-nvl/interaction-handlers').then(({ PanInteraction, ZoomInteraction, ClickInteraction }) => {
-      console.log('Interaction handlers loaded')
-
       panHandler = new PanInteraction(nvl)
       zoomHandler = new ZoomInteraction(nvl)
       clickHandler = new ClickInteraction(nvl)
 
-      clickHandler.updateCallback('onNodeClick', (node: any) => {
-        console.log('Node clicked via handler:', node)
+      clickHandler.updateCallback('onNodeClick', (node: Node) => {
         if (onNodeClick) {
           const classNode = classNodeMap.get(node.id)
           if (classNode) {
@@ -122,7 +128,6 @@ export function DependencyGraphVisualization({
     })
 
     return () => {
-      console.log('Cleaning up interaction handlers')
       panHandler?.destroy()
       zoomHandler?.destroy()
       clickHandler?.destroy()
@@ -131,35 +136,22 @@ export function DependencyGraphVisualization({
 
   const handleZoomIn = useCallback(() => {
     if (nvlRef.current) {
-      try {
-        const currentZoom = nvlRef.current.getScale()
-        nvlRef.current.setZoom(currentZoom * 1.3)
-      } catch (err) {
-        console.error('Error zooming in:', err)
-      }
+      const currentZoom = nvlRef.current.getScale()
+      nvlRef.current.setZoom(currentZoom * 1.3)
     }
   }, [])
 
   const handleZoomOut = useCallback(() => {
     if (nvlRef.current) {
-      try {
-        const currentZoom = nvlRef.current.getScale()
-        nvlRef.current.setZoom(currentZoom / 1.3)
-      } catch (err) {
-        console.error('Error zooming out:', err)
-      }
+      const currentZoom = nvlRef.current.getScale()
+      nvlRef.current.setZoom(currentZoom / 1.3)
     }
   }, [])
 
   const handleResetView = useCallback(() => {
     if (nvlRef.current) {
-      try {
-        // Fit all nodes
-        const allNodeIds = classNodes.map(n => n.fullyQualifiedClassName)
-        nvlRef.current.fit(allNodeIds)
-      } catch (err) {
-        console.error('Error fitting view:', err)
-      }
+      const allNodeIds = classNodes.map(n => n.fullyQualifiedClassName)
+      nvlRef.current.fit(allNodeIds)
     }
   }, [classNodes])
 
@@ -175,10 +167,6 @@ export function DependencyGraphVisualization({
     <div
       ref={containerRef}
       className="h-[800px] bg-slate-900 rounded-lg border border-slate-700 relative"
-      onWheel={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-      }}
     >
       <BasicNvlWrapper
         nodes={nvlNodes}
@@ -195,11 +183,8 @@ export function DependencyGraphVisualization({
         layout="forceDirected"
         nvlCallbacks={{
           onLayoutDone: () => {
-            console.log('Layout done. Fitting view...')
-            // Auto fit on initial load with delay to ensure layout is complete
             setTimeout(() => {
               handleResetView()
-              console.log('NVL ref current:', nvlRef.current)
             }, 500)
           },
         }}
@@ -252,10 +237,9 @@ export function DependencyGraphVisualization({
       {/* Instructions */}
       <div className="absolute bottom-4 left-4 bg-slate-800 text-white px-3 py-2 rounded text-xs z-50 pointer-events-none">
         <div className="font-semibold mb-1">Controls:</div>
-        <div>• Scroll/buttons to zoom</div>
+        <div>• Mouse wheel to zoom</div>
         <div>• Click + drag to pan</div>
         <div>• Click node for details</div>
-        <div>• Double-click node to zoom</div>
       </div>
     </div>
   )
