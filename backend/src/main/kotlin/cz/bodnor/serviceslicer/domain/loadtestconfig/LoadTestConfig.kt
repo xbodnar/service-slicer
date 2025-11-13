@@ -29,8 +29,7 @@ class LoadTestConfig(
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "k6_configuration")
     val k6Configuration: K6Configuration? = null,
-) : UpdatableEntity(id) {
-}
+) : UpdatableEntity(id)
 
 /**
  * Represents a user behavior model (flow/scenario).

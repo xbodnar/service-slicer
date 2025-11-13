@@ -1,13 +1,12 @@
 package cz.bodnor.serviceslicer.adapter.`in`.web.requests
 
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.AddSystemUnderTestCommand
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.CreateLoadTestExperimentCommand
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.UpdateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.UpdateSystemUnderTestCommand
-import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
 import java.util.UUID
-
 
 data class CreateLoadTestExperimentRequest(
     val name: String,
@@ -66,7 +65,10 @@ data class UpdateSystemUnderTestRequest(
     val appPort: Int = 9090,
     val startupTimeoutSeconds: Long = 180,
 ) {
-    fun toCommand(experimentId: UUID, sutId: UUID) = UpdateSystemUnderTestCommand(
+    fun toCommand(
+        experimentId: UUID,
+        sutId: UUID,
+    ) = UpdateSystemUnderTestCommand(
         experimentId = experimentId,
         sutId = sutId,
         name = name,
@@ -78,4 +80,3 @@ data class UpdateSystemUnderTestRequest(
         startupTimeoutSeconds = startupTimeoutSeconds,
     )
 }
-

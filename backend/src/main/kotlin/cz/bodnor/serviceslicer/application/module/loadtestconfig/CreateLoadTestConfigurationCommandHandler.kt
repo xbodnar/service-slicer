@@ -32,15 +32,15 @@ class CreateLoadTestConfigurationCommandHandler(
 
         val apiOperations = openApiParsingService.parse(command.openApiFileId)
         val behaviorModels = command.behaviorModels.mapIndexed { index, model ->
-                BehaviorModel(
-                    id = model.id,
-                    actor = model.actor,
-                    usageProfile = model.behaviorProbability,
-                    steps = model.steps,
-                    thinkFrom = model.thinkFrom,
-                    thinkTo = model.thinkTo,
-                )
-            }
+            BehaviorModel(
+                id = model.id,
+                actor = model.actor,
+                usageProfile = model.behaviorProbability,
+                steps = model.steps,
+                thinkFrom = model.thinkFrom,
+                thinkTo = model.thinkTo,
+            )
+        }
 
         ValidateLoadTestConfig(behaviorModels, apiOperations, command.operationalProfile)
         saveApiOperations(apiOperations)

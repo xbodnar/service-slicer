@@ -1,6 +1,5 @@
 package cz.bodnor.serviceslicer.domain.loadtestexperiment
 
-import cz.bodnor.serviceslicer.domain.loadtestconfig.LoadTestConfigWriteService
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -85,7 +84,7 @@ class LoadTestExperimentWriteService(
         return systemUnderTestRepository.save(sut)
     }
 
-    fun  deleteSystemUnderTest(
+    fun deleteSystemUnderTest(
         experimentId: UUID,
         sutId: UUID,
     ) {
