@@ -36,28 +36,9 @@ class LoadTestExperimentsController(
     fun getExperiment(@PathVariable experimentId: UUID): GetLoadTestExperimentQuery.Result =
         queryBus(GetLoadTestExperimentQuery(experimentId = experimentId))
 
-    @PostMapping("/{experimentId}/sut")
-    fun addSystemUnderTest(
-        @PathVariable experimentId: UUID,
-        @RequestBody request: AddSystemUnderTestRequest,
-    ) = commandBus(request.toCommand(experimentId))
-
     @PutMapping("/{experimentId}/config")
     fun updateLoadTestConfig(
         @PathVariable experimentId: UUID,
         @RequestBody request: UpdateLoadTestConfigRequest,
     ) = commandBus(request.toCommand(experimentId))
-
-    @PutMapping("/{experimentId}/sut/{sutId}")
-    fun updateSystemUnderTest(
-        @PathVariable experimentId: UUID,
-        @PathVariable sutId: UUID,
-        @RequestBody request: UpdateSystemUnderTestRequest,
-    ) = commandBus(request.toCommand(experimentId, sutId))
-
-    @DeleteMapping("/{experimentId}/sut/{sutId}")
-    fun deleteSystemUnderTest(
-        @PathVariable experimentId: UUID,
-        @PathVariable sutId: UUID,
-    ) = commandBus(DeleteSystemUnderTestCommand(experimentId, sutId))
 }
