@@ -1,4 +1,5 @@
 import { useListFiles } from '@/api/generated/file-controller/file-controller'
+import type { ListFilesResponse } from '@/api/types/file'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -60,7 +61,7 @@ export function FileListPage() {
     return <div className="p-8">Loading files...</div>
   }
 
-  const files = (data as any)?.files || []
+  const files = (data as ListFilesResponse)?.files || []
 
   return (
     <div className="container mx-auto py-8">
@@ -91,7 +92,7 @@ export function FileListPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              files.map((file: any) => (
+              files.map((file) => (
                 <TableRow key={file.fileId}>
                   <TableCell className="font-medium">{file.filename}</TableCell>
                   <TableCell>{formatFileSize(file.expectedSize)}</TableCell>

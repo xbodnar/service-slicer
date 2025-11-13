@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Badge } from '@/components/ui/badge'
 import { useListFiles } from '@/api/generated/file-controller/file-controller'
+import type { ListFilesResponse } from '@/api/types/file'
 import { useFileUpload, type UploadedFile } from '@/hooks/useFileUpload'
 import { Package, CheckCircle2, Loader2 } from 'lucide-react'
 
@@ -32,8 +33,8 @@ export function FileSelector({
   const { data: filesData } = useListFiles({ page: 0, size: 100 })
 
   // Filter files by READY status and optionally by MIME type
-  const availableFiles = ((filesData as any)?.files || []).filter(
-    (file: any) => {
+  const availableFiles = ((filesData as ListFilesResponse)?.files || []).filter(
+    (file) => {
       if (file.status !== 'READY') return false
       if (mimeTypeFilter) {
         const mimeType = file.mimeType.toLowerCase()
@@ -67,7 +68,7 @@ export function FileSelector({
   }
 
   const handleExistingFileSelect = (fileId: string) => {
-    const selectedExistingFile = availableFiles.find((f: any) => f.fileId === fileId)
+    const selectedExistingFile = availableFiles.find((f) => f.fileId === fileId)
     if (selectedExistingFile) {
       onFileSelected({
         fileId: selectedExistingFile.fileId,
@@ -133,7 +134,7 @@ export function FileSelector({
             {availableFiles.length === 0 ? (
               <div className="p-2 text-sm text-muted-foreground">No files available</div>
             ) : (
-              availableFiles.map((file: any) => (
+              availableFiles.map((file) => (
                 <SelectItem key={file.fileId} value={file.fileId}>
                   <div className="flex items-center gap-2">
                     <span className="truncate">{file.filename}</span>
