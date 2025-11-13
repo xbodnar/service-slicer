@@ -2,6 +2,7 @@ package cz.bodnor.serviceslicer.application.module.loadtestconfig.command
 
 import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
+import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
 
 data class CreateLoadTestConfigCommand(
@@ -10,20 +11,25 @@ data class CreateLoadTestConfigCommand(
     val operationalProfile: OperationalProfile? = null,
 ) : Command<CreateLoadTestConfigCommand.Result> {
 
+    @Schema(description = "User behavior model configuration")
     data class CreateUserBehaviorModelDto(
+        @Schema(description = "Unique identifier for the behavior model", example = "bm1")
         val id: String,
-        // Name of the actor persona this behavior model represents
+        @Schema(description = "Name of the actor persona", example = "Customer")
         val actor: String,
-        // Probability of this behavior model being executed, must be between 0 and 1
+        @Schema(description = "Probability of this behavior model being executed (0-1)", example = "0.5")
         val usageProfile: Double,
-        // Sequence of operations that the actor performs, IDs of the operations in the OpenAPI file
+        @Schema(description = "Sequence of operation IDs from OpenAPI file", example = "[\"o1\", \"o2\", \"o3\"]")
         val steps: List<String>,
-        // Think time range (in milliseconds)
+        @Schema(description = "Minimum think time in milliseconds", example = "1000")
         val thinkFrom: Int,
+        @Schema(description = "Maximum think time in milliseconds", example = "3000")
         val thinkTo: Int,
     )
 
+    @Schema(name = "CreateLoadTestConfigResult", description = "Result of creating load test configuration")
     data class Result(
+        @Schema(description = "ID of the created load test configuration")
         val loadTestConfigId: UUID,
     )
 }

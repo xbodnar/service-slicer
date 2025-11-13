@@ -12,7 +12,7 @@ import { FileSelector } from '@/components/ui/file-selector'
 import { useToast } from '@/components/ui/use-toast'
 import { useFileUpload, type UploadedFile } from '@/hooks/useFileUpload'
 import { useCreateProject } from '@/hooks/useProjects'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Loader2 } from 'lucide-react'
 
 const projectSchema = z.object({
   projectName: z.string().min(1, 'Project name is required'),
@@ -144,7 +144,7 @@ export function ProjectCreatePage() {
 
             {extractedDirId && sourceZipFile && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 text-green-500" />
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
                 ZIP extracted successfully
               </div>
             )}

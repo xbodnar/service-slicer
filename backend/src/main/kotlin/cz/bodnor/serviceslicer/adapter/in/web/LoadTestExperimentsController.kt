@@ -40,7 +40,6 @@ class LoadTestExperimentsController(
     ) = commandBus(request.toCommand(experimentId))
 
     @PostMapping("/{experimentId}/config/generate-bm")
-    fun generateBehaviorModels(
-        @PathVariable experimentId: UUID,
-    ) = commandBus(GenerateBehaviorModelsCommand(experimentId = experimentId))
+    fun generateBehaviorModels(@PathVariable experimentId: UUID) =
+        commandBus(GenerateBehaviorModelsCommand(experimentId = experimentId))
 }

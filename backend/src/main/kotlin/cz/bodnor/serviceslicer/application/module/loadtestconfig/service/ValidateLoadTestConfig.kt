@@ -14,7 +14,7 @@ object ValidateLoadTestConfig {
         operationalProfile: OperationalProfile? = null,
     ) {
         if (behaviorModels.isNotEmpty()) {
-            val sumOfUsageProfiles = (behaviorModels.sumOf { (it.usageProfile * 100).roundToInt()}) / 100.0
+            val sumOfUsageProfiles = (behaviorModels.sumOf { (it.usageProfile * 100).roundToInt() }) / 100.0
             verify(sumOfUsageProfiles == 1.0) {
                 "Sum of behavior probabilities must be 1.0, but was $sumOfUsageProfiles"
             }
