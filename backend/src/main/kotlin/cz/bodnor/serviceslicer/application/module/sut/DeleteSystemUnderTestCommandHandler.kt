@@ -1,6 +1,6 @@
-package cz.bodnor.serviceslicer.application.module.loadtestexperiment
+package cz.bodnor.serviceslicer.application.module.sut
 
-import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.DeleteSystemUnderTestCommand
+import cz.bodnor.serviceslicer.application.module.sut.command.DeleteSystemUnderTestCommand
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.LoadTestExperimentWriteService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.stereotype.Component

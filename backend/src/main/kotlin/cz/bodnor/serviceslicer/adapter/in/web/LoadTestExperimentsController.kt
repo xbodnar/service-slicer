@@ -4,7 +4,6 @@ import cz.bodnor.serviceslicer.adapter.`in`.web.requests.AddSystemUnderTestReque
 import cz.bodnor.serviceslicer.adapter.`in`.web.requests.CreateLoadTestExperimentRequest
 import cz.bodnor.serviceslicer.adapter.`in`.web.requests.UpdateLoadTestConfigRequest
 import cz.bodnor.serviceslicer.adapter.`in`.web.requests.UpdateSystemUnderTestRequest
-import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.DeleteSystemUnderTestCommand
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.query.GetLoadTestExperimentQuery
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.query.ListLoadTestExperimentsQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus

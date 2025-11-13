@@ -5,6 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useExperiment } from '@/hooks/useExperiments'
 import { useUpdateLoadTestConfig } from '@/api/generated/load-test-experiments-controller/load-test-experiments-controller'
+import {
+  useAddSystemUnderTest,
+  useUpdateSystemUnderTest,
+  useDeleteSystemUnderTest,
+} from '@/api/generated/system-under-test-controller/system-under-test-controller'
 import { useFileUpload, type UploadedFile } from '@/hooks/useFileUpload'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
@@ -48,7 +53,16 @@ const loadTestConfigSchema = z.object({
   }).optional(),
 })
 
+const systemUnderTestSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().optional(),
+  healthCheckPath: z.string().min(1, 'Health check path is required'),
+  appPort: z.coerce.number().min(1).max(65535, 'Port must be between 1 and 65535'),
+  startupTimeoutSeconds: z.coerce.number().min(1, 'Timeout must be at least 1 second'),
+})
+
 type LoadTestConfigFormData = z.infer<typeof loadTestConfigSchema>
+type SystemUnderTestFormData = z.infer<typeof systemUnderTestSchema>
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -64,9 +78,18 @@ export function ExperimentDetailPage() {
   const { toast } = useToast()
   const { uploadFile, isUploading } = useFileUpload()
   const updateLoadTestConfig = useUpdateLoadTestConfig()
+  const addSut = useAddSystemUnderTest()
+  const updateSut = useUpdateSystemUnderTest()
+  const deleteSut = useDeleteSystemUnderTest()
 
   const [isEditing, setIsEditing] = useState(false)
   const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
+
+  // SUT management state
+  const [isAddingSut, setIsAddingSut] = useState(false)
+  const [editingSutId, setEditingSutId] = useState<string | null>(null)
+  const [sutComposeFile, setSutComposeFile] = useState<UploadedFile | null>(null)
+  const [sutJarFile, setSutJarFile] = useState<UploadedFile | null>(null)
 
   const form = useForm<LoadTestConfigFormData>({
     resolver: zodResolver(loadTestConfigSchema),
@@ -84,6 +107,17 @@ export function ExperimentDetailPage() {
     name: 'behaviorModels',
   })
 
+  const sutForm = useForm<SystemUnderTestFormData>({
+    resolver: zodResolver(systemUnderTestSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      healthCheckPath: '/actuator/health',
+      appPort: 8080,
+      startupTimeoutSeconds: 60,
+    },
+  })
+
   const handleStartEdit = () => {
     if (!data) return
 
@@ -91,7 +125,7 @@ export function ExperimentDetailPage() {
     const behaviorModels = data.loadTestConfig.behaviorModels.map((model: any) => ({
       id: model.id,
       actor: model.actor,
-      behaviorProbability: model.usageProfile,
+      behaviorProbability: model.behaviorProbability,
       steps: model.steps.join(', '),
       thinkFrom: model.thinkFrom,
       thinkTo: model.thinkTo,
@@ -215,6 +249,141 @@ export function ExperimentDetailPage() {
       toast({
         variant: 'destructive',
         title: 'Failed to update configuration',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      })
+    }
+  }
+
+  // SUT handlers
+  const handleStartAddSut = () => {
+    sutForm.reset()
+    setSutComposeFile(null)
+    setSutJarFile(null)
+    setIsAddingSut(true)
+  }
+
+  const handleStartEditSut = (sut: any) => {
+    sutForm.reset({
+      name: sut.name,
+      description: sut.description || '',
+      healthCheckPath: sut.healthCheckPath,
+      appPort: sut.appPort,
+      startupTimeoutSeconds: sut.startupTimeoutSeconds,
+    })
+    setSutComposeFile(null)
+    setSutJarFile(null)
+    setEditingSutId(sut.systemUnderTestId)
+  }
+
+  const handleCancelSut = () => {
+    setIsAddingSut(false)
+    setEditingSutId(null)
+    setSutComposeFile(null)
+    setSutJarFile(null)
+    sutForm.reset()
+  }
+
+  const handleComposeFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const result = await uploadFile(file)
+    if (result) setSutComposeFile(result)
+  }
+
+  const handleJarFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const result = await uploadFile(file)
+    if (result) setSutJarFile(result)
+  }
+
+  const onSubmitSut = async (formData: SystemUnderTestFormData) => {
+    if (!data) return
+
+    try {
+      if (editingSutId) {
+        // Update existing SUT
+        const existingSut = data.systemsUnderTest.find((s: any) => s.systemUnderTestId === editingSutId)
+        if (!existingSut) return
+
+        await updateSut.mutateAsync({
+          experimentId: experimentId!,
+          sutId: editingSutId,
+          data: {
+            name: formData.name,
+            description: formData.description,
+            healthCheckPath: formData.healthCheckPath,
+            appPort: formData.appPort,
+            startupTimeoutSeconds: formData.startupTimeoutSeconds,
+            composeFileId: sutComposeFile?.fileId || existingSut.composeFile.fileId,
+            jarFileId: sutJarFile?.fileId || existingSut.jarFile.fileId,
+          },
+        })
+
+        toast({
+          title: 'SUT updated',
+          description: 'System under test has been updated successfully',
+        })
+      } else {
+        // Add new SUT
+        if (!sutComposeFile || !sutJarFile) {
+          toast({
+            variant: 'destructive',
+            title: 'Missing files',
+            description: 'Please upload both Docker Compose and JAR files',
+          })
+          return
+        }
+
+        await addSut.mutateAsync({
+          experimentId: experimentId!,
+          data: {
+            name: formData.name,
+            description: formData.description,
+            healthCheckPath: formData.healthCheckPath,
+            appPort: formData.appPort,
+            startupTimeoutSeconds: formData.startupTimeoutSeconds,
+            composeFileId: sutComposeFile.fileId,
+            jarFileId: sutJarFile.fileId,
+          },
+        })
+
+        toast({
+          title: 'SUT added',
+          description: 'System under test has been added successfully',
+        })
+      }
+
+      handleCancelSut()
+      refetch()
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: editingSutId ? 'Failed to update SUT' : 'Failed to add SUT',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      })
+    }
+  }
+
+  const handleDeleteSut = async (sutId: string) => {
+    if (!confirm('Are you sure you want to delete this system under test?')) return
+
+    try {
+      await deleteSut.mutateAsync({
+        experimentId: experimentId!,
+        sutId,
+      })
+
+      toast({
+        title: 'SUT deleted',
+        description: 'System under test has been deleted successfully',
+      })
+
+      refetch()
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete SUT',
         description: error instanceof Error ? error.message : 'An unknown error occurred',
       })
     }
@@ -486,7 +655,7 @@ export function ExperimentDetailPage() {
                         <span className="text-xs text-muted-foreground">•</span>
                         <span className="text-sm text-muted-foreground">{model.actor}</span>
                         <Badge variant="secondary" className="ml-auto">
-                          {(model.usageProfile * 100).toFixed(0)}%
+                          {(model.behaviorProbability * 100).toFixed(0)}%
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -524,17 +693,156 @@ export function ExperimentDetailPage() {
         {/* Systems Under Test */}
         <Card className="border-2 transition-shadow hover:shadow-md">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Server className="h-5 w-5 text-primary" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Server className="h-5 w-5 text-primary" />
+                </div>
+                <CardTitle className="flex items-center gap-2">
+                  Systems Under Test
+                  <Badge variant="outline">{data.systemsUnderTest.length}</Badge>
+                </CardTitle>
               </div>
-              <CardTitle className="flex items-center gap-2">
-                Systems Under Test
-                <Badge variant="outline">{data.systemsUnderTest.length}</Badge>
-              </CardTitle>
+              {!isAddingSut && !editingSutId && (
+                <Button variant="outline" size="sm" onClick={handleStartAddSut}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add SUT
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Add/Edit SUT Form */}
+            {(isAddingSut || editingSutId) && (
+              <form onSubmit={sutForm.handleSubmit(onSubmitSut)} className="space-y-4 p-4 rounded-lg border-2 border-primary/20 bg-primary/5">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">
+                    {editingSutId ? 'Edit System Under Test' : 'Add New System Under Test'}
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="sut-name">Name *</Label>
+                    <Input
+                      id="sut-name"
+                      {...sutForm.register('name')}
+                      placeholder="Monolithic System"
+                    />
+                    {sutForm.formState.errors.name && (
+                      <p className="text-xs text-destructive">{sutForm.formState.errors.name.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sut-description">Description</Label>
+                    <Textarea
+                      id="sut-description"
+                      {...sutForm.register('description')}
+                      placeholder="Original monolithic application"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sut-compose">Docker Compose File * {editingSutId && '(leave empty to keep current)'}</Label>
+                    <FileInput
+                      id="sut-compose"
+                      accept=".yml,.yaml"
+                      onChange={handleComposeFileUpload}
+                      disabled={isUploading}
+                    />
+                    {sutComposeFile && (
+                      <div className="flex items-center gap-2 p-2 rounded bg-muted/50">
+                        <FileArchive className="h-4 w-4 text-primary" />
+                        <span className="text-sm">{sutComposeFile.filename}</span>
+                        <CheckCircle2 className="h-4 w-4 text-green-500 ml-auto" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sut-jar">JAR File * {editingSutId && '(leave empty to keep current)'}</Label>
+                    <FileInput
+                      id="sut-jar"
+                      accept=".jar"
+                      onChange={handleJarFileUpload}
+                      disabled={isUploading}
+                    />
+                    {sutJarFile && (
+                      <div className="flex items-center gap-2 p-2 rounded bg-muted/50">
+                        <Package className="h-4 w-4 text-primary" />
+                        <span className="text-sm">{sutJarFile.filename}</span>
+                        <CheckCircle2 className="h-4 w-4 text-green-500 ml-auto" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="sut-health">Health Check Path *</Label>
+                      <Input
+                        id="sut-health"
+                        {...sutForm.register('healthCheckPath')}
+                        placeholder="/actuator/health"
+                      />
+                      {sutForm.formState.errors.healthCheckPath && (
+                        <p className="text-xs text-destructive">{sutForm.formState.errors.healthCheckPath.message}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="sut-port">App Port *</Label>
+                      <Input
+                        id="sut-port"
+                        type="number"
+                        {...sutForm.register('appPort')}
+                        placeholder="8080"
+                      />
+                      {sutForm.formState.errors.appPort && (
+                        <p className="text-xs text-destructive">{sutForm.formState.errors.appPort.message}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sut-timeout">Startup Timeout (seconds) *</Label>
+                    <Input
+                      id="sut-timeout"
+                      type="number"
+                      {...sutForm.register('startupTimeoutSeconds')}
+                      placeholder="60"
+                    />
+                    {sutForm.formState.errors.startupTimeoutSeconds && (
+                      <p className="text-xs text-destructive">{sutForm.formState.errors.startupTimeoutSeconds.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="submit"
+                    disabled={addSut.isPending || updateSut.isPending || isUploading}
+                  >
+                    {(addSut.isPending || updateSut.isPending) && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
+                    {editingSutId ? 'Update SUT' : 'Add SUT'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelSut}
+                    disabled={addSut.isPending || updateSut.isPending || isUploading}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Existing SUTs List */}
             {data.systemsUnderTest.map((system, idx) => (
               <div
                 key={system.systemUnderTestId}
@@ -543,12 +851,35 @@ export function ExperimentDetailPage() {
                   idx > 0 && 'mt-4'
                 )}
               >
-                <div>
-                  <h4 className="font-semibold">{system.name}</h4>
-                  {system.description && (
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {system.description}
-                    </p>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-semibold">{system.name}</h4>
+                    {system.description && (
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {system.description}
+                      </p>
+                    )}
+                  </div>
+                  {!isAddingSut && !editingSutId && (
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
+                        onClick={() => handleStartEditSut(system)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        onClick={() => handleDeleteSut(system.systemUnderTestId)}
+                        disabled={deleteSut.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
 
