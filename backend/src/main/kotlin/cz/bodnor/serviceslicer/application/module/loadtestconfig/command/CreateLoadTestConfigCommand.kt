@@ -6,7 +6,6 @@ import java.util.UUID
 
 data class CreateLoadTestConfigCommand(
     val openApiFileId: UUID,
-    val name: String,
     val behaviorModels: List<CreateUserBehaviorModelDto> = emptyList(),
     val operationalProfile: OperationalProfile? = null,
 ) : Command<CreateLoadTestConfigCommand.Result> {

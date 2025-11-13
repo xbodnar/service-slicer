@@ -16,7 +16,7 @@ import java.util.UUID
 class LoadTestExperiment(
     id: UUID = UUID.randomUUID(),
     // Reference to the load test configuration
-    val loadTestConfigId: UUID,
+    var loadTestConfigId: UUID,
     // Custom name to identify this experiment
     val name: String,
     // Description of this experiment

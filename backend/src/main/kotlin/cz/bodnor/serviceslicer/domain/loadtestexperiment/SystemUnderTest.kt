@@ -16,19 +16,19 @@ class SystemUnderTest(
     // Reference to the parent experiment
     val experimentId: UUID,
     // Custom name to identify this system configuration
-    val name: String,
+    var name: String,
     // Reference to the docker-compose file
-    val composeFileId: UUID,
+    var composeFileId: UUID,
     // Reference to the JAR file
-    val jarFileId: UUID,
+    var jarFileId: UUID,
     // Description of this system configuration (e.g., "Baseline monolith", "3-service decomposition")
-    val description: String? = null,
+    var description: String? = null,
     // Health check endpoint path (e.g., "/actuator/health")
-    val healthCheckPath: String,
+    var healthCheckPath: String,
     // Port on which the application is exposed (based on docker-compose)
-    val appPort: Int,
+    var appPort: Int,
     // Startup timeout in seconds
-    val startupTimeoutSeconds: Long,
+    var startupTimeoutSeconds: Long,
 ) : UpdatableEntity(id)
 
 @Repository

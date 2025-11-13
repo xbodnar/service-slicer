@@ -3,6 +3,7 @@ package cz.bodnor.serviceslicer.adapter.`in`.web
 import cz.bodnor.serviceslicer.adapter.`in`.web.requests.CreateProjectRequest
 import cz.bodnor.serviceslicer.application.module.analysis.command.BuildDependencyGraphCommand
 import cz.bodnor.serviceslicer.application.module.project.query.GetProjectQuery
+import cz.bodnor.serviceslicer.application.module.project.query.ListProjectsQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryBus
 import org.springframework.web.bind.annotation.GetMapping
@@ -19,6 +20,9 @@ class ProjectController(
     private val commandBus: CommandBus,
     private val queryBus: QueryBus,
 ) {
+    @GetMapping
+    fun listProjects(): ListProjectsQuery.Result = queryBus(ListProjectsQuery())
+
     @PostMapping
     fun createProject(@RequestBody body: CreateProjectRequest) = commandBus(body.toCommand())
 

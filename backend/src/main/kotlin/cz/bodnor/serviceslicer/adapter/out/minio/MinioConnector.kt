@@ -6,6 +6,7 @@ import io.minio.GetPresignedObjectUrlArgs
 import io.minio.ListObjectsArgs
 import io.minio.MinioClient
 import io.minio.PutObjectArgs
+import io.minio.RemoveObjectArgs
 import io.minio.StatObjectArgs
 import io.minio.StatObjectResponse
 import io.minio.http.Method
@@ -73,4 +74,13 @@ class MinioConnector(
             .recursive(true)
             .build(),
     ).map { it.get() }
+
+    fun deleteObject(storageKey: String) {
+        minioClient.removeObject(
+            RemoveObjectArgs.builder()
+                .bucket(minioProperties.bucketName)
+                .`object`(storageKey)
+                .build(),
+        )
+    }
 }

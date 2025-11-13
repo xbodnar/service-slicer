@@ -18,15 +18,13 @@ import java.util.UUID
 class LoadTestConfig(
     id: UUID = UUID.randomUUID(),
     // Reference to the OpenAPI specification file
-    val openApiFileId: UUID,
-    // Custom name to identify this configuration
-    val name: String,
+    var openApiFileId: UUID,
     // Behavior models representing user flows/scenarios
     @JdbcTypeCode(SqlTypes.JSON)
-    val behaviorModels: List<BehaviorModel> = emptyList(),
+    var behaviorModels: List<BehaviorModel> = emptyList(),
     // Operational profile defining load patterns and weights
     @JdbcTypeCode(SqlTypes.JSON)
-    val operationalProfile: OperationalProfile? = null,
+    var operationalProfile: OperationalProfile? = null,
     // k6 test configuration (VUs, duration, thresholds, etc.)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "k6_configuration")

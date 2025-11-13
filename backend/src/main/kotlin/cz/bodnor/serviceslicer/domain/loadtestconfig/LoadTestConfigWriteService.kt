@@ -10,7 +10,6 @@ class LoadTestConfigWriteService(
 
     fun create(
         openApiFileId: UUID,
-        name: String,
         behaviorModels: List<BehaviorModel> = emptyList(),
         operationalProfile: OperationalProfile? = null,
         k6Configuration: K6Configuration? = null,
@@ -18,7 +17,6 @@ class LoadTestConfigWriteService(
         LoadTestConfig(
             id = UUID.randomUUID(),
             openApiFileId = openApiFileId,
-            name = name,
             behaviorModels = behaviorModels,
             operationalProfile = operationalProfile,
             k6Configuration = k6Configuration,

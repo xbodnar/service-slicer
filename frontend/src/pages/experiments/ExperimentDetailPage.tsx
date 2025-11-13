@@ -1,0 +1,603 @@
+import { useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import { useForm, useFieldArray } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import { useExperiment } from '@/hooks/useExperiments'
+import { useUpdateLoadTestConfig } from '@/api/generated/load-test-experiments-controller/load-test-experiments-controller'
+import { useFileUpload, type UploadedFile } from '@/hooks/useFileUpload'
+import { useToast } from '@/components/ui/use-toast'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { FileInput } from '@/components/ui/file-input'
+import { cn } from '@/lib/utils'
+import {
+  Loader2,
+  ArrowLeft,
+  FileCode,
+  Server,
+  Package,
+  Activity,
+  FileArchive,
+  Users,
+  Pencil,
+  X,
+  Plus,
+  Trash2,
+  CheckCircle2
+} from 'lucide-react'
+
+const loadTestConfigSchema = z.object({
+  behaviorModels: z.array(
+    z.object({
+      id: z.string().min(1, 'ID is required'),
+      actor: z.string().min(1, 'Actor name is required'),
+      behaviorProbability: z.coerce.number().min(0).max(1),
+      steps: z.string().min(1, 'At least one step is required'),
+      thinkFrom: z.coerce.number().min(0),
+      thinkTo: z.coerce.number().min(0),
+    })
+  ).optional(),
+  operationalProfile: z.object({
+    loads: z.string().optional(),
+    freq: z.string().optional(),
+  }).optional(),
+})
+
+type LoadTestConfigFormData = z.infer<typeof loadTestConfigSchema>
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
+}
+
+export function ExperimentDetailPage() {
+  const { experimentId } = useParams<{ experimentId: string }>()
+  const { data, isLoading, error, refetch } = useExperiment(experimentId!)
+  const { toast } = useToast()
+  const { uploadFile, isUploading } = useFileUpload()
+  const updateLoadTestConfig = useUpdateLoadTestConfig()
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
+
+  const form = useForm<LoadTestConfigFormData>({
+    resolver: zodResolver(loadTestConfigSchema),
+    defaultValues: {
+      behaviorModels: [],
+      operationalProfile: {
+        loads: '',
+        freq: '',
+      },
+    },
+  })
+
+  const { fields: behaviorFields, append: appendBehavior, remove: removeBehavior } = useFieldArray({
+    control: form.control,
+    name: 'behaviorModels',
+  })
+
+  const handleStartEdit = () => {
+    if (!data) return
+
+    // Pre-populate form with existing data
+    const behaviorModels = data.loadTestConfig.behaviorModels.map((model: any) => ({
+      id: model.id,
+      actor: model.actor,
+      behaviorProbability: model.usageProfile,
+      steps: model.steps.join(', '),
+      thinkFrom: model.thinkFrom,
+      thinkTo: model.thinkTo,
+    }))
+
+    form.reset({
+      behaviorModels: behaviorModels.length > 0 ? behaviorModels : [],
+      operationalProfile: data.loadTestConfig.operationalProfile
+        ? {
+            loads: data.loadTestConfig.operationalProfile.loads.join(', '),
+            freq: data.loadTestConfig.operationalProfile.freq.join(', '),
+          }
+        : { loads: '', freq: '' },
+    })
+
+    setIsEditing(true)
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setOpenApiFile(null)
+    form.reset()
+  }
+
+  const handleOpenApiUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const result = await uploadFile(file)
+    if (result) {
+      setOpenApiFile(result)
+    }
+  }
+
+  const handleAddBehaviorModel = () => {
+    appendBehavior({
+      id: '',
+      actor: '',
+      behaviorProbability: 0.5,
+      steps: '',
+      thinkFrom: 1000,
+      thinkTo: 3000,
+    })
+  }
+
+  const onSubmit = async (formData: LoadTestConfigFormData) => {
+    if (!data) return
+
+    // Use existing OpenAPI file if no new one was uploaded
+    const openApiFileId = openApiFile?.fileId || data.loadTestConfig.openApiFile.fileId
+
+    try {
+      // Process behavioral models
+      let behaviorModels: any[] = []
+      if (formData.behaviorModels && formData.behaviorModels.length > 0) {
+        behaviorModels = formData.behaviorModels.map((model) => ({
+          id: model.id,
+          actor: model.actor,
+          behaviorProbability: model.behaviorProbability,
+          steps: model.steps.split(',').map((s) => s.trim()),
+          thinkFrom: model.thinkFrom,
+          thinkTo: model.thinkTo,
+        }))
+      }
+
+      // Process operational profile
+      let operationalProfile: any = undefined
+      if (formData.operationalProfile?.loads && formData.operationalProfile?.freq) {
+        const loads = formData.operationalProfile.loads
+          .split(',')
+          .map((l) => parseInt(l.trim(), 10))
+          .filter((l) => !isNaN(l))
+
+        const freq = formData.operationalProfile.freq
+          .split(',')
+          .map((f) => parseFloat(f.trim()))
+          .filter((f) => !isNaN(f))
+
+        if (loads.length > 0 && freq.length > 0) {
+          if (loads.length !== freq.length) {
+            toast({
+              variant: 'destructive',
+              title: 'Invalid operational profile',
+              description: 'Loads and frequencies must have the same number of elements',
+            })
+            return
+          }
+
+          const freqSum = freq.reduce((sum, f) => sum + f, 0)
+          if (Math.abs(freqSum - 1.0) > 0.001) {
+            toast({
+              variant: 'destructive',
+              title: 'Invalid operational profile',
+              description: `Frequencies must sum to 1.0 (current sum: ${freqSum.toFixed(3)})`,
+            })
+            return
+          }
+
+          operationalProfile = { loads, freq }
+        }
+      }
+
+      await updateLoadTestConfig.mutateAsync({
+        experimentId: experimentId!,
+        data: {
+          openApiFileId,
+          behaviorModels,
+          operationalProfile,
+        },
+      })
+
+      toast({
+        title: 'Configuration updated',
+        description: 'Load test configuration has been updated successfully',
+      })
+
+      setIsEditing(false)
+      setOpenApiFile(null)
+      refetch()
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update configuration',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      })
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-destructive">
+          Error loading experiment: {(error as Error)?.message || 'Unknown error'}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start gap-4">
+        <Link to="/experiments">
+          <Button variant="outline" size="icon" className="h-9 w-9 flex-shrink-0 mt-1">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight">{data.name}</h1>
+          {data.description && (
+            <p className="text-muted-foreground mt-1.5">{data.description}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Load Test Configuration */}
+        <Card className="border-2 transition-shadow hover:shadow-md">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Activity className="h-5 w-5 text-primary" />
+                </div>
+                <CardTitle>Load Test Configuration</CardTitle>
+              </div>
+              {!isEditing && (
+                <Button variant="outline" size="sm" onClick={handleStartEdit}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {isEditing ? (
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {/* OpenAPI File */}
+                <div className="space-y-2">
+                  <Label htmlFor="openapi-file">OpenAPI Specification File (optional - leave empty to keep current)</Label>
+                  <FileInput
+                    id="openapi-file"
+                    accept=".yaml,.yml,.json"
+                    onChange={handleOpenApiUpload}
+                    disabled={isUploading}
+                  />
+                  {openApiFile ? (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                      <FileCode className="h-4 w-4 text-primary flex-shrink-0" />
+                      <span className="text-sm font-medium flex-1 truncate">{openApiFile.filename}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {(openApiFile.size / 1024).toFixed(2)} KB
+                      </Badge>
+                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                      <FileCode className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-sm text-muted-foreground">
+                        Current: {data.loadTestConfig.openApiFile.filename}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Behavioral Models */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Behavioral Models</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddBehaviorModel}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Model
+                    </Button>
+                  </div>
+
+                  {behaviorFields.map((field, index) => (
+                    <Card key={field.id} className="p-4">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-semibold">Model {index + 1}</h4>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeBehavior(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`behavior-id-${index}`}>ID</Label>
+                            <Input
+                              id={`behavior-id-${index}`}
+                              {...form.register(`behaviorModels.${index}.id`)}
+                              placeholder="checkout-flow"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor={`behavior-actor-${index}`}>Actor</Label>
+                            <Input
+                              id={`behavior-actor-${index}`}
+                              {...form.register(`behaviorModels.${index}.actor`)}
+                              placeholder="Customer"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor={`behavior-probability-${index}`}>
+                            Behavior Probability (0-1)
+                          </Label>
+                          <Input
+                            id={`behavior-probability-${index}`}
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="1"
+                            {...form.register(`behaviorModels.${index}.behaviorProbability`)}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor={`behavior-steps-${index}`}>
+                            Steps (comma-separated)
+                          </Label>
+                          <Textarea
+                            id={`behavior-steps-${index}`}
+                            {...form.register(`behaviorModels.${index}.steps`)}
+                            placeholder="createOrder, addPayment, confirmOrder"
+                            rows={2}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`behavior-think-from-${index}`}>
+                              Think Time From (ms)
+                            </Label>
+                            <Input
+                              id={`behavior-think-from-${index}`}
+                              type="number"
+                              {...form.register(`behaviorModels.${index}.thinkFrom`)}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor={`behavior-think-to-${index}`}>
+                              Think Time To (ms)
+                            </Label>
+                            <Input
+                              id={`behavior-think-to-${index}`}
+                              type="number"
+                              {...form.register(`behaviorModels.${index}.thinkTo`)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Operational Profile */}
+                <div className="space-y-4">
+                  <Label>Operational Profile</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="op-loads">Loads (comma-separated)</Label>
+                      <Input
+                        id="op-loads"
+                        {...form.register('operationalProfile.loads')}
+                        placeholder="25, 50, 100, 150, 200"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="op-freq">Frequencies (must sum to 1)</Label>
+                      <Input
+                        id="op-freq"
+                        {...form.register('operationalProfile.freq')}
+                        placeholder="0.1, 0.2, 0.3, 0.3, 0.1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-4">
+                  <Button type="submit" disabled={updateLoadTestConfig.isPending || isUploading}>
+                    {updateLoadTestConfig.isPending && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
+                    Save Changes
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                    disabled={updateLoadTestConfig.isPending || isUploading}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <>
+            {/* OpenAPI File */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <FileCode className="h-4 w-4" />
+                <span>OpenAPI Specification</span>
+              </div>
+              <div className="flex items-center gap-2 pl-6">
+                <span className="font-medium">{data.loadTestConfig.openApiFile.filename}</span>
+                <Badge variant="secondary" className="text-xs">
+                  {formatFileSize(data.loadTestConfig.openApiFile.fileSize)}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Behavior Models */}
+            {data.loadTestConfig.behaviorModels.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>Behavior Models</span>
+                  </div>
+                  <Badge variant="outline">{data.loadTestConfig.behaviorModels.length}</Badge>
+                </div>
+                <div className="space-y-2 pl-6">
+                  {data.loadTestConfig.behaviorModels.map((model) => (
+                    <div key={model.id} className="p-3 rounded-lg bg-muted/50 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{model.id}</span>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-sm text-muted-foreground">{model.actor}</span>
+                        <Badge variant="secondary" className="ml-auto">
+                          {(model.usageProfile * 100).toFixed(0)}%
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {model.steps.join(' → ')} • Think: {model.thinkFrom}-{model.thinkTo}ms
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Operational Profile */}
+            {data.loadTestConfig.operationalProfile && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Activity className="h-4 w-4" />
+                  <span>Operational Profile</span>
+                </div>
+                <div className="pl-6 text-sm space-y-1">
+                  <p><span className="text-muted-foreground">Loads:</span> {data.loadTestConfig.operationalProfile.loads.join(', ')}</p>
+                  <p>
+                    <span className="text-muted-foreground">Frequencies:</span>{' '}
+                    {data.loadTestConfig.operationalProfile.freq
+                      .map((f) => (f * 100).toFixed(0) + '%')
+                      .join(', ')}
+                  </p>
+                </div>
+              </div>
+            )}
+            </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Systems Under Test */}
+        <Card className="border-2 transition-shadow hover:shadow-md">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Server className="h-5 w-5 text-primary" />
+              </div>
+              <CardTitle className="flex items-center gap-2">
+                Systems Under Test
+                <Badge variant="outline">{data.systemsUnderTest.length}</Badge>
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {data.systemsUnderTest.map((system, idx) => (
+              <div
+                key={system.systemUnderTestId}
+                className={cn(
+                  'space-y-3 p-4 rounded-lg bg-muted/50 transition-colors hover:bg-muted',
+                  idx > 0 && 'mt-4'
+                )}
+              >
+                <div>
+                  <h4 className="font-semibold">{system.name}</h4>
+                  {system.description && (
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {system.description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-2.5">
+                  {/* Docker Compose */}
+                  <div className="flex items-start gap-2">
+                    <FileArchive className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Docker Compose</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm truncate">{system.composeFile.filename}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {formatFileSize(system.composeFile.fileSize)}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* JAR File */}
+                  <div className="flex items-start gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Application JAR</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm truncate">{system.jarFile.filename}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {formatFileSize(system.jarFile.fileSize)}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Health & Port */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Health Check</p>
+                      <p className="font-mono text-sm">{system.healthCheckPath}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Port</p>
+                      <p className="text-sm font-medium">{system.appPort}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}

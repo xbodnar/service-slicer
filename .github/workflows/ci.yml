@@ -22,13 +22,13 @@ jobs:
           java-version: 21
           cache: maven
 
-      - name: Compile source code
-        working-directory: ./backend
-        run: ./mvnw -B -ntp clean compile
-
       - name: Run ktlint check
         working-directory: ./backend
         run: ./mvnw -B -ntp ktlint:check
+
+      - name: Compile source code
+        working-directory: ./backend
+        run: ./mvnw -B -ntp clean compile
 
   test:
     runs-on: ubuntu-latest

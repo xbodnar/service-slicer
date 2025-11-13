@@ -32,6 +32,13 @@ class GetProjectQueryHandler(
                     dependencyGraph = GetProjectQuery.GraphSummary(
                         nodeCount = graphNodes.size,
                         edgeCount = graphNodes.sumOf { it.dependencies.size },
+                        nodes = graphNodes.map { node ->
+                            GetProjectQuery.ClassNodeDto(
+                                simpleClassName = node.simpleClassName,
+                                fullyQualifiedClassName = node.fullyQualifiedClassName,
+                                dependencies = node.dependencies.map { it.target.fullyQualifiedClassName },
+                            )
+                        },
                     ),
                     labelPropagationAlgorithm = GetProjectQuery.DecompositionResults(
                         communities = graphNodes.communities { it.communityLabelPropagation.toString() },
