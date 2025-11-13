@@ -103,15 +103,14 @@ export interface FileDto {
 export interface BehaviorModel {
   id: string
   actor: string
-  behaviorProbability: number
+  usageProfile: number
   steps: string[]
   thinkFrom: number
   thinkTo: number
 }
 
 export interface OperationalProfile {
-  loads: number[]
-  freq: number[]
+  loadsToFreq: Array<{ first: number; second: number }>
 }
 
 export interface CreateLoadTestConfigDto {

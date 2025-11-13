@@ -15,7 +15,7 @@ data class CreateLoadTestConfigCommand(
         // Name of the actor persona this behavior model represents
         val actor: String,
         // Probability of this behavior model being executed, must be between 0 and 1
-        val behaviorProbability: Double,
+        val usageProfile: Double,
         // Sequence of operations that the actor performs, IDs of the operations in the OpenAPI file
         val steps: List<String>,
         // Think time range (in milliseconds)

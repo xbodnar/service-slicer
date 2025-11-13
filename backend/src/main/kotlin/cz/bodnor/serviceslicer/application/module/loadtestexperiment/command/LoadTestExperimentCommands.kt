@@ -39,3 +39,12 @@ data class UpdateLoadTestConfigCommand(
         val loadTestConfigId: UUID,
     )
 }
+
+data class GenerateBehaviorModelsCommand(
+    val experimentId: UUID,
+) : Command<GenerateBehaviorModelsCommand.Result> {
+
+    data class Result(
+        val loadTestConfigId: UUID,
+    )
+}

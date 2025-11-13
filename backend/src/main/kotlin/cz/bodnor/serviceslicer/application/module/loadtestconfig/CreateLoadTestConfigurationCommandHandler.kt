@@ -35,7 +35,7 @@ class CreateLoadTestConfigurationCommandHandler(
             BehaviorModel(
                 id = model.id,
                 actor = model.actor,
-                usageProfile = model.behaviorProbability,
+                usageProfile = model.usageProfile,
                 steps = model.steps,
                 thinkFrom = model.thinkFrom,
                 thinkTo = model.thinkTo,

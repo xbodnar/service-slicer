@@ -55,10 +55,8 @@ data class BehaviorModel(
  * Operational profile defining load patterns and weights.
  */
 data class OperationalProfile(
-    // List of loads (e.g., [25, 50, 100, 150, 200])
-    val loads: List<Int>,
-    // Probability of each load (must sum to 1)
-    val freq: List<Double>,
+    // List of pairs of load (e.g., 25, 50, 100, 150, 200) and frequencies (must sum to 1)
+    val loadsToFreq: List<Pair<Int, Double>>,
 )
 
 /**

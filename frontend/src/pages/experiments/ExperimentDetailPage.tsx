@@ -10,6 +10,7 @@ import {
   useUpdateSystemUnderTest,
   useDeleteSystemUnderTest,
 } from '@/api/generated/system-under-test-controller/system-under-test-controller'
+import { useGenerateBehaviorModels } from '@/api/generated/load-test-experiments-controller/load-test-experiments-controller'
 import { type UploadedFile } from '@/hooks/useFileUpload'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
@@ -33,7 +34,6 @@ import {
   X,
   Plus,
   Trash2,
-  CheckCircle2
 } from 'lucide-react'
 
 const loadTestConfigSchema = z.object({
@@ -41,16 +41,18 @@ const loadTestConfigSchema = z.object({
     z.object({
       id: z.string().min(1, 'ID is required'),
       actor: z.string().min(1, 'Actor name is required'),
-      behaviorProbability: z.coerce.number().min(0).max(1),
+      usageProfile: z.coerce.number().min(0).max(1),
       steps: z.string().min(1, 'At least one step is required'),
       thinkFrom: z.coerce.number().min(0),
       thinkTo: z.coerce.number().min(0),
     })
   ).optional(),
-  operationalProfile: z.object({
-    loads: z.string().optional(),
-    freq: z.string().optional(),
-  }).optional(),
+  operationalProfile: z.array(
+    z.object({
+      load: z.coerce.number().min(1, 'Load must be at least 1'),
+      frequency: z.coerce.number().min(0).max(1, 'Frequency must be between 0 and 1'),
+    })
+  ).optional(),
 })
 
 const systemUnderTestSchema = z.object({
@@ -77,6 +79,7 @@ export function ExperimentDetailPage() {
   const { data, isLoading, error, refetch } = useExperiment(experimentId!)
   const { toast } = useToast()
   const updateLoadTestConfig = useUpdateLoadTestConfig()
+  const generateBehaviorModels = useGenerateBehaviorModels()
   const addSut = useAddSystemUnderTest()
   const updateSut = useUpdateSystemUnderTest()
   const deleteSut = useDeleteSystemUnderTest()
@@ -94,16 +97,18 @@ export function ExperimentDetailPage() {
     resolver: zodResolver(loadTestConfigSchema),
     defaultValues: {
       behaviorModels: [],
-      operationalProfile: {
-        loads: '',
-        freq: '',
-      },
+      operationalProfile: [],
     },
   })
 
   const { fields: behaviorFields, append: appendBehavior, remove: removeBehavior } = useFieldArray({
     control: form.control,
     name: 'behaviorModels',
+  })
+
+  const { fields: operationalProfileFields, append: appendOperationalProfile, remove: removeOperationalProfile } = useFieldArray({
+    control: form.control,
+    name: 'operationalProfile',
   })
 
   const sutForm = useForm<SystemUnderTestFormData>({
@@ -124,7 +129,7 @@ export function ExperimentDetailPage() {
     const behaviorModels = data.loadTestConfig.behaviorModels.map((model: any) => ({
       id: model.id,
       actor: model.actor,
-      behaviorProbability: model.behaviorProbability,
+      usageProfile: model.usageProfile,
       steps: model.steps.join(', '),
       thinkFrom: model.thinkFrom,
       thinkTo: model.thinkTo,
@@ -133,11 +138,11 @@ export function ExperimentDetailPage() {
     form.reset({
       behaviorModels: behaviorModels.length > 0 ? behaviorModels : [],
       operationalProfile: data.loadTestConfig.operationalProfile
-        ? {
-            loads: data.loadTestConfig.operationalProfile.loads.join(', '),
-            freq: data.loadTestConfig.operationalProfile.freq.join(', '),
-          }
-        : { loads: '', freq: '' },
+        ? data.loadTestConfig.operationalProfile.loadsToFreq.map(p => ({
+            load: p.first,
+            frequency: p.second,
+          }))
+        : [],
     })
 
     setIsEditing(true)
@@ -157,10 +162,17 @@ export function ExperimentDetailPage() {
     appendBehavior({
       id: '',
       actor: '',
-      behaviorProbability: 0.5,
+      usageProfile: 0.5,
       steps: '',
       thinkFrom: 1000,
       thinkTo: 3000,
+    })
+  }
+
+  const handleAddOperationalProfile = () => {
+    appendOperationalProfile({
+      load: 25,
+      frequency: 0.2,
     })
   }
 
@@ -177,7 +189,7 @@ export function ExperimentDetailPage() {
         behaviorModels = formData.behaviorModels.map((model) => ({
           id: model.id,
           actor: model.actor,
-          behaviorProbability: model.behaviorProbability,
+          usageProfile: model.usageProfile,
           steps: model.steps.split(',').map((s) => s.trim()),
           thinkFrom: model.thinkFrom,
           thinkTo: model.thinkTo,
@@ -186,39 +198,23 @@ export function ExperimentDetailPage() {
 
       // Process operational profile
       let operationalProfile: any = undefined
-      if (formData.operationalProfile?.loads && formData.operationalProfile?.freq) {
-        const loads = formData.operationalProfile.loads
-          .split(',')
-          .map((l) => parseInt(l.trim(), 10))
-          .filter((l) => !isNaN(l))
-
-        const freq = formData.operationalProfile.freq
-          .split(',')
-          .map((f) => parseFloat(f.trim()))
-          .filter((f) => !isNaN(f))
-
-        if (loads.length > 0 && freq.length > 0) {
-          if (loads.length !== freq.length) {
-            toast({
-              variant: 'destructive',
-              title: 'Invalid operational profile',
-              description: 'Loads and frequencies must have the same number of elements',
-            })
-            return
-          }
-
-          const freqSum = freq.reduce((sum, f) => sum + f, 0)
-          if (Math.abs(freqSum - 1.0) > 0.001) {
-            toast({
-              variant: 'destructive',
-              title: 'Invalid operational profile',
-              description: `Frequencies must sum to 1.0 (current sum: ${freqSum.toFixed(3)})`,
-            })
-            return
-          }
-
-          operationalProfile = { loads, freq }
+      if (formData.operationalProfile && formData.operationalProfile.length > 0) {
+        const freqSum = formData.operationalProfile.reduce((sum, p) => sum + p.frequency, 0)
+        if (Math.abs(freqSum - 1.0) > 0.001) {
+          toast({
+            variant: 'destructive',
+            title: 'Invalid operational profile',
+            description: `Frequencies must sum to 1.0 (current sum: ${freqSum.toFixed(3)})`,
+          })
+          return
         }
+
+        // Convert to loadsToFreq format
+        const loadsToFreq = formData.operationalProfile.map(p => ({
+          first: p.load,
+          second: p.frequency,
+        }))
+        operationalProfile = { loadsToFreq }
       }
 
       await updateLoadTestConfig.mutateAsync({
@@ -376,6 +372,27 @@ export function ExperimentDetailPage() {
     }
   }
 
+  const handleGenerateBehaviorModels = async () => {
+    try {
+      await generateBehaviorModels.mutateAsync({
+        experimentId: experimentId!,
+      })
+
+      toast({
+        title: 'Behavior models generated',
+        description: 'Behavior models have been generated successfully',
+      })
+
+      refetch()
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to generate behavior models',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      })
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -470,87 +487,78 @@ export function ExperimentDetailPage() {
 
                   {behaviorFields.map((field, index) => (
                     <Card key={field.id} className="p-4">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-sm font-semibold">Model {index + 1}</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1 grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor={`behavior-id-${index}`}>ID</Label>
+                              <Input
+                                id={`behavior-id-${index}`}
+                                {...form.register(`behaviorModels.${index}.id`)}
+                                placeholder="checkout-flow"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`behavior-actor-${index}`}>Actor</Label>
+                              <Input
+                                id={`behavior-actor-${index}`}
+                                {...form.register(`behaviorModels.${index}.actor`)}
+                                placeholder="Customer"
+                              />
+                            </div>
+                          </div>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
                             onClick={() => removeBehavior(index)}
+                            className="flex-shrink-0"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-3">
                           <div className="space-y-2">
-                            <Label htmlFor={`behavior-id-${index}`}>ID</Label>
+                            <Label htmlFor={`usage-profile-${index}`}>Usage Profile</Label>
                             <Input
-                              id={`behavior-id-${index}`}
-                              {...form.register(`behaviorModels.${index}.id`)}
-                              placeholder="checkout-flow"
+                              id={`usage-profile-${index}`}
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="1"
+                              {...form.register(`behaviorModels.${index}.usageProfile`)}
+                              placeholder="0.5"
                             />
                           </div>
-
                           <div className="space-y-2">
-                            <Label htmlFor={`behavior-actor-${index}`}>Actor</Label>
+                            <Label htmlFor={`behavior-think-from-${index}`}>Think From (ms)</Label>
                             <Input
-                              id={`behavior-actor-${index}`}
-                              {...form.register(`behaviorModels.${index}.actor`)}
-                              placeholder="Customer"
+                              id={`behavior-think-from-${index}`}
+                              type="number"
+                              {...form.register(`behaviorModels.${index}.thinkFrom`)}
+                              placeholder="1000"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`behavior-think-to-${index}`}>Think To (ms)</Label>
+                            <Input
+                              id={`behavior-think-to-${index}`}
+                              type="number"
+                              {...form.register(`behaviorModels.${index}.thinkTo`)}
+                              placeholder="3000"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor={`behavior-probability-${index}`}>
-                            Behavior Probability (0-1)
-                          </Label>
-                          <Input
-                            id={`behavior-probability-${index}`}
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="1"
-                            {...form.register(`behaviorModels.${index}.behaviorProbability`)}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor={`behavior-steps-${index}`}>
-                            Steps (comma-separated)
-                          </Label>
+                          <Label htmlFor={`behavior-steps-${index}`}>Steps</Label>
                           <Textarea
                             id={`behavior-steps-${index}`}
                             {...form.register(`behaviorModels.${index}.steps`)}
                             placeholder="createOrder, addPayment, confirmOrder"
                             rows={2}
                           />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor={`behavior-think-from-${index}`}>
-                              Think Time From (ms)
-                            </Label>
-                            <Input
-                              id={`behavior-think-from-${index}`}
-                              type="number"
-                              {...form.register(`behaviorModels.${index}.thinkFrom`)}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor={`behavior-think-to-${index}`}>
-                              Think Time To (ms)
-                            </Label>
-                            <Input
-                              id={`behavior-think-to-${index}`}
-                              type="number"
-                              {...form.register(`behaviorModels.${index}.thinkTo`)}
-                            />
-                          </div>
                         </div>
                       </div>
                     </Card>
@@ -559,31 +567,87 @@ export function ExperimentDetailPage() {
 
                 {/* Operational Profile */}
                 <div className="space-y-4">
-                  <Label>Operational Profile</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="op-loads">Loads (comma-separated)</Label>
-                      <Input
-                        id="op-loads"
-                        {...form.register('operationalProfile.loads')}
-                        placeholder="25, 50, 100, 150, 200"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="op-freq">Frequencies (must sum to 1)</Label>
-                      <Input
-                        id="op-freq"
-                        {...form.register('operationalProfile.freq')}
-                        placeholder="0.1, 0.2, 0.3, 0.3, 0.1"
-                      />
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Operational Profile</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddOperationalProfile}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Load & Frequency
+                    </Button>
                   </div>
+
+                  {operationalProfileFields.map((field, index) => (
+                    <Card key={field.id} className="p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`op-load-${index}`}>Load (users)</Label>
+                            <Input
+                              id={`op-load-${index}`}
+                              type="number"
+                              {...form.register(`operationalProfile.${index}.load`)}
+                              placeholder="25"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor={`op-freq-${index}`}>Frequency (0-1)</Label>
+                            <Input
+                              id={`op-freq-${index}`}
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="1"
+                              {...form.register(`operationalProfile.${index}.frequency`)}
+                              placeholder="0.2"
+                            />
+                          </div>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeOperationalProfile(index)}
+                          className="flex-shrink-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+
+                  {operationalProfileFields.length > 0 && (() => {
+                    const opProfile = form.watch('operationalProfile')
+                    const sum = opProfile?.reduce((s, p) => s + (Number(p.frequency) || 0), 0) || 0
+                    const isValid = Math.abs(sum - 1.0) <= 0.001
+                    if (isValid) return null
+                    return (
+                      <p className="text-xs text-destructive font-medium">
+                        Frequencies must sum to 1.0 (current sum: {sum.toFixed(2)})
+                      </p>
+                    )
+                  })()}
                 </div>
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-4">
-                  <Button type="submit" disabled={updateLoadTestConfig.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={
+                      updateLoadTestConfig.isPending ||
+                      (() => {
+                        const opProfile = form.watch('operationalProfile')
+                        if (!opProfile || opProfile.length === 0) return false
+                        const sum = opProfile.reduce((s, p) => s + (Number(p.frequency) || 0), 0)
+                        return Math.abs(sum - 1.0) > 0.001
+                      })()
+                    }
+                  >
                     {updateLoadTestConfig.isPending && (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     )}
@@ -616,6 +680,28 @@ export function ExperimentDetailPage() {
               </div>
             </div>
 
+            {/* Generate Behavior Models Button */}
+            <div className="pt-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleGenerateBehaviorModels}
+                disabled={generateBehaviorModels.isPending}
+              >
+                {generateBehaviorModels.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {data.loadTestConfig.behaviorModels.length > 0 ? 'Regenerating...' : 'Generating...'}
+                  </>
+                ) : (
+                  <>
+                    <Activity className="h-4 w-4 mr-2" />
+                    {data.loadTestConfig.behaviorModels.length > 0 ? 'Regenerate Behavior Models' : 'Generate Behavior Models'}
+                  </>
+                )}
+              </Button>
+            </div>
+
             {/* Behavior Models */}
             {data.loadTestConfig.behaviorModels.length > 0 && (
               <div className="space-y-2">
@@ -634,7 +720,7 @@ export function ExperimentDetailPage() {
                         <span className="text-xs text-muted-foreground">•</span>
                         <span className="text-sm text-muted-foreground">{model.actor}</span>
                         <Badge variant="secondary" className="ml-auto">
-                          {(model.behaviorProbability * 100).toFixed(0)}%
+                          {(model.usageProfile * 100).toFixed(0)}%
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -654,11 +740,11 @@ export function ExperimentDetailPage() {
                   <span>Operational Profile</span>
                 </div>
                 <div className="pl-6 text-sm space-y-1">
-                  <p><span className="text-muted-foreground">Loads:</span> {data.loadTestConfig.operationalProfile.loads.join(', ')}</p>
+                  <p><span className="text-muted-foreground">Loads:</span> {data.loadTestConfig.operationalProfile.loadsToFreq.map(p => p.first).join(', ')}</p>
                   <p>
                     <span className="text-muted-foreground">Frequencies:</span>{' '}
-                    {data.loadTestConfig.operationalProfile.freq
-                      .map((f) => (f * 100).toFixed(0) + '%')
+                    {data.loadTestConfig.operationalProfile.loadsToFreq
+                      .map((p) => (p.second * 100).toFixed(0) + '%')
                       .join(', ')}
                   </p>
                 </div>
