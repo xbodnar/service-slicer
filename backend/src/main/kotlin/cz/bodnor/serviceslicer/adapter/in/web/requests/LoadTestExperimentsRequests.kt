@@ -4,7 +4,6 @@ import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateL
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand.CreateUserBehaviorModelDto
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.CreateLoadTestExperimentCommand
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.UpdateLoadTestConfigCommand
-import cz.bodnor.serviceslicer.application.module.sut.command.AddSystemUnderTestCommand
 import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
 import java.util.UUID
 

@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.application.module.loadtestexperiment.command
 
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand.CreateUserBehaviorModelDto
-import cz.bodnor.serviceslicer.application.module.sut.command.AddSystemUnderTestCommand
 import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import java.util.UUID
@@ -40,5 +39,3 @@ data class UpdateLoadTestConfigCommand(
         val loadTestConfigId: UUID,
     )
 }
-
-

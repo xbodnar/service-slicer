@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.adapter.`in`.web.requests
 
 import cz.bodnor.serviceslicer.application.module.sut.command.AddSystemUnderTestCommand
 import cz.bodnor.serviceslicer.application.module.sut.command.UpdateSystemUnderTestCommand
-import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import java.util.UUID
 
 data class AddSystemUnderTestRequest(

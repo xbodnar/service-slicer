@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
-import kotlin.math.exp
 
 @Component
 class CreateLoadTestExperimentCommandHandler(
@@ -35,7 +34,9 @@ class CreateLoadTestExperimentCommandHandler(
             description = command.description,
         )
 
-        command.systemsUnderTest.forEach { sut -> experiment.addSystemUnderTest(sut.toEntity(experimentId = experiment.id)) }
+        command.systemsUnderTest.forEach { sut ->
+            experiment.addSystemUnderTest(sut.toEntity(experimentId = experiment.id))
+        }
 
         return CreateLoadTestExperimentCommand.Result(experimentId = experiment.id)
     }

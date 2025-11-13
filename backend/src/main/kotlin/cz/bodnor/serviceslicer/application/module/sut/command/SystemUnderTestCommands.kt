@@ -25,7 +25,6 @@ data class DeleteSystemUnderTestCommand(
     val sutId: UUID,
 ) : Command<Unit>
 
-
 data class AddSystemUnderTestCommand(
     val experimentId: UUID,
     val name: String,
