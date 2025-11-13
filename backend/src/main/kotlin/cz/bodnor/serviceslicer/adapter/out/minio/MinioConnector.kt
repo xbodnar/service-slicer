@@ -38,6 +38,15 @@ class MinioConnector(
             .build(),
     )
 
+    fun getPresignedDownloadUrl(storageKey: String): String = minioClient.getPresignedObjectUrl(
+        GetPresignedObjectUrlArgs.builder()
+            .method(Method.GET)
+            .bucket(minioProperties.bucketName)
+            .`object`(storageKey)
+            .expiry(minioProperties.presignedUrlExpiration.toInt(), TimeUnit.SECONDS)
+            .build(),
+    )
+
     fun getObjectMetadata(storageKey: String): StatObjectResponse = minioClient.statObject(
         StatObjectArgs.builder()
             .bucket(minioProperties.bucketName)

@@ -8,12 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileInput } from '@/components/ui/file-input'
-import { Badge } from '@/components/ui/badge'
+import { FileSelector } from '@/components/ui/file-selector'
 import { useToast } from '@/components/ui/use-toast'
-import { useFileUpload, type UploadedFile } from '@/hooks/useFileUpload'
+import { type UploadedFile } from '@/hooks/useFileUpload'
 import { useCreateExperiment } from '@/hooks/useExperiments'
-import { ArrowLeft, Loader2, Plus, Trash2, FileCode, FileArchive, Package, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react'
 
 const experimentSchema = z.object({
   name: z.string().min(1, 'Experiment name is required'),
@@ -53,7 +52,6 @@ interface SystemFiles {
 export function ExperimentCreatePage() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { uploadFile, isUploading } = useFileUpload()
   const createExperiment = useCreateExperiment()
 
   const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
@@ -93,48 +91,24 @@ export function ExperimentCreatePage() {
     name: 'behaviorModels',
   })
 
-  const handleOpenApiUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const result = await uploadFile(file)
-    if (result) {
-      setOpenApiFile(result)
-    }
+  const handleOpenApiFileSelected = (file: UploadedFile | null) => {
+    setOpenApiFile(file)
   }
 
-  const handleComposeUpload = async (
-    index: number,
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const result = await uploadFile(file)
-    if (result) {
-      setSystemFiles((prev) => {
-        const updated = [...prev]
-        updated[index] = { ...updated[index], composeFile: result }
-        return updated
-      })
-    }
+  const handleComposeFileSelected = (index: number, file: UploadedFile | null) => {
+    setSystemFiles((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], composeFile: file }
+      return updated
+    })
   }
 
-  const handleJarUpload = async (
-    index: number,
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const result = await uploadFile(file)
-    if (result) {
-      setSystemFiles((prev) => {
-        const updated = [...prev]
-        updated[index] = { ...updated[index], jarFile: result }
-        return updated
-      })
-    }
+  const handleJarFileSelected = (index: number, file: UploadedFile | null) => {
+    setSystemFiles((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], jarFile: file }
+      return updated
+    })
   }
 
   const handleAddSystem = () => {
@@ -325,25 +299,15 @@ export function ExperimentCreatePage() {
             <CardDescription>OpenAPI specification and test configuration</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="openapi-file">OpenAPI Specification File</Label>
-              <FileInput
-                id="openapi-file"
-                accept=".yaml,.yml,.json"
-                onChange={handleOpenApiUpload}
-                disabled={isUploading}
-              />
-              {openApiFile && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
-                  <FileCode className="h-4 w-4 text-primary flex-shrink-0" />
-                  <span className="text-sm font-medium flex-1 truncate">{openApiFile.filename}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {(openApiFile.size / 1024).toFixed(2)} KB
-                  </Badge>
-                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                </div>
-              )}
-            </div>
+            <FileSelector
+              id="openapi-file"
+              label="OpenAPI Specification File"
+              accept=".json"
+              required
+              onFileSelected={handleOpenApiFileSelected}
+              selectedFile={openApiFile}
+              mimeTypeFilter="json"
+            />
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -552,43 +516,25 @@ export function ExperimentCreatePage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor={`compose-file-${index}`}>Docker Compose File</Label>
-                    <FileInput
-                      id={`compose-file-${index}`}
-                      accept=".yaml,.yml"
-                      onChange={(e) => handleComposeUpload(index, e)}
-                      disabled={isUploading}
-                    />
-                    {systemFiles[index]?.composeFile && (
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
-                        <FileArchive className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span className="text-sm font-medium flex-1 truncate">
-                          {systemFiles[index].composeFile!.filename}
-                        </span>
-                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                      </div>
-                    )}
-                  </div>
+                  <FileSelector
+                    id={`compose-file-${index}`}
+                    label="Docker Compose File"
+                    accept=".yaml,.yml"
+                    required
+                    onFileSelected={(file) => handleComposeFileSelected(index, file)}
+                    selectedFile={systemFiles[index]?.composeFile}
+                    mimeTypeFilter="yaml"
+                  />
 
-                  <div className="space-y-2">
-                    <Label htmlFor={`jar-file-${index}`}>JAR File</Label>
-                    <FileInput
-                      id={`jar-file-${index}`}
-                      accept=".jar"
-                      onChange={(e) => handleJarUpload(index, e)}
-                      disabled={isUploading}
-                    />
-                    {systemFiles[index]?.jarFile && (
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
-                        <Package className="h-4 w-4 text-primary flex-shrink-0" />
-                        <span className="text-sm font-medium flex-1 truncate">
-                          {systemFiles[index].jarFile!.filename}
-                        </span>
-                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                      </div>
-                    )}
-                  </div>
+                  <FileSelector
+                    id={`jar-file-${index}`}
+                    label="JAR File"
+                    accept=".jar"
+                    required
+                    onFileSelected={(file) => handleJarFileSelected(index, file)}
+                    selectedFile={systemFiles[index]?.jarFile}
+                    mimeTypeFilter="jar"
+                  />
 
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
@@ -641,13 +587,6 @@ export function ExperimentCreatePage() {
             </Button>
           </Link>
         </div>
-
-        {isUploading && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Uploading file...
-          </div>
-        )}
       </form>
     </div>
   )

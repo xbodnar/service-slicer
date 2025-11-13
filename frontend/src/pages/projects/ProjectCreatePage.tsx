@@ -8,12 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileInput } from '@/components/ui/file-input'
-import { Badge } from '@/components/ui/badge'
+import { FileSelector } from '@/components/ui/file-selector'
 import { useToast } from '@/components/ui/use-toast'
 import { useFileUpload, type UploadedFile } from '@/hooks/useFileUpload'
 import { useCreateProject } from '@/hooks/useProjects'
-import { ArrowLeft, Loader2, FileArchive, Package, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 
 const projectSchema = z.object({
   projectName: z.string().min(1, 'Project name is required'),
@@ -26,7 +25,7 @@ type ProjectFormData = z.infer<typeof projectSchema>
 export function ProjectCreatePage() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { uploadFile, extractZip, isUploading } = useFileUpload()
+  const { extractZip } = useFileUpload()
   const createProject = useCreateProject()
 
   const [jarFile, setJarFile] = useState<UploadedFile | null>(null)
@@ -42,28 +41,20 @@ export function ProjectCreatePage() {
     },
   })
 
-  const handleJarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const result = await uploadFile(file)
-    if (result) {
-      setJarFile(result)
-    }
+  const handleJarFileSelected = (file: UploadedFile | null) => {
+    setJarFile(file)
   }
 
-  const handleSourceZipUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const result = await uploadFile(file)
-    if (result) {
-      setSourceZipFile(result)
-      // Automatically extract ZIP after upload
-      const dirId = await extractZip(result.fileId)
+  const handleSourceZipFileSelected = async (file: UploadedFile | null) => {
+    setSourceZipFile(file)
+    if (file) {
+      // Automatically extract ZIP after selection
+      const dirId = await extractZip(file.fileId)
       if (dirId) {
         setExtractedDirId(dirId)
       }
+    } else {
+      setExtractedDirId(null)
     }
   }
 
@@ -129,58 +120,32 @@ export function ProjectCreatePage() {
             <CardTitle>Files</CardTitle>
             <CardDescription>Upload your JAR file and optionally your source code</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {/* JAR Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="jar-file">JAR File (required)</Label>
-              <FileInput
-                id="jar-file"
-                accept=".jar"
-                onChange={handleJarUpload}
-                disabled={isUploading}
-              />
-              {jarFile && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
-                  <Package className="h-4 w-4 text-primary flex-shrink-0" />
-                  <span className="text-sm font-medium flex-1 truncate">{jarFile.filename}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {(jarFile.size / 1024 / 1024).toFixed(2)} MB
-                  </Badge>
-                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                </div>
-              )}
-            </div>
+            <FileSelector
+              id="jar-file"
+              label="JAR File"
+              accept=".jar"
+              required
+              onFileSelected={handleJarFileSelected}
+              selectedFile={jarFile}
+              mimeTypeFilter="jar"
+            />
 
             {/* Source ZIP Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="source-zip">Source ZIP (optional)</Label>
-              <FileInput
-                id="source-zip"
-                accept=".zip"
-                onChange={handleSourceZipUpload}
-                disabled={isUploading}
-              />
-              {sourceZipFile && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
-                  <FileArchive className="h-4 w-4 text-primary flex-shrink-0" />
-                  <span className="text-sm font-medium flex-1 truncate">{sourceZipFile.filename}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {(sourceZipFile.size / 1024 / 1024).toFixed(2)} MB
-                  </Badge>
-                  {extractedDirId && (
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Extracted
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </div>
+            <FileSelector
+              id="source-zip"
+              label="Source ZIP"
+              accept=".zip"
+              onFileSelected={handleSourceZipFileSelected}
+              selectedFile={sourceZipFile}
+              mimeTypeFilter="zip"
+            />
 
-            {isUploading && (
+            {extractedDirId && sourceZipFile && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Uploading...
+                <Loader2 className="h-4 w-4 text-green-500" />
+                ZIP extracted successfully
               </div>
             )}
           </CardContent>

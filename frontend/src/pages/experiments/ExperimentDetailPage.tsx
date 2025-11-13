@@ -10,7 +10,7 @@ import {
   useUpdateSystemUnderTest,
   useDeleteSystemUnderTest,
 } from '@/api/generated/system-under-test-controller/system-under-test-controller'
-import { useFileUpload, type UploadedFile } from '@/hooks/useFileUpload'
+import { type UploadedFile } from '@/hooks/useFileUpload'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { FileInput } from '@/components/ui/file-input'
+import { FileSelector } from '@/components/ui/file-selector'
 import { cn } from '@/lib/utils'
 import {
   Loader2,
@@ -76,7 +76,6 @@ export function ExperimentDetailPage() {
   const { experimentId } = useParams<{ experimentId: string }>()
   const { data, isLoading, error, refetch } = useExperiment(experimentId!)
   const { toast } = useToast()
-  const { uploadFile, isUploading } = useFileUpload()
   const updateLoadTestConfig = useUpdateLoadTestConfig()
   const addSut = useAddSystemUnderTest()
   const updateSut = useUpdateSystemUnderTest()
@@ -150,14 +149,8 @@ export function ExperimentDetailPage() {
     form.reset()
   }
 
-  const handleOpenApiUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const result = await uploadFile(file)
-    if (result) {
-      setOpenApiFile(result)
-    }
+  const handleOpenApiFileSelected = (file: UploadedFile | null) => {
+    setOpenApiFile(file)
   }
 
   const handleAddBehaviorModel = () => {
@@ -283,18 +276,12 @@ export function ExperimentDetailPage() {
     sutForm.reset()
   }
 
-  const handleComposeFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const result = await uploadFile(file)
-    if (result) setSutComposeFile(result)
+  const handleComposeFileSelected = (file: UploadedFile | null) => {
+    setSutComposeFile(file)
   }
 
-  const handleJarFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const result = await uploadFile(file)
-    if (result) setSutJarFile(result)
+  const handleJarFileSelected = (file: UploadedFile | null) => {
+    setSutJarFile(file)
   }
 
   const onSubmitSut = async (formData: SystemUnderTestFormData) => {
@@ -448,23 +435,15 @@ export function ExperimentDetailPage() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {/* OpenAPI File */}
                 <div className="space-y-2">
-                  <Label htmlFor="openapi-file">OpenAPI Specification File (optional - leave empty to keep current)</Label>
-                  <FileInput
+                  <FileSelector
                     id="openapi-file"
-                    accept=".yaml,.yml,.json"
-                    onChange={handleOpenApiUpload}
-                    disabled={isUploading}
+                    label="OpenAPI Specification File (optional - leave empty to keep current)"
+                    accept=".json"
+                    onFileSelected={handleOpenApiFileSelected}
+                    selectedFile={openApiFile}
+                    mimeTypeFilter="json"
                   />
-                  {openApiFile ? (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
-                      <FileCode className="h-4 w-4 text-primary flex-shrink-0" />
-                      <span className="text-sm font-medium flex-1 truncate">{openApiFile.filename}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {(openApiFile.size / 1024).toFixed(2)} KB
-                      </Badge>
-                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                    </div>
-                  ) : (
+                  {!openApiFile && (
                     <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
                       <FileCode className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <span className="text-sm text-muted-foreground">
@@ -604,7 +583,7 @@ export function ExperimentDetailPage() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-4">
-                  <Button type="submit" disabled={updateLoadTestConfig.isPending || isUploading}>
+                  <Button type="submit" disabled={updateLoadTestConfig.isPending}>
                     {updateLoadTestConfig.isPending && (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     )}
@@ -614,7 +593,7 @@ export function ExperimentDetailPage() {
                     type="button"
                     variant="outline"
                     onClick={handleCancelEdit}
-                    disabled={updateLoadTestConfig.isPending || isUploading}
+                    disabled={updateLoadTestConfig.isPending}
                   >
                     <X className="h-4 w-4 mr-2" />
                     Cancel
@@ -744,39 +723,25 @@ export function ExperimentDetailPage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="sut-compose">Docker Compose File * {editingSutId && '(leave empty to keep current)'}</Label>
-                    <FileInput
-                      id="sut-compose"
-                      accept=".yml,.yaml"
-                      onChange={handleComposeFileUpload}
-                      disabled={isUploading}
-                    />
-                    {sutComposeFile && (
-                      <div className="flex items-center gap-2 p-2 rounded bg-muted/50">
-                        <FileArchive className="h-4 w-4 text-primary" />
-                        <span className="text-sm">{sutComposeFile.filename}</span>
-                        <CheckCircle2 className="h-4 w-4 text-green-500 ml-auto" />
-                      </div>
-                    )}
-                  </div>
+                  <FileSelector
+                    id="sut-compose"
+                    label={`Docker Compose File ${editingSutId ? '(leave empty to keep current)' : '*'}`}
+                    accept=".yml,.yaml"
+                    required={!editingSutId}
+                    onFileSelected={handleComposeFileSelected}
+                    selectedFile={sutComposeFile}
+                    mimeTypeFilter="yaml"
+                  />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="sut-jar">JAR File * {editingSutId && '(leave empty to keep current)'}</Label>
-                    <FileInput
-                      id="sut-jar"
-                      accept=".jar"
-                      onChange={handleJarFileUpload}
-                      disabled={isUploading}
-                    />
-                    {sutJarFile && (
-                      <div className="flex items-center gap-2 p-2 rounded bg-muted/50">
-                        <Package className="h-4 w-4 text-primary" />
-                        <span className="text-sm">{sutJarFile.filename}</span>
-                        <CheckCircle2 className="h-4 w-4 text-green-500 ml-auto" />
-                      </div>
-                    )}
-                  </div>
+                  <FileSelector
+                    id="sut-jar"
+                    label={`JAR File ${editingSutId ? '(leave empty to keep current)' : '*'}`}
+                    accept=".jar"
+                    required={!editingSutId}
+                    onFileSelected={handleJarFileSelected}
+                    selectedFile={sutJarFile}
+                    mimeTypeFilter="jar"
+                  />
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -822,7 +787,7 @@ export function ExperimentDetailPage() {
                 <div className="flex gap-2">
                   <Button
                     type="submit"
-                    disabled={addSut.isPending || updateSut.isPending || isUploading}
+                    disabled={addSut.isPending || updateSut.isPending}
                   >
                     {(addSut.isPending || updateSut.isPending) && (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -833,7 +798,7 @@ export function ExperimentDetailPage() {
                     type="button"
                     variant="outline"
                     onClick={handleCancelSut}
-                    disabled={addSut.isPending || updateSut.isPending || isUploading}
+                    disabled={addSut.isPending || updateSut.isPending}
                   >
                     <X className="h-4 w-4 mr-2" />
                     Cancel
