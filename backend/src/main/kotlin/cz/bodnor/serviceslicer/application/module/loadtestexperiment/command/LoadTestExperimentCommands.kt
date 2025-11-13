@@ -39,3 +39,53 @@ data class CreateLoadTestExperimentCommand(
         val startupTimeoutSeconds: Long = 180,
     )
 }
+
+data class AddSystemUnderTestCommand(
+    val experimentId: UUID,
+    val name: String,
+    val composeFileId: UUID,
+    val jarFileId: UUID,
+    val description: String? = null,
+    val healthCheckPath: String = "/actuator/health",
+    val appPort: Int = 9090,
+    val startupTimeoutSeconds: Long = 180,
+) : Command<AddSystemUnderTestCommand.Result> {
+
+    data class Result(
+        val systemUnderTestId: UUID,
+    )
+}
+
+data class UpdateLoadTestConfigCommand(
+    val experimentId: UUID,
+    val openApiFileId: UUID,
+    val behaviorModels: List<CreateUserBehaviorModelDto> = emptyList(),
+    val operationalProfile: OperationalProfile? = null,
+) : Command<UpdateLoadTestConfigCommand.Result> {
+
+    data class Result(
+        val loadTestConfigId: UUID,
+    )
+}
+
+data class UpdateSystemUnderTestCommand(
+    val experimentId: UUID,
+    val sutId: UUID,
+    val name: String,
+    val composeFileId: UUID,
+    val jarFileId: UUID,
+    val description: String? = null,
+    val healthCheckPath: String = "/actuator/health",
+    val appPort: Int = 9090,
+    val startupTimeoutSeconds: Long = 180,
+) : Command<UpdateSystemUnderTestCommand.Result> {
+
+    data class Result(
+        val systemUnderTestId: UUID,
+    )
+}
+
+data class DeleteSystemUnderTestCommand(
+    val experimentId: UUID,
+    val sutId: UUID,
+) : Command<Unit>

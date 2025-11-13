@@ -6,6 +6,7 @@ import jakarta.persistence.Entity
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
@@ -32,4 +33,10 @@ data class RequestBody(
 )
 
 @Repository
-interface ApiOperationRepository : JpaRepository<ApiOperation, UUID>
+interface ApiOperationRepository : JpaRepository<ApiOperation, UUID> {
+
+    fun findByOpenApiFileId(openApiFileId: UUID): List<ApiOperation>
+
+    @Modifying
+    fun deleteByOpenApiFileId(openApiFileId: UUID)
+}
