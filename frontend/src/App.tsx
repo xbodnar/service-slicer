@@ -8,6 +8,7 @@ import { ProjectCreatePage } from '@/pages/projects/ProjectCreatePage'
 import { ExperimentListPage } from '@/pages/experiments/ExperimentListPage'
 import { ExperimentDetailPage } from '@/pages/experiments/ExperimentDetailPage'
 import { ExperimentCreatePage } from '@/pages/experiments/ExperimentCreatePage'
+import { FileListPage } from '@/pages/files/FileListPage'
 
 function App() {
   return (
@@ -25,6 +26,9 @@ function App() {
           <Route path="experiments" element={<ExperimentListPage />} />
           <Route path="experiments/new" element={<ExperimentCreatePage />} />
           <Route path="experiments/:experimentId" element={<ExperimentDetailPage />} />
+
+          {/* Files */}
+          <Route path="files" element={<FileListPage />} />
         </Route>
       </Routes>
       <Toaster />
