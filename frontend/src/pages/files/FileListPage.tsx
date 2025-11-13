@@ -8,21 +8,28 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { useToast } from '@/components/ui/use-toast'
 import { Download } from 'lucide-react'
 
 export function FileListPage() {
   const { data, isLoading } = useListFiles({ page: 0, size: 100 })
+  const { toast } = useToast()
 
   const handleDownload = async (fileId: string, filename: string) => {
     try {
       const response = await fetch(`/api/files/${fileId}/download`)
+      if (!response.ok) {
+        throw new Error('Failed to get download URL')
+      }
       const data = await response.json()
 
-      // Fetch the file as a blob to force download
+      // Fetch as blob to force download (works cross-origin)
       const fileResponse = await fetch(data.downloadUrl)
+      if (!fileResponse.ok) {
+        throw new Error('File not found or unavailable')
+      }
       const blob = await fileResponse.blob()
 
-      // Create a temporary download link
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -30,11 +37,14 @@ export function FileListPage() {
       document.body.appendChild(a)
       a.click()
 
-      // Cleanup
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
     } catch (error) {
-      console.error('Failed to download file:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Download failed',
+        description: error instanceof Error ? error.message : 'Failed to download file'
+      })
     }
   }
 
