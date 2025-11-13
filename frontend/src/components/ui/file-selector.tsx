@@ -29,7 +29,7 @@ export function FileSelector({
 }: FileSelectorProps) {
   const [mode, setMode] = useState<'upload' | 'existing'>('upload')
   const { uploadFile, isUploading } = useFileUpload()
-  const { data: filesData } = useListFiles({ page: 0, size: 1000 })
+  const { data: filesData } = useListFiles({ page: 0, size: 100 })
 
   // Filter files by READY status and optionally by MIME type
   const availableFiles = ((filesData as any)?.files || []).filter(
