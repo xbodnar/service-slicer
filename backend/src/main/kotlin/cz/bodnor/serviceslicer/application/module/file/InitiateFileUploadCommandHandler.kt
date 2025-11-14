@@ -21,7 +21,6 @@ class InitiateFileUploadCommandHandler(
             filename = command.filename,
             mimeType = command.mimeType,
             expectedSize = command.size,
-            contentHash = command.contentHash,
         )
 
         val uploadUrl = generateFileUploadUrl(file.storageKey)

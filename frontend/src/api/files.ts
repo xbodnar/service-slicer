@@ -80,7 +80,6 @@ export const uploadFile = async (file: File): Promise<string> => {
     filename: file.name,
     size: file.size,
     mimeType: file.type,
-    contentHash: 'placeholder', // In production, you'd compute the hash
   })
 
   // Step 2: Upload to presigned URL

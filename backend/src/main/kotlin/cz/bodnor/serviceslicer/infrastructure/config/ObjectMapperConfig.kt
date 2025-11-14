@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.infrastructure.config
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -23,4 +24,5 @@ class ObjectMapperConfig {
         .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
         .configure(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN, true)
         .configure(DeserializationFeature.ACCEPT_FLOAT_AS_INT, false)
+        .setSerializationInclusion(JsonInclude.Include.NON_NULL)
 }

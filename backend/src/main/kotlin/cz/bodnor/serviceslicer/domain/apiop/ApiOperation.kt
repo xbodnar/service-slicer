@@ -23,13 +23,26 @@ class ApiOperation(
     val path: String,
     // User readable name, such as "Get user by ID"
     val name: String,
+    // Request parameters (path, query, header, cookie)
+    @JdbcTypeCode(SqlTypes.JSON)
+    val parameters: List<ApiParameter> = emptyList(),
     // Request body schema
     @JdbcTypeCode(SqlTypes.JSON)
-    val requestBody: RequestBody? = null,
+    val requestBody: Map<String, Schema<*>?>? = null,
+    // Response schemas by status code
+    @JdbcTypeCode(SqlTypes.JSON)
+    val responses: Map<String, ApiResponse> = emptyMap(),
 ) : UpdatableEntity(id)
 
-data class RequestBody(
-    val content: Map<String, Schema<Any>>,
+data class ApiParameter(
+    val name: String,
+    val `in`: String, // "path", "query", "header", "cookie"
+    val required: Boolean,
+    val schema: Schema<*>,
+)
+
+data class ApiResponse(
+    val content: Map<String, Schema<*>?>,
 )
 
 @Repository

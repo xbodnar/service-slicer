@@ -7,7 +7,6 @@ import java.util.UUID
 data class InitiateFileUploadCommand(
     val filename: String,
     val size: Long,
-    val contentHash: String,
     val mimeType: String,
 ) : Command<InitiateFileUploadCommand.Result> {
     @Schema(name = "InitiateFileUploadResult", description = "Result of initiating a file upload")

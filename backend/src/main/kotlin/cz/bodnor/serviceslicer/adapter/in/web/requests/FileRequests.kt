@@ -17,15 +17,11 @@ data class InitiateFileUploadRequest(
     @field:NotBlank
     @Schema(description = "MIME type of the file", example = "application/java-archive")
     val mimeType: String,
-    @field:NotBlank
-    @Schema(description = "SHA-256 hash of the file content", example = "abc123def456...")
-    val contentHash: String,
 ) {
     fun toCommand(): InitiateFileUploadCommand = InitiateFileUploadCommand(
         filename = filename,
         size = size,
         mimeType = mimeType,
-        contentHash = contentHash,
     )
 }
 

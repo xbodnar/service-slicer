@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FileSelector } from '@/components/ui/file-selector'
 import { useToast } from '@/components/ui/use-toast'
 import { type UploadedFile } from '@/hooks/useFileUpload'
@@ -22,7 +23,15 @@ const experimentSchema = z.object({
       id: z.string().min(1, 'ID is required'),
       actor: z.string().min(1, 'Actor name is required'),
       usageProfile: z.coerce.number().min(0).max(1),
-      steps: z.string().min(1, 'At least one step is required'),
+      steps: z.array(
+        z.object({
+          method: z.string().min(1, 'Method is required'),
+          path: z.string().min(1, 'Path is required'),
+          headers: z.string().default('{}'),
+          params: z.string().default('{}'),
+          body: z.string().optional(),
+        })
+      ).min(1, 'At least one step is required'),
       thinkFrom: z.coerce.number().min(0),
       thinkTo: z.coerce.number().min(0),
     })
@@ -49,6 +58,125 @@ type ExperimentFormData = z.infer<typeof experimentSchema>
 interface SystemFiles {
   composeFile: UploadedFile | null
   jarFile: UploadedFile | null
+}
+
+interface BehaviorModelStepsProps {
+  behaviorIndex: number
+  control: any
+  register: any
+}
+
+function BehaviorModelSteps({ behaviorIndex, control, register }: BehaviorModelStepsProps) {
+  const { fields: stepFields, append: appendStep, remove: removeStep } = useFieldArray({
+    control,
+    name: `behaviorModels.${behaviorIndex}.steps`,
+  })
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label>API Request Steps</Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => appendStep({ method: 'GET', path: '/', headers: '{}', params: '{}', body: '' })}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Step
+        </Button>
+      </div>
+
+      {stepFields.map((field, stepIndex) => (
+        <Card key={field.id} className="p-3 bg-muted/30">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Step {stepIndex + 1}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeStep(stepIndex)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-method`}>Method</Label>
+                <Select
+                  defaultValue={field.method}
+                  onValueChange={(value) => {
+                    const input = document.getElementById(`behavior-${behaviorIndex}-step-${stepIndex}-method-hidden`) as HTMLInputElement
+                    if (input) input.value = value
+                  }}
+                >
+                  <SelectTrigger id={`behavior-${behaviorIndex}-step-${stepIndex}-method`}>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GET">GET</SelectItem>
+                    <SelectItem value="POST">POST</SelectItem>
+                    <SelectItem value="PUT">PUT</SelectItem>
+                    <SelectItem value="PATCH">PATCH</SelectItem>
+                    <SelectItem value="DELETE">DELETE</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input
+                  type="hidden"
+                  id={`behavior-${behaviorIndex}-step-${stepIndex}-method-hidden`}
+                  {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.method`)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-path`}>Path</Label>
+                <Input
+                  id={`behavior-${behaviorIndex}-step-${stepIndex}-path`}
+                  {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.path`)}
+                  placeholder="/api/resource"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-headers`}>Headers (JSON)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-headers`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.headers`)}
+                placeholder='{"Content-Type": "application/json"}'
+                rows={2}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-params`}>Query Params (JSON)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-params`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.params`)}
+                placeholder='{"filter": "active"}'
+                rows={2}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-body`}>Body (optional)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-body`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.body`)}
+                placeholder='{"key": "value"}'
+                rows={3}
+                className="font-mono text-xs"
+              />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
 }
 
 export function ExperimentCreatePage() {
@@ -136,7 +264,7 @@ export function ExperimentCreatePage() {
       id: '',
       actor: '',
       usageProfile: 0.5,
-      steps: '',
+      steps: [{ method: 'GET', path: '/', headers: '{}', params: '{}', body: '' }],
       thinkFrom: 1000,
       thinkTo: 3000,
     })
@@ -174,14 +302,32 @@ export function ExperimentCreatePage() {
       // Process behavioral models if provided
       let behaviorModels: any[] | undefined
       if (data.behaviorModels && data.behaviorModels.length > 0) {
-        behaviorModels = data.behaviorModels.map((model) => ({
-          id: model.id,
-          actor: model.actor,
-          usageProfile: model.usageProfile,
-          steps: model.steps.split(',').map((s) => s.trim()),
-          thinkFrom: model.thinkFrom,
-          thinkTo: model.thinkTo,
-        }))
+        behaviorModels = data.behaviorModels.map((model) => {
+          const steps = model.steps.map((step) => {
+            let headers, params
+            try {
+              headers = JSON.parse(step.headers || '{}')
+              params = JSON.parse(step.params || '{}')
+            } catch (e) {
+              throw new Error(`Invalid JSON for headers/params in step "${step.path}": ${e}`)
+            }
+            return {
+              method: step.method,
+              path: step.path,
+              headers,
+              params,
+              body: step.body || undefined,
+            }
+          })
+          return {
+            id: model.id,
+            actor: model.actor,
+            usageProfile: model.usageProfile,
+            steps,
+            thinkFrom: model.thinkFrom,
+            thinkTo: model.thinkTo,
+          }
+        })
       }
 
       // Process operational profile if provided
@@ -382,20 +528,11 @@ export function ExperimentCreatePage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor={`behavior-steps-${index}`}>
-                        Steps (comma-separated operation IDs)
-                      </Label>
-                      <Textarea
-                        id={`behavior-steps-${index}`}
-                        {...form.register(`behaviorModels.${index}.steps`)}
-                        placeholder="createOrder,addPayment,confirmOrder"
-                        rows={2}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Enter operation IDs from your OpenAPI spec, separated by commas
-                      </p>
-                    </div>
+                    <BehaviorModelSteps
+                      behaviorIndex={index}
+                      control={form.control}
+                      register={form.register}
+                    />
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">

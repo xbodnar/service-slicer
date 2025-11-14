@@ -45,10 +45,18 @@ data class BehaviorModel(
     // Sequence of API operations that comprise this user flow. The IDs refer to the operationId in the ApiOperation
     // entities for this OpenApi file.
     // Example: ["o1", "o2", "o3"]
-    val steps: List<String>,
+    val steps: List<ApiRequest>,
     // Think time range (in milliseconds)
     val thinkFrom: Int,
     val thinkTo: Int,
+)
+
+data class ApiRequest(
+    val method: String,
+    val path: String,
+    val headers: Map<String, String> = emptyMap(),
+    val params: Map<String, String> = emptyMap(),
+    val body: String? = null,
 )
 
 /**

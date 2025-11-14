@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.loadtestconfig.command
 
+import cz.bodnor.serviceslicer.domain.loadtestconfig.ApiRequest
 import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import io.swagger.v3.oas.annotations.media.Schema
@@ -19,8 +20,8 @@ data class CreateLoadTestConfigCommand(
         val actor: String,
         @Schema(description = "Probability of this behavior model being executed (0-1)", example = "0.5")
         val usageProfile: Double,
-        @Schema(description = "Sequence of operation IDs from OpenAPI file", example = "[\"o1\", \"o2\", \"o3\"]")
-        val steps: List<String>,
+        @Schema(description = "Sequence of operation IDs from OpenAPI file")
+        val steps: List<ApiRequest>,
         @Schema(description = "Minimum think time in milliseconds", example = "1000")
         val thinkFrom: Int,
         @Schema(description = "Maximum think time in milliseconds", example = "3000")

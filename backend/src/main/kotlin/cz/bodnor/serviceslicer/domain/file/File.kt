@@ -18,7 +18,6 @@ class File(
     // An empty string for directories
     val filename: String,
     val expectedSize: Long,
-    val contentHash: String,
     val mimeType: String,
 ) : UpdatableEntity(id) {
 

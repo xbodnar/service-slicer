@@ -38,17 +38,16 @@ class UpdateLoadTestConfigCommandHandler(
         val loadTestConfig = loadTestConfigReadService.getById(loadTestExperiment.loadTestConfigId)
 
         val apiOperations = if (loadTestConfig.openApiFileId != command.openApiFileId) {
-            val oldFile = fileReadService.getById(loadTestConfig.openApiFileId)
-            deleteFileFromStorage(oldFile.storageKey)
-
             val newFile = fileReadService.getById(command.openApiFileId)
             require(newFile.status == FileStatus.READY) { "File is not uploaded yet" }
-
-            apiOperationWriteService.deleteByOpenApiFileId(oldFile.id)
 
             val apiOperations = openApiParsingService.parse(command.openApiFileId)
             saveApiOperations(apiOperations)
             loadTestConfig.openApiFileId = newFile.id
+
+            val oldFile = fileReadService.getById(loadTestConfig.openApiFileId)
+            deleteFileFromStorage(oldFile.storageKey)
+            apiOperationWriteService.deleteByOpenApiFileId(oldFile.id)
 
             apiOperations
         } else {
