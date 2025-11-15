@@ -24,7 +24,7 @@ class LoadTestConfig(
     var behaviorModels: List<BehaviorModel> = emptyList(),
     // Operational profile defining load patterns and weights
     @JdbcTypeCode(SqlTypes.JSON)
-    var operationalProfile: OperationalProfile? = null,
+    var operationalProfile: List<OperationalLoad> = emptyList(),
     // k6 test configuration (VUs, duration, thresholds, etc.)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "k6_configuration")
@@ -59,12 +59,11 @@ data class ApiRequest(
     val body: String? = null,
 )
 
-/**
- * Operational profile defining load patterns and weights.
- */
-data class OperationalProfile(
-    // List of pairs of load (e.g., 25, 50, 100, 150, 200) and frequencies (must sum to 1)
-    val loadsToFreq: List<Pair<Int, Double>>,
+data class OperationalLoad(
+    // Number of concurrent users
+    val load: Int,
+    // Frequency of this load (must sum to 1)
+    val frequency: Double,
 )
 
 /**

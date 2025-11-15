@@ -1,7 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.loadtestexperiment.query
 
 import cz.bodnor.serviceslicer.domain.loadtestconfig.BehaviorModel
-import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
+import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalLoad
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.Query
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
@@ -66,7 +66,7 @@ data class GetLoadTestExperimentQuery(val experimentId: UUID) : Query<GetLoadTes
         @Schema(description = "List of user behavior models")
         val behaviorModels: List<BehaviorModel>,
         @Schema(description = "Operational profile")
-        val operationalProfile: OperationalProfile?,
+        val operationalProfile: List<OperationalLoad>,
     )
 
     @Schema(description = "System under test")

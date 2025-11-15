@@ -1,10 +1,10 @@
-package cz.bodnor.serviceslicer.application.module.loadtestexperiment
+package cz.bodnor.serviceslicer.application.module.loadtestconfig
 
 import cz.bodnor.serviceslicer.application.module.file.port.out.DeleteFileFromStorage
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.UpdateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.port.out.SaveApiOperations
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.service.OpenApiParsingService
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.service.ValidateLoadTestConfig
-import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.UpdateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.domain.apiop.ApiOperationReadService
 import cz.bodnor.serviceslicer.domain.apiop.ApiOperationWriteService
 import cz.bodnor.serviceslicer.domain.file.FileReadService

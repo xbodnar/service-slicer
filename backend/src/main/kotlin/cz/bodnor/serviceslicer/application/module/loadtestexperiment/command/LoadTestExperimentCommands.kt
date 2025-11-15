@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.application.module.loadtestexperiment.command
 
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand.CreateUserBehaviorModelDto
-import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
@@ -36,30 +35,5 @@ data class CreateLoadTestExperimentCommand(
     data class Result(
         @Schema(description = "ID of the created experiment")
         val experimentId: UUID,
-    )
-}
-
-data class UpdateLoadTestConfigCommand(
-    val experimentId: UUID,
-    val openApiFileId: UUID,
-    val behaviorModels: List<CreateUserBehaviorModelDto> = emptyList(),
-    val operationalProfile: OperationalProfile? = null,
-) : Command<UpdateLoadTestConfigCommand.Result> {
-
-    @Schema(name = "UpdateLoadTestConfigResult", description = "Result of updating load test configuration")
-    data class Result(
-        @Schema(description = "ID of the updated load test configuration")
-        val loadTestConfigId: UUID,
-    )
-}
-
-data class GenerateBehaviorModelsCommand(
-    val experimentId: UUID,
-) : Command<GenerateBehaviorModelsCommand.Result> {
-
-    @Schema(name = "GenerateBehaviorModelsResult", description = "Result of generating behavior models")
-    data class Result(
-        @Schema(description = "ID of the updated load test configuration")
-        val loadTestConfigId: UUID,
     )
 }

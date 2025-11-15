@@ -2,9 +2,9 @@ package cz.bodnor.serviceslicer.adapter.`in`.web.requests
 
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand.CreateUserBehaviorModelDto
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.UpdateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.CreateLoadTestExperimentCommand
-import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.UpdateLoadTestConfigCommand
-import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
+import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalLoad
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
 
@@ -28,10 +28,18 @@ data class CreateLoadTestExperimentRequest(
         @Schema(description = "ID of the OpenAPI specification file")
         val openApiFileId: UUID,
         @Schema(description = "List of user behavior models")
-        val behaviorModels: List<CreateUserBehaviorModelDto> = emptyList(),
+        val behaviorModels: List<CreateUserBehaviorModelDto>,
         @Schema(description = "Operational profile defining load patterns")
-        val operationalProfile: OperationalProfile? = null,
+        val operationalProfile: List<OperationalLoad>,
+        @Schema(description = "Whether to generate behavior models automatically")
+        val generateBehaviorModels: Boolean = false,
     ) {
+        init {
+            require(behaviorModels.isNotEmpty() || generateBehaviorModels) {
+                "Either behavior models must not be empty or generateBehaviorModels must be true"
+            }
+        }
+
         fun toCommand(): CreateLoadTestConfigCommand = CreateLoadTestConfigCommand(
             openApiFileId = openApiFileId,
             behaviorModels = behaviorModels,
@@ -54,7 +62,7 @@ data class UpdateLoadTestConfigRequest(
     @Schema(description = "List of user behavior models")
     val behaviorModels: List<CreateLoadTestConfigCommand.CreateUserBehaviorModelDto> = emptyList(),
     @Schema(description = "Operational profile defining load patterns")
-    val operationalProfile: OperationalProfile? = null,
+    val operationalProfile: List<OperationalLoad>,
 ) {
     fun toCommand(experimentId: UUID) = UpdateLoadTestConfigCommand(
         experimentId = experimentId,

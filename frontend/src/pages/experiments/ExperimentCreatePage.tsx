@@ -343,12 +343,7 @@ export function ExperimentCreatePage() {
           return
         }
 
-        // Convert to loadsToFreq format
-        const loadsToFreq = data.operationalProfile.map(p => ({
-          first: p.load,
-          second: p.frequency,
-        }))
-        operationalProfile = { loadsToFreq }
+        operationalProfile = data.operationalProfile
       }
 
       const result = await createExperiment.mutateAsync({

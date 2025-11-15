@@ -1,7 +1,7 @@
-package cz.bodnor.serviceslicer.application.module.loadtestexperiment
+package cz.bodnor.serviceslicer.application.module.loadtestconfig
 
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.GenerateBehaviorModelsCommand
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.port.out.GenerateBehaviorModels
-import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.GenerateBehaviorModelsCommand
 import cz.bodnor.serviceslicer.domain.loadtestconfig.LoadTestConfigReadService
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.LoadTestExperimentReadService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler

@@ -10,8 +10,8 @@ class LoadTestConfigWriteService(
 
     fun create(
         openApiFileId: UUID,
-        behaviorModels: List<BehaviorModel> = emptyList(),
-        operationalProfile: OperationalProfile? = null,
+        behaviorModels: List<BehaviorModel>,
+        operationalProfile: List<OperationalLoad>,
         k6Configuration: K6Configuration? = null,
     ): LoadTestConfig = repository.save(
         LoadTestConfig(

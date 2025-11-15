@@ -10,7 +10,7 @@ import cz.bodnor.serviceslicer.application.module.loadtestexperiment.port.out.Ge
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.query.FileDto
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.query.GetLoadTestExperimentQuery
 import cz.bodnor.serviceslicer.domain.loadtestconfig.BehaviorModel
-import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
+import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalLoad
 import org.jooq.DSLContext
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -73,11 +73,11 @@ class GetLoadTestExperimentJooq(
         // Parse JSON fields
         val behaviorModels = experimentRecord.get(LOAD_TEST_CONFIG.BEHAVIOR_MODELS)?.data()?.let {
             objectMapper.readValue<List<BehaviorModel>>(it)
-        } ?: emptyList()
+        } ?: error("BehaviorModels for LoadTestExperiment with id: $experimentId not specified!")
 
         val operationalProfile = experimentRecord.get(LOAD_TEST_CONFIG.OPERATIONAL_PROFILE)?.data()?.let {
-            objectMapper.readValue<OperationalProfile>(it)
-        }
+            objectMapper.readValue<List<OperationalLoad>>(it)
+        } ?: error("OperationalProfile for LoadTestExperiment with id: $experimentId not specified!")
 
         return GetLoadTestExperimentQuery.Result(
             experimentId = experimentRecord.get(LOAD_TEST_EXPERIMENT.ID)!!,

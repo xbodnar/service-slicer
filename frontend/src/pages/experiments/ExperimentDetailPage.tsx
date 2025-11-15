@@ -271,12 +271,7 @@ export function ExperimentDetailPage() {
 
     form.reset({
       behaviorModels: behaviorModels.length > 0 ? behaviorModels : [],
-      operationalProfile: data.loadTestConfig.operationalProfile
-        ? data.loadTestConfig.operationalProfile.loadsToFreq.map(p => ({
-            load: p.first,
-            frequency: p.second,
-          }))
-        : [],
+      operationalProfile: data.loadTestConfig.operationalProfile || [],
     })
 
     setIsEditing(true)
@@ -361,12 +356,7 @@ export function ExperimentDetailPage() {
           return
         }
 
-        // Convert to loadsToFreq format
-        const loadsToFreq = formData.operationalProfile.map(p => ({
-          first: p.load,
-          second: p.frequency,
-        }))
-        operationalProfile = { loadsToFreq }
+        operationalProfile = formData.operationalProfile
       }
 
       await updateLoadTestConfig.mutateAsync({
@@ -881,18 +871,18 @@ export function ExperimentDetailPage() {
             )}
 
             {/* Operational Profile */}
-            {data.loadTestConfig.operationalProfile && (
+            {data.loadTestConfig.operationalProfile && data.loadTestConfig.operationalProfile.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Activity className="h-4 w-4" />
                   <span>Operational Profile</span>
                 </div>
                 <div className="pl-6 text-sm space-y-1">
-                  <p><span className="text-muted-foreground">Loads:</span> {data.loadTestConfig.operationalProfile.loadsToFreq.map(p => p.first).join(', ')}</p>
+                  <p><span className="text-muted-foreground">Loads:</span> {data.loadTestConfig.operationalProfile.map(p => p.load).join(', ')}</p>
                   <p>
                     <span className="text-muted-foreground">Frequencies:</span>{' '}
-                    {data.loadTestConfig.operationalProfile.loadsToFreq
-                      .map((p) => (p.second * 100).toFixed(0) + '%')
+                    {data.loadTestConfig.operationalProfile
+                      .map((p) => (p.frequency * 100).toFixed(0) + '%')
                       .join(', ')}
                   </p>
                 </div>
