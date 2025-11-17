@@ -163,36 +163,165 @@ class SystemUnderTestRunner(
                 )
             }
 
+            // Debug: Check database connection and available databases
+            logger.debug { "Running database diagnostics before SQL execution..." }
+            debugDatabaseConnection(project, workDir, dbContainerName, dbUsername, dbName)
+
             // Execute SQL script inside the container
-            logger.info { "Executing SQL script in database container..." }
-            val execResult = commandExecutor.execute(
-                listOf(
-                    "docker",
-                    "compose",
-                    "-p",
-                    project,
-                    "exec",
-                    "-T",
-                    dbContainerName,
-                    "psql",
-                    "-U",
-                    dbUsername,
-                    "-d",
-                    dbName,
-                    "-f",
-                    "/tmp/seed.sql",
-                ),
-                workDir,
+            logger.info { "Executing SQL script in database '$dbName' as user '$dbUsername'..." }
+            val psqlCommand = listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-d",
+                dbName,
+                "-v",
+                "ON_ERROR_STOP=1", // Stop on first error
+                "-a", // Echo all input from script
+                "-f",
+                "/tmp/seed.sql",
             )
+            logger.debug { "Executing command: ${psqlCommand.joinToString(" ")}" }
+
+            val execResult = commandExecutor.execute(psqlCommand, workDir)
 
             logger.info { "SQL execution output:\n${execResult.output}" }
 
             if (execResult.exitCode != 0) {
                 throw IllegalStateException(
-                    "Failed to execute SQL script (exit=${execResult.exitCode})\n${execResult.output}",
+                    "Failed to execute SQL script against database '$dbName' (exit=${execResult.exitCode})\n" +
+                        "Command: ${psqlCommand.joinToString(" ")}\n" +
+                        "Output:\n${execResult.output}",
                 )
             }
         }
+    }
+
+    private fun debugDatabaseConnection(
+        project: String,
+        workDir: java.io.File,
+        dbContainerName: String,
+        dbUsername: String,
+        dbName: String,
+    ) {
+        // 1. List all databases
+        logger.debug { "Listing all databases in container '$dbContainerName'..." }
+        val listDbResult = commandExecutor.execute(
+            listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-l",
+            ),
+            workDir,
+        )
+        logger.debug { "Available databases:\n${listDbResult.output}" }
+
+        // 2. Check current database connection
+        logger.debug { "Checking connection to database '$dbName'..." }
+        val checkDbResult = commandExecutor.execute(
+            listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-d",
+                dbName,
+                "-c",
+                "SELECT current_database();",
+            ),
+            workDir,
+        )
+        logger.debug { "Current database connection:\n${checkDbResult.output}" }
+
+        // 3. Show search_path
+        logger.debug { "Checking search_path in database '$dbName'..." }
+        val searchPathResult = commandExecutor.execute(
+            listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-d",
+                dbName,
+                "-c",
+                "SHOW search_path;",
+            ),
+            workDir,
+        )
+        logger.debug { "Search path:\n${searchPathResult.output}" }
+
+        // 4. List all schemas
+        logger.debug { "Listing all schemas in database '$dbName'..." }
+        val listSchemasResult = commandExecutor.execute(
+            listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-d",
+                dbName,
+                "-c",
+                "SELECT schema_name FROM information_schema.schemata ORDER BY schema_name;",
+            ),
+            workDir,
+        )
+        logger.debug { "Available schemas:\n${listSchemasResult.output}" }
+
+        // 5. List tables across ALL schemas
+        logger.debug { "Listing ALL tables in database '$dbName' (all schemas)..." }
+        val listAllTablesResult = commandExecutor.execute(
+            listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-d",
+                dbName,
+                "-c",
+                "SELECT schemaname, tablename FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY schemaname, tablename;",
+            ),
+            workDir,
+        )
+        logger.debug { "All tables in database '$dbName':\n${listAllTablesResult.output}" }
     }
 
     private fun waitHealthy(
