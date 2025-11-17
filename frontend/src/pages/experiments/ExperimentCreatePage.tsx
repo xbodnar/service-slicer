@@ -68,6 +68,7 @@ type ExperimentFormData = z.infer<typeof experimentSchema>
 interface SystemFiles {
   composeFile: UploadedFile | null
   jarFile: UploadedFile | null
+  sqlSeedFile: UploadedFile | null
 }
 
 interface BehaviorModelStepsProps {
@@ -196,7 +197,7 @@ export function ExperimentCreatePage() {
 
   const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
   const [systemFiles, setSystemFiles] = useState<SystemFiles[]>([
-    { composeFile: null, jarFile: null },
+    { composeFile: null, jarFile: null, sqlSeedFile: null },
   ])
 
   const form = useForm<ExperimentFormData>({
@@ -259,6 +260,14 @@ export function ExperimentCreatePage() {
     })
   }
 
+  const handleSqlSeedFileSelected = (index: number, file: UploadedFile | null) => {
+    setSystemFiles((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], sqlSeedFile: file }
+      return updated
+    })
+  }
+
   const handleAddSystem = () => {
     appendSystem({
       name: '',
@@ -267,7 +276,7 @@ export function ExperimentCreatePage() {
       appPort: 9090,
       startupTimeoutSeconds: 180,
     })
-    setSystemFiles((prev) => [...prev, { composeFile: null, jarFile: null }])
+    setSystemFiles((prev) => [...prev, { composeFile: null, jarFile: null, sqlSeedFile: null }])
   }
 
   const handleRemoveSystem = (index: number) => {
@@ -371,6 +380,7 @@ export function ExperimentCreatePage() {
             name: system.name,
             composeFileId: systemFiles[index].composeFile!.fileId,
             jarFileId: systemFiles[index].jarFile!.fileId,
+            sqlSeedFileId: systemFiles[index].sqlSeedFile?.fileId || undefined,
             description: system.description || undefined,
             healthCheckPath: system.healthCheckPath,
             appPort: system.appPort,
@@ -738,6 +748,15 @@ export function ExperimentCreatePage() {
                     onFileSelected={(file) => handleJarFileSelected(index, file)}
                     selectedFile={systemFiles[index]?.jarFile}
                     mimeTypeFilter="jar"
+                  />
+
+                  <FileSelector
+                    id={`sql-seed-file-${index}`}
+                    label="SQL Seed File (optional)"
+                    accept=".sql"
+                    onFileSelected={(file) => handleSqlSeedFileSelected(index, file)}
+                    selectedFile={systemFiles[index]?.sqlSeedFile}
+                    mimeTypeFilter="sql"
                   />
 
                   <div className="grid grid-cols-3 gap-4">

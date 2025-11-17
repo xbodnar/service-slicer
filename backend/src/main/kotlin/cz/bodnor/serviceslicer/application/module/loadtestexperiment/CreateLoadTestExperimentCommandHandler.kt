@@ -41,6 +41,7 @@ class CreateLoadTestExperimentCommandHandler(
         command.systemsUnderTest.forEach { sut ->
             validateFileExists(sut.jarFileId)
             validateFileExists(sut.composeFileId)
+            sut.sqlSeedFileId?.let { validateFileExists(it) }
             experiment.addSystemUnderTest(sut.toEntity(experimentId = experiment.id))
         }
 

@@ -5,13 +5,6 @@ import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.port.out.GenerateBehaviorModels
 import cz.bodnor.serviceslicer.domain.loadtestconfig.BehaviorModel
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.model.ChatModel
-import org.springframework.ai.chat.prompt.Prompt
-import org.springframework.ai.converter.BeanOutputConverter
-import org.springframework.ai.openai.OpenAiChatModel
-import org.springframework.ai.openai.OpenAiChatOptions
-import org.springframework.ai.openai.api.OpenAiApi
-import org.springframework.ai.openai.api.ResponseFormat
 import org.springframework.stereotype.Component
 import java.nio.file.Files
 import java.util.UUID

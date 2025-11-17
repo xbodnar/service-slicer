@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.application.module.sut
 
 import cz.bodnor.serviceslicer.application.module.sut.command.UpdateSystemUnderTestCommand
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.LoadTestExperimentReadService
-import cz.bodnor.serviceslicer.domain.loadtestexperiment.LoadTestExperimentWriteService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import cz.bodnor.serviceslicer.infrastructure.exception.applicationError
 import org.springframework.stereotype.Component

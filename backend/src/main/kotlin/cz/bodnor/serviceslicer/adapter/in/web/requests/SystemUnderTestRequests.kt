@@ -13,6 +13,8 @@ data class AddSystemUnderTestRequest(
     val composeFileId: UUID,
     @Schema(description = "ID of the JAR file to test")
     val jarFileId: UUID,
+    @Schema(description = "ID of the SQL seed file (optional)")
+    val sqlSeedFileId: UUID? = null,
     @Schema(description = "Description of the system under test", example = "Original monolithic implementation")
     val description: String? = null,
     @Schema(description = "Health check endpoint path", example = "/actuator/health")
@@ -32,6 +34,7 @@ data class AddSystemUnderTestRequest(
         startupTimeoutSeconds = startupTimeoutSeconds,
         jarFileId = jarFileId,
         composeFileId = composeFileId,
+        sqlSeedFileId = sqlSeedFileId,
     )
 }
 
@@ -43,6 +46,8 @@ data class UpdateSystemUnderTestRequest(
     val composeFileId: UUID,
     @Schema(description = "ID of the JAR file to test")
     val jarFileId: UUID,
+    @Schema(description = "ID of the SQL seed file (optional)")
+    val sqlSeedFileId: UUID? = null,
     @Schema(description = "Description of the system under test", example = "Original monolithic implementation")
     val description: String? = null,
     @Schema(description = "Health check endpoint path", example = "/actuator/health")
@@ -61,6 +66,7 @@ data class UpdateSystemUnderTestRequest(
         name = name,
         composeFileId = composeFileId,
         jarFileId = jarFileId,
+        sqlSeedFileId = sqlSeedFileId,
         description = description,
         healthCheckPath = healthCheckPath,
         appPort = appPort,

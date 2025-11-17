@@ -79,6 +79,8 @@ data class GetLoadTestExperimentQuery(val experimentId: UUID) : Query<GetLoadTes
         val composeFile: FileDto,
         @Schema(description = "JAR file to test")
         val jarFile: FileDto,
+        @Schema(description = "SQL seed file (optional)")
+        val sqlSeedFile: FileDto?,
         @Schema(description = "Description of the system under test")
         val description: String?,
         @Schema(description = "Health check endpoint path")

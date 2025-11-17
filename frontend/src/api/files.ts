@@ -72,14 +72,34 @@ export const fetchGitRepository = async (
 }
 
 /**
+ * Get MIME type from file extension when browser doesn't detect it
+ */
+const getMimeTypeFromExtension = (filename: string): string => {
+  const extension = filename.toLowerCase().split('.').pop()
+  const mimeTypeMap: Record<string, string> = {
+    'sql': 'application/sql',
+    'jar': 'application/java-archive',
+    'yml': 'application/x-yaml',
+    'yaml': 'application/x-yaml',
+    'json': 'application/json',
+    'zip': 'application/zip',
+    'txt': 'text/plain',
+  }
+  return mimeTypeMap[extension || ''] || 'application/octet-stream'
+}
+
+/**
  * Complete 3-step file upload flow
  */
 export const uploadFile = async (file: File): Promise<string> => {
+  // Determine MIME type: use browser's detection or fall back to extension-based detection
+  const mimeType = file.type || getMimeTypeFromExtension(file.name)
+
   // Step 1: Initiate upload
   const { fileId, uploadUrl } = await initiateFileUpload({
     filename: file.name,
     size: file.size,
-    mimeType: file.type,
+    mimeType,
   })
 
   // Step 2: Upload to presigned URL

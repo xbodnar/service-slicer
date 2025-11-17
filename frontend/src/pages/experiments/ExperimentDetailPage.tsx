@@ -220,6 +220,7 @@ export function ExperimentDetailPage() {
   const [editingSutId, setEditingSutId] = useState<string | null>(null)
   const [sutComposeFile, setSutComposeFile] = useState<UploadedFile | null>(null)
   const [sutJarFile, setSutJarFile] = useState<UploadedFile | null>(null)
+  const [sutSqlSeedFile, setSutSqlSeedFile] = useState<UploadedFile | null>(null)
 
   const form = useForm<LoadTestConfigFormData>({
     resolver: zodResolver(loadTestConfigSchema),
@@ -403,6 +404,7 @@ export function ExperimentDetailPage() {
     })
     setSutComposeFile(null)
     setSutJarFile(null)
+    setSutSqlSeedFile(null)
     setEditingSutId(sut.systemUnderTestId)
   }
 
@@ -411,6 +413,7 @@ export function ExperimentDetailPage() {
     setEditingSutId(null)
     setSutComposeFile(null)
     setSutJarFile(null)
+    setSutSqlSeedFile(null)
     sutForm.reset()
   }
 
@@ -420,6 +423,10 @@ export function ExperimentDetailPage() {
 
   const handleJarFileSelected = (file: UploadedFile | null) => {
     setSutJarFile(file)
+  }
+
+  const handleSqlSeedFileSelected = (file: UploadedFile | null) => {
+    setSutSqlSeedFile(file)
   }
 
   const onSubmitSut = async (formData: SystemUnderTestFormData) => {
@@ -442,6 +449,7 @@ export function ExperimentDetailPage() {
             startupTimeoutSeconds: formData.startupTimeoutSeconds,
             composeFileId: sutComposeFile?.fileId || existingSut.composeFile.fileId,
             jarFileId: sutJarFile?.fileId || existingSut.jarFile.fileId,
+            sqlSeedFileId: sutSqlSeedFile?.fileId || existingSut.sqlSeedFile?.fileId || undefined,
           },
         })
 
@@ -470,6 +478,7 @@ export function ExperimentDetailPage() {
             startupTimeoutSeconds: formData.startupTimeoutSeconds,
             composeFileId: sutComposeFile.fileId,
             jarFileId: sutJarFile.fileId,
+            sqlSeedFileId: sutSqlSeedFile?.fileId || undefined,
           },
         })
 
@@ -967,6 +976,15 @@ export function ExperimentDetailPage() {
                     mimeTypeFilter="jar"
                   />
 
+                  <FileSelector
+                    id="sut-sql-seed"
+                    label="SQL Seed File (optional)"
+                    accept=".sql"
+                    onFileSelected={handleSqlSeedFileSelected}
+                    selectedFile={sutSqlSeedFile}
+                    mimeTypeFilter="sql"
+                  />
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="sut-health">Health Check Path *</Label>
@@ -1100,6 +1118,22 @@ export function ExperimentDetailPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* SQL Seed File (optional) */}
+                  {system.sqlSeedFile && (
+                    <div className="flex items-start gap-2">
+                      <FileCode className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">SQL Seed File</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-sm truncate">{system.sqlSeedFile.filename}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {formatFileSize(system.sqlSeedFile.fileSize)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Health & Port */}
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t">

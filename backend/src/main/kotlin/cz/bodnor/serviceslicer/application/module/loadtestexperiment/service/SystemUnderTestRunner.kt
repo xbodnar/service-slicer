@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.loadtestexperiment.service
 
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
-import cz.bodnor.serviceslicer.application.module.file.service.UnzipFile
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTestRepository
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -10,8 +9,6 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 import java.net.HttpURLConnection
 import java.net.URL
-import java.nio.file.Files
-import java.nio.file.Path
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference

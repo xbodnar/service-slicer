@@ -48,6 +48,7 @@ class GetLoadTestExperimentJooq(
         // Fetch systems under test with their compose and jar files
         val composeFileAlias = FILE.`as`("compose_file")
         val jarFileAlias = FILE.`as`("jar_file")
+        val sqlSeedFileAlias = FILE.`as`("sql_seed_file")
 
         val sutRecords = dsl
             .select(
@@ -63,10 +64,14 @@ class GetLoadTestExperimentJooq(
                 jarFileAlias.ID.`as`("jar_file_id"),
                 jarFileAlias.FILENAME.`as`("jar_filename"),
                 jarFileAlias.EXPECTED_SIZE.`as`("jar_file_size"),
+                sqlSeedFileAlias.ID.`as`("sql_seed_file_id"),
+                sqlSeedFileAlias.FILENAME.`as`("sql_seed_filename"),
+                sqlSeedFileAlias.EXPECTED_SIZE.`as`("sql_seed_file_size"),
             )
             .from(SYSTEM_UNDER_TEST)
             .join(composeFileAlias).on(SYSTEM_UNDER_TEST.COMPOSE_FILE_ID.eq(composeFileAlias.ID))
             .join(jarFileAlias).on(SYSTEM_UNDER_TEST.JAR_FILE_ID.eq(jarFileAlias.ID))
+            .leftJoin(sqlSeedFileAlias).on(SYSTEM_UNDER_TEST.SQL_SEED_FILE_ID.eq(sqlSeedFileAlias.ID))
             .where(SYSTEM_UNDER_TEST.EXPERIMENT_ID.eq(experimentId))
             .fetch()
 
@@ -107,6 +112,13 @@ class GetLoadTestExperimentJooq(
                         filename = sut.get("jar_filename", String::class.java)!!,
                         fileSize = sut.get("jar_file_size", Long::class.java)!!,
                     ),
+                    sqlSeedFile = sut.get("sql_seed_file_id", UUID::class.java)?.let {
+                        FileDto(
+                            fileId = it,
+                            filename = sut.get("sql_seed_filename", String::class.java)!!,
+                            fileSize = sut.get("sql_seed_file_size", Long::class.java)!!,
+                        )
+                    },
                     description = sut.get(SYSTEM_UNDER_TEST.DESCRIPTION),
                     healthCheckPath = sut.get(SYSTEM_UNDER_TEST.HEALTH_CHECK_PATH)!!,
                     appPort = sut.get(SYSTEM_UNDER_TEST.APP_PORT)!!,
