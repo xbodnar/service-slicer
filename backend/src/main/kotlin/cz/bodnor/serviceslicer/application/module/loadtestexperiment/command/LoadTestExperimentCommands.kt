@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.loadtestexperiment.command
 
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand
-import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.CreateLoadTestConfigCommand.CreateUserBehaviorModelDto
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
@@ -21,6 +20,8 @@ data class CreateLoadTestExperimentCommand(
         val composeFileId: UUID,
         @Schema(description = "ID of the JAR file to test")
         val jarFileId: UUID,
+        @Schema(description = "ID of the SQL seed file (optional)")
+        val sqlSeedFileId: UUID? = null,
         @Schema(description = "Description of the system under test")
         val description: String? = null,
         @Schema(description = "Health check endpoint path", example = "/actuator/health")

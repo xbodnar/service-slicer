@@ -42,15 +42,16 @@ class OpenApiParsingService(
                     name = operation.operationId ?: error("Operation ID not found for operation $operation"),
                     parameters = operation.parameters?.mapNotNull { param ->
                         param?.schema?.`$ref`?.let { schemaName ->
-                                ApiParameter(
+                            ApiParameter(
                                 name = param.name,
                                 `in` = param.`in`,
                                 required = param.required ?: false,
                                 schema = schemaName.extractSchema(openAPI),
-                            ) }
+                            )
+                        }
                     } ?: emptyList(),
                     requestBody = operation.requestBody?.content?.mapValues { content ->
-                            content.value.schema?.`$ref`?.extractSchema(openAPI)
+                        content.value.schema?.`$ref`?.extractSchema(openAPI)
                     } ?: emptyMap(),
                     responses = operation.responses?.mapValues { (_, response) ->
                         ApiResponse(

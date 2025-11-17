@@ -8,3 +8,5 @@ fun verify(
 ) {
     if (!condition) throw ApplicationError(message())
 }
+
+fun applicationError(message: String): Nothing = throw ApplicationError(message)

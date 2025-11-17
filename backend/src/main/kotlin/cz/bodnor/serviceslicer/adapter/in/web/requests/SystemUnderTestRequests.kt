@@ -22,15 +22,16 @@ data class AddSystemUnderTestRequest(
     @Schema(description = "Startup timeout in seconds", example = "180")
     val startupTimeoutSeconds: Long = 180,
 ) {
+
     fun toCommand(experimentId: UUID) = AddSystemUnderTestCommand(
         experimentId = experimentId,
         name = name,
-        composeFileId = composeFileId,
-        jarFileId = jarFileId,
         description = description,
         healthCheckPath = healthCheckPath,
         appPort = appPort,
         startupTimeoutSeconds = startupTimeoutSeconds,
+        jarFileId = jarFileId,
+        composeFileId = composeFileId,
     )
 }
 

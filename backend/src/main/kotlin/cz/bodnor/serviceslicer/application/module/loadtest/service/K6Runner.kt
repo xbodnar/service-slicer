@@ -22,11 +22,12 @@ class K6Runner(
 
     fun runTest(
         scriptPath: Path,
+        configPath: Path,
         environmentVariables: Map<String, String> = emptyMap(),
     ): K6Result {
         logger.info { "Starting k6 load test with script: ${scriptPath.toFile().absolutePath}" }
 
-        val command = buildK6Command(scriptPath, environmentVariables)
+        val command = buildK6Command(scriptPath, configPath, environmentVariables)
 
         logger.info { "Executing k6 command: ${command.joinToString(" ")}" }
 
@@ -51,6 +52,7 @@ class K6Runner(
 
     private fun buildK6Command(
         scriptPath: Path,
+        configPath: Path,
         environmentVariables: Map<String, String>,
     ): List<String> {
         val command = mutableListOf(
@@ -65,12 +67,15 @@ class K6Runner(
         // Mount script directory (read-write so k6 can write summary.json)
         val scriptDir = scriptPath.parent.toFile().absolutePath
         val scriptName = scriptPath.fileName.toString()
+        val configName = configPath.fileName.toString()
         command.addAll(
             listOf(
                 "-v",
                 "$scriptDir:/scripts",
             ),
         )
+
+        command.addAll(listOf("-e", "LOAD_TEST_CONFIG_FILE=/scripts/$configName"))
 
         // Add environment variables
         environmentVariables.forEach { (key, value) ->

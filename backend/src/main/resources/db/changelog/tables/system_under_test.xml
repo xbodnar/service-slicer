@@ -64,4 +64,12 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add-sql-seed-file" author="Norbert Bodnar">
+        <addColumn tableName="system_under_test">
+            <column name="sql_seed_file_id" type="uuid">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

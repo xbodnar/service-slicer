@@ -1,0 +1,97 @@
+{
+  "experimentId": "b3ebfca5-7412-4fd1-824a-99b200588061",
+  "name": "Experiment 1",
+  "loadTestConfig": {
+    "loadTestConfigId": "88068545-cb33-4247-86dc-c55aefdffd49",
+    "openApiFile": {
+      "fileId": "894132f4-0d49-4237-a9c9-d8652ddee4d9",
+      "filename": "openapi.json",
+      "fileSize": 39540
+    },
+    "behaviorModels": [
+      {
+        "id": "reader-passive",
+        "actor": "Reader",
+        "usageProfile": 1.0,
+        "steps": [
+          {
+            "method": "GET",
+            "path": "/articles",
+            "headers": {},
+            "params": {},
+            "save": {}
+          },
+          {
+            "method": "POST",
+            "path": "/users/login",
+            "headers": {},
+            "params": {},
+            "body": {
+              "user": {
+                "email": "user1@test.com",
+                "password": "password"
+              }
+            },
+            "save": {
+              "token": "$.user.token"
+            }
+          },
+          {
+            "method": "GET",
+            "path": "/articles/feed",
+            "headers": {
+              "Authorization": "Bearer ${token}"
+            },
+            "params": {}
+          }
+        ],
+        "thinkFrom": 1000,
+        "thinkTo": 3000
+      }
+    ],
+    "operationalProfile": [
+      {
+        "load": 25,
+        "frequency": 0.1
+      },
+      {
+        "load": 100,
+        "frequency": 0.2
+      },
+      {
+        "load": 200,
+        "frequency": 0.3
+      },
+      {
+        "load": 300,
+        "frequency": 0.2
+      },
+      {
+        "load": 400,
+        "frequency": 0.2
+      }
+    ]
+  },
+  "systemsUnderTest": [
+    {
+      "systemUnderTestId": "d78557f4-ed79-4de0-a1fc-58ead60ab73b",
+      "name": "Monolith",
+      "composeFile": {
+        "fileId": "f2af3bb9-f3ea-44a9-980f-ac8c43e47586",
+        "filename": "docker-compose.yml",
+        "fileSize": 1141
+      },
+      "jarFile": {
+        "fileId": "a4e83586-5fa0-4f4f-b695-d016793fbc44",
+        "filename": "spring-boot-blog-example-app-0.0.1-SNAPSHOT.jar",
+        "fileSize": 62020852
+      },
+      "description": "",
+      "healthCheckPath": "/actuator/health",
+      "appPort": 8080,
+      "startupTimeoutSeconds": 60
+    }
+  ],
+  "createdAt": "2025-11-14T20:23:26.086661Z",
+  "updatedAt": "2025-11-14T20:23:26.086661Z"
+}

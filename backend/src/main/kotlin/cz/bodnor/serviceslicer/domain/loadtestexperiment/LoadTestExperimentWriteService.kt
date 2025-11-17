@@ -23,51 +23,6 @@ class LoadTestExperimentWriteService(
         return experimentRepository.save(experiment)
     }
 
-    fun addSystemUnderTest(
-        experimentId: UUID,
-        systemUnderTestInput: SystemUnderTestInput,
-    ): LoadTestExperiment {
-        val experiment = experimentRepository.findById(experimentId)
-            .orElseThrow { IllegalArgumentException("LoadTestExperiment with id $experimentId not found") }
-
-        val systemUnderTest = SystemUnderTest(
-            experimentId = experiment.id,
-            name = systemUnderTestInput.name,
-            composeFileId = systemUnderTestInput.composeFileId,
-            jarFileId = systemUnderTestInput.jarFileId,
-            description = systemUnderTestInput.description,
-            healthCheckPath = systemUnderTestInput.healthCheckPath,
-            appPort = systemUnderTestInput.appPort,
-            startupTimeoutSeconds = systemUnderTestInput.startupTimeoutSeconds,
-        )
-        experiment.addSystemUnderTest(systemUnderTest)
-
-        return experimentRepository.save(experiment)
-    }
-
-    fun updateSystemUnderTest(
-        experimentId: UUID,
-        sutId: UUID,
-        systemUnderTestInput: SystemUnderTestInput,
-    ): SystemUnderTest {
-        val sut = systemUnderTestRepository.findById(sutId)
-            .orElseThrow { IllegalArgumentException("SystemUnderTest with id $sutId not found") }
-
-        require(sut.experimentId == experimentId) {
-            "SystemUnderTest with id $sutId does not belong to experiment $experimentId"
-        }
-
-        sut.name = systemUnderTestInput.name
-        sut.composeFileId = systemUnderTestInput.composeFileId
-        sut.jarFileId = systemUnderTestInput.jarFileId
-        sut.description = systemUnderTestInput.description
-        sut.healthCheckPath = systemUnderTestInput.healthCheckPath
-        sut.appPort = systemUnderTestInput.appPort
-        sut.startupTimeoutSeconds = systemUnderTestInput.startupTimeoutSeconds
-
-        return systemUnderTestRepository.save(sut)
-    }
-
     fun deleteSystemUnderTest(
         experimentId: UUID,
         sutId: UUID,
@@ -81,14 +36,4 @@ class LoadTestExperimentWriteService(
 
         systemUnderTestRepository.delete(sut)
     }
-
-    data class SystemUnderTestInput(
-        val name: String,
-        val composeFileId: UUID,
-        val jarFileId: UUID,
-        val description: String? = null,
-        val healthCheckPath: String = "/actuator/health",
-        val appPort: Int = 9090,
-        val startupTimeoutSeconds: Long = 180,
-    )
 }
