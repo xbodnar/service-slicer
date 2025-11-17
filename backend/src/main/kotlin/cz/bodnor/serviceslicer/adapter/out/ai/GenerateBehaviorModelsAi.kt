@@ -5,8 +5,10 @@ import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.port.out.GenerateBehaviorModels
 import cz.bodnor.serviceslicer.domain.loadtestconfig.BehaviorModel
 import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.ai.converter.BeanOutputConverter
+import org.springframework.ai.openai.OpenAiChatModel
 import org.springframework.ai.openai.OpenAiChatOptions
 import org.springframework.ai.openai.api.OpenAiApi
 import org.springframework.ai.openai.api.ResponseFormat
@@ -23,10 +25,6 @@ class GenerateBehaviorModelsAi(
 
     private val chatClient: ChatClient = chatClientBuilder.build()
 
-    private val outputConverter = BeanOutputConverter(AiResponse::class.java)
-
-    private val jsonSchema = outputConverter.jsonSchema
-
     data class AiResponse(
         val behaviorModels: List<BehaviorModel>,
     )
@@ -34,18 +32,9 @@ class GenerateBehaviorModelsAi(
     override fun invoke(openApiFileId: UUID): List<BehaviorModel> = diskOperations.withFile(openApiFileId) {
         val openApiContent = Files.readString(it)
 
-        val prompt =
-            Prompt(
-                SYSTEM_PROMPT.replace("{{openApiContent}}", openApiContent),
-                OpenAiChatOptions.builder().model(
-                    OpenAiApi.ChatModel.GPT_5_CHAT_LATEST,
-                ).responseFormat(ResponseFormat(ResponseFormat.Type.JSON_SCHEMA, jsonSchema)).build(),
-            )
-
-        val response = chatClient.prompt(prompt).call()
-        val content = response.content() ?: throw IllegalStateException("No AI response: ${response.content()}")
-
-        outputConverter.convert(content)?.behaviorModels ?: error("Couldn't deserialize OpenAI response")
+        chatClient.prompt().user { user ->
+            user.text(SYSTEM_PROMPT).param("openApiContent", openApiContent)
+        }.call().entity(AiResponse::class.java)?.behaviorModels ?: error("Couldn't deserialize OpenAI response")
     }
 
     companion object {
@@ -64,7 +53,7 @@ class GenerateBehaviorModelsAi(
             Use these to produce realistic `BehaviorModel` objects that can be used for performance and scalability assessments.
 
             OpenApi specification:
-            {{openApiContent}}
+            {openApiContent}
 
             ---
 

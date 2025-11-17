@@ -18,6 +18,7 @@ import { ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react'
 const experimentSchema = z.object({
   name: z.string().min(1, 'Experiment name is required'),
   description: z.string().optional(),
+  generateBehaviorModels: z.boolean().default(false),
   behaviorModels: z.array(
     z.object({
       id: z.string().min(1, 'ID is required'),
@@ -41,7 +42,7 @@ const experimentSchema = z.object({
       load: z.coerce.number().min(1, 'Load must be at least 1'),
       frequency: z.coerce.number().min(0).max(1, 'Frequency must be between 0 and 1'),
     })
-  ).optional(),
+  ).min(1, 'At least one operational load is required'),
   systemsUnderTest: z.array(
     z.object({
       name: z.string().min(1, 'System name is required'),
@@ -51,6 +52,15 @@ const experimentSchema = z.object({
       startupTimeoutSeconds: z.coerce.number().default(180),
     })
   ).min(1, 'At least one system under test is required'),
+}).refine((data) => {
+  // If not generating behavior models, require at least one behavior model to be defined
+  if (!data.generateBehaviorModels && (!data.behaviorModels || data.behaviorModels.length === 0)) {
+    return false
+  }
+  return true
+}, {
+  message: 'Either enable auto-generation or define at least one behavior model',
+  path: ['behaviorModels'],
 })
 
 type ExperimentFormData = z.infer<typeof experimentSchema>
@@ -194,8 +204,14 @@ export function ExperimentCreatePage() {
     defaultValues: {
       name: '',
       description: '',
+      generateBehaviorModels: false,
       behaviorModels: [],
-      operationalProfile: [],
+      operationalProfile: [
+        {
+          load: 25,
+          frequency: 1.0,
+        },
+      ],
       systemsUnderTest: [
         {
           name: '',
@@ -299,9 +315,9 @@ export function ExperimentCreatePage() {
     }
 
     try {
-      // Process behavioral models if provided
-      let behaviorModels: any[] | undefined
-      if (data.behaviorModels && data.behaviorModels.length > 0) {
+      // Process behavioral models based on generateBehaviorModels flag
+      let behaviorModels: any[] = []
+      if (!data.generateBehaviorModels && data.behaviorModels && data.behaviorModels.length > 0) {
         behaviorModels = data.behaviorModels.map((model) => {
           const steps = model.steps.map((step) => {
             let headers, params
@@ -330,20 +346,15 @@ export function ExperimentCreatePage() {
         })
       }
 
-      // Process operational profile if provided
-      let operationalProfile: any | null = null
-      if (data.operationalProfile && data.operationalProfile.length > 0) {
-        const freqSum = data.operationalProfile.reduce((sum, p) => sum + p.frequency, 0)
-        if (Math.abs(freqSum - 1.0) > 0.001) {
-          toast({
-            variant: 'destructive',
-            title: 'Invalid operational profile',
-            description: `Frequencies must sum to 1.0 (current sum: ${freqSum.toFixed(3)})`,
-          })
-          return
-        }
-
-        operationalProfile = data.operationalProfile
+      // Validate operational profile frequencies sum to 1.0
+      const freqSum = data.operationalProfile.reduce((sum, p) => sum + p.frequency, 0)
+      if (Math.abs(freqSum - 1.0) > 0.001) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid operational profile',
+          description: `Frequencies must sum to 1.0 (current sum: ${freqSum.toFixed(3)})`,
+        })
+        return
       }
 
       const result = await createExperiment.mutateAsync({
@@ -353,7 +364,8 @@ export function ExperimentCreatePage() {
           loadTestConfig: {
             openApiFileId: openApiFile.fileId,
             behaviorModels,
-            operationalProfile,
+            operationalProfile: data.operationalProfile,
+            generateBehaviorModels: data.generateBehaviorModels,
           },
           systemsUnderTest: data.systemsUnderTest.map((system, index) => ({
             name: system.name,
@@ -445,24 +457,37 @@ export function ExperimentCreatePage() {
               mimeTypeFilter="json"
             />
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Behavioral Models (optional)</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    If left empty, AI will generate behavioral models based on the OpenAPI specification
-                  </p>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="generateBehaviorModels"
+                {...form.register('generateBehaviorModels')}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="generateBehaviorModels" className="cursor-pointer">
+                Auto-generate behavior models from OpenAPI specification
+              </Label>
+            </div>
+
+            {!form.watch('generateBehaviorModels') && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Behavioral Models</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Define the user behavior patterns for load testing
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddBehaviorModel}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Model
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddBehaviorModel}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Model
-                </Button>
-              </div>
 
               {behaviorFields.map((field, index) => (
                 <Card key={field.id} className="p-4">
@@ -555,14 +580,21 @@ export function ExperimentCreatePage() {
                   </div>
                 </Card>
               ))}
-            </div>
+
+                {form.formState.errors.behaviorModels && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.behaviorModels.message}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Operational Profile (optional)</Label>
+                  <Label>Operational Profile</Label>
                   <p className="text-xs text-muted-foreground mt-1">
-                    If left empty, AI will generate an operational profile based on the OpenAPI specification
+                    Define load levels and their frequency distribution (frequencies must sum to 1.0)
                   </p>
                 </div>
                 <Button
@@ -572,7 +604,7 @@ export function ExperimentCreatePage() {
                   onClick={handleAddOperationalProfile}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Load & Frequency
+                  Add Operational Load
                 </Button>
               </div>
 
@@ -617,9 +649,10 @@ export function ExperimentCreatePage() {
                 </Card>
               ))}
 
-              {operationalProfileFields.length > 0 && (() => {
+              {(() => {
                 const opProfile = form.watch('operationalProfile')
-                const sum = opProfile?.reduce((s, p) => s + (Number(p.frequency) || 0), 0) || 0
+                if (!opProfile || opProfile.length === 0) return null
+                const sum = opProfile.reduce((s, p) => s + (Number(p.frequency) || 0), 0)
                 const isValid = Math.abs(sum - 1.0) <= 0.001
                 if (isValid) return null
                 return (
@@ -628,6 +661,12 @@ export function ExperimentCreatePage() {
                   </p>
                 )
               })()}
+
+              {form.formState.errors.operationalProfile && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.operationalProfile.message}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -747,7 +786,7 @@ export function ExperimentCreatePage() {
               !openApiFile ||
               (() => {
                 const opProfile = form.watch('operationalProfile')
-                if (!opProfile || opProfile.length === 0) return false
+                if (!opProfile || opProfile.length === 0) return true // Must have at least one
                 const sum = opProfile.reduce((s, p) => s + (Number(p.frequency) || 0), 0)
                 return Math.abs(sum - 1.0) > 0.001
               })()
