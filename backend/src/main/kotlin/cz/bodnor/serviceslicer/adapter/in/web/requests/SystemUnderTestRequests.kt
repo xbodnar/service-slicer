@@ -23,6 +23,14 @@ data class AddSystemUnderTestRequest(
     val appPort: Int = 9090,
     @Schema(description = "Startup timeout in seconds", example = "180")
     val startupTimeoutSeconds: Long = 180,
+    @Schema(description = "Database container name in docker-compose (required if sqlSeedFileId is provided)")
+    val dbContainerName: String? = null,
+    @Schema(description = "Database port inside container (required if sqlSeedFileId is provided)")
+    val dbPort: Int? = null,
+    @Schema(description = "Database name (required if sqlSeedFileId is provided)")
+    val dbName: String? = null,
+    @Schema(description = "Database username (required if sqlSeedFileId is provided)")
+    val dbUsername: String? = null,
 ) {
 
     fun toCommand(experimentId: UUID) = AddSystemUnderTestCommand(
@@ -35,6 +43,10 @@ data class AddSystemUnderTestRequest(
         jarFileId = jarFileId,
         composeFileId = composeFileId,
         sqlSeedFileId = sqlSeedFileId,
+        dbContainerName = dbContainerName,
+        dbPort = dbPort,
+        dbName = dbName,
+        dbUsername = dbUsername,
     )
 }
 
@@ -56,6 +68,14 @@ data class UpdateSystemUnderTestRequest(
     val appPort: Int = 9090,
     @Schema(description = "Startup timeout in seconds", example = "180")
     val startupTimeoutSeconds: Long = 180,
+    @Schema(description = "Database container name in docker-compose (required if sqlSeedFileId is provided)")
+    val dbContainerName: String? = null,
+    @Schema(description = "Database port inside container (required if sqlSeedFileId is provided)")
+    val dbPort: Int? = null,
+    @Schema(description = "Database name (required if sqlSeedFileId is provided)")
+    val dbName: String? = null,
+    @Schema(description = "Database username (required if sqlSeedFileId is provided)")
+    val dbUsername: String? = null,
 ) {
     fun toCommand(
         experimentId: UUID,
@@ -71,5 +91,9 @@ data class UpdateSystemUnderTestRequest(
         healthCheckPath = healthCheckPath,
         appPort = appPort,
         startupTimeoutSeconds = startupTimeoutSeconds,
+        dbContainerName = dbContainerName,
+        dbPort = dbPort,
+        dbName = dbName,
+        dbUsername = dbUsername,
     )
 }

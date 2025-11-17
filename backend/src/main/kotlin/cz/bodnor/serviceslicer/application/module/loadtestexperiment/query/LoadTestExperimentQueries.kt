@@ -89,5 +89,13 @@ data class GetLoadTestExperimentQuery(val experimentId: UUID) : Query<GetLoadTes
         val appPort: Int,
         @Schema(description = "Startup timeout in seconds")
         val startupTimeoutSeconds: Long,
+        @Schema(description = "Database container name in docker-compose")
+        val dbContainerName: String?,
+        @Schema(description = "Database port inside container")
+        val dbPort: Int?,
+        @Schema(description = "Database name")
+        val dbName: String?,
+        @Schema(description = "Database username")
+        val dbUsername: String?,
     )
 }

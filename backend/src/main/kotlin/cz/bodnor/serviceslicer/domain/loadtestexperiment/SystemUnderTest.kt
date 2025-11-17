@@ -31,6 +31,14 @@ class SystemUnderTest(
     var appPort: Int,
     // Startup timeout in seconds
     var startupTimeoutSeconds: Long,
+    // Database container name in docker-compose (required if sqlSeedFileId is set)
+    var dbContainerName: String? = null,
+    // Database port inside container (required if sqlSeedFileId is set)
+    var dbPort: Int? = null,
+    // Database name (required if sqlSeedFileId is set)
+    var dbName: String? = null,
+    // Database username (required if sqlSeedFileId is set)
+    var dbUsername: String? = null,
 ) : UpdatableEntity(id)
 
 @Repository

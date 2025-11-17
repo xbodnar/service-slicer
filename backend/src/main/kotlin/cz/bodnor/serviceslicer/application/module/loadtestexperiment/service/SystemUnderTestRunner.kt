@@ -1,6 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.loadtestexperiment.service
 
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
+import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTest
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTestRepository
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -77,7 +78,16 @@ class SystemUnderTestRunner(
                 info.state = RunState.WAITING_HEALTHY
                 waitHealthy(sut.appPort, sut.healthCheckPath, timeout = Duration.ofSeconds(sut.startupTimeoutSeconds))
 
-                logger.info { "SUT is healthy, ready to run tests" }
+                logger.info { "SUT is healthy" }
+
+                // 4) Execute SQL seed file if provided
+                if (sut.sqlSeedFileId != null) {
+                    logger.info { "SQL seed file specified, executing SQL script..." }
+                    executeSqlSeedFile(sut, project, workDir)
+                    logger.info { "SQL seed file executed successfully" }
+                }
+
+                logger.info { "SUT is ready to run tests" }
 
                 info.state = RunState.RUNNING
             } catch (t: Throwable) {
@@ -111,6 +121,79 @@ class SystemUnderTestRunner(
     )
 
     // --- helpers ---
+
+    private fun executeSqlSeedFile(
+        sut: SystemUnderTest,
+        project: String,
+        workDir: java.io.File,
+    ) {
+        // Extract and validate required fields
+        val sqlSeedFileId = requireNotNull(sut.sqlSeedFileId) { "SQL seed file ID must be provided" }
+        val dbContainerName = requireNotNull(sut.dbContainerName) { "DB container name must be provided" }
+        val dbPort = requireNotNull(sut.dbPort) { "DB port must be provided" }
+        val dbName = requireNotNull(sut.dbName) { "DB name must be provided" }
+        val dbUsername = requireNotNull(sut.dbUsername) { "DB username must be provided" }
+
+        diskOperations.withFile(sqlSeedFileId) { sqlFilePath ->
+            logger.info { "Transferring SQL seed file to execution environment..." }
+
+            // Transfer SQL file to execution environment
+            val remoteSqlPath = commandExecutor.transferFile(
+                sqlFilePath,
+                "$project/seed.sql",
+            )
+
+            // Copy SQL file into database container
+            logger.info { "Copying SQL file into database container $dbContainerName..." }
+            val copyResult = commandExecutor.execute(
+                listOf(
+                    "docker",
+                    "compose",
+                    "-p",
+                    project,
+                    "cp",
+                    remoteSqlPath.toFile().name,
+                    "$dbContainerName:/tmp/seed.sql",
+                ),
+                workDir,
+            )
+            if (copyResult.exitCode != 0) {
+                throw IllegalStateException(
+                    "Failed to copy SQL file into container (exit=${copyResult.exitCode})\n${copyResult.output}",
+                )
+            }
+
+            // Execute SQL script inside the container
+            logger.info { "Executing SQL script in database container..." }
+            val execResult = commandExecutor.execute(
+                listOf(
+                    "docker",
+                    "compose",
+                    "-p",
+                    project,
+                    "exec",
+                    "-T",
+                    dbContainerName,
+                    "psql",
+                    "-U",
+                    dbUsername,
+                    "-d",
+                    dbName,
+                    "-f",
+                    "/tmp/seed.sql",
+                ),
+                workDir,
+            )
+
+            logger.info { "SQL execution output:\n${execResult.output}" }
+
+            if (execResult.exitCode != 0) {
+                throw IllegalStateException(
+                    "Failed to execute SQL script (exit=${execResult.exitCode})\n${execResult.output}",
+                )
+            }
+        }
+    }
 
     private fun waitHealthy(
         port: Int,

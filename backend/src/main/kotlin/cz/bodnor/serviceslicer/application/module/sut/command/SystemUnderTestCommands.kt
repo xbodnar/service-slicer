@@ -14,6 +14,10 @@ data class UpdateSystemUnderTestCommand(
     val healthCheckPath: String = "/actuator/health",
     val appPort: Int = 9090,
     val startupTimeoutSeconds: Long = 180,
+    val dbContainerName: String? = null,
+    val dbPort: Int? = null,
+    val dbName: String? = null,
+    val dbUsername: String? = null,
 ) : Command<UpdateSystemUnderTestCommand.Result> {
 
     data class Result(
@@ -36,6 +40,10 @@ data class AddSystemUnderTestCommand(
     val healthCheckPath: String = "/actuator/health",
     val appPort: Int = 9090,
     val startupTimeoutSeconds: Long = 180,
+    val dbContainerName: String? = null,
+    val dbPort: Int? = null,
+    val dbName: String? = null,
+    val dbUsername: String? = null,
 ) : Command<AddSystemUnderTestCommand.Result> {
 
     data class Result(

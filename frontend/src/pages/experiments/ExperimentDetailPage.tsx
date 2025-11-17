@@ -70,7 +70,26 @@ const systemUnderTestSchema = z.object({
   healthCheckPath: z.string().min(1, 'Health check path is required'),
   appPort: z.coerce.number().min(1).max(65535, 'Port must be between 1 and 65535'),
   startupTimeoutSeconds: z.coerce.number().min(1, 'Timeout must be at least 1 second'),
-})
+  dbContainerName: z.string().optional(),
+  dbPort: z.coerce.number().optional(),
+  dbName: z.string().optional(),
+  dbUsername: z.string().optional(),
+}).refine(
+  (data) => {
+    // If any DB field is filled, all must be filled
+    const hasDbContainerName = data.dbContainerName && data.dbContainerName.trim() !== ''
+    const hasDbPort = data.dbPort !== undefined && data.dbPort !== null && String(data.dbPort).trim() !== ''
+    const hasDbName = data.dbName && data.dbName.trim() !== ''
+    const hasDbUsername = data.dbUsername && data.dbUsername.trim() !== ''
+
+    const filledCount = [hasDbContainerName, hasDbPort, hasDbName, hasDbUsername].filter(Boolean).length
+    return filledCount === 0 || filledCount === 4
+  },
+  {
+    message: 'All database config fields (container name, port, database name, username) must be filled together',
+    path: ['dbContainerName'],
+  }
+)
 
 type LoadTestConfigFormData = z.infer<typeof loadTestConfigSchema>
 type SystemUnderTestFormData = z.infer<typeof systemUnderTestSchema>
@@ -248,6 +267,10 @@ export function ExperimentDetailPage() {
       healthCheckPath: '/actuator/health',
       appPort: 8080,
       startupTimeoutSeconds: 60,
+      dbContainerName: '',
+      dbPort: undefined,
+      dbName: '',
+      dbUsername: '',
     },
   })
 
@@ -401,6 +424,10 @@ export function ExperimentDetailPage() {
       healthCheckPath: sut.healthCheckPath,
       appPort: sut.appPort,
       startupTimeoutSeconds: sut.startupTimeoutSeconds,
+      dbContainerName: sut.dbContainerName || '',
+      dbPort: sut.dbPort || undefined,
+      dbName: sut.dbName || '',
+      dbUsername: sut.dbUsername || '',
     })
     setSutComposeFile(null)
     setSutJarFile(null)
@@ -450,6 +477,10 @@ export function ExperimentDetailPage() {
             composeFileId: sutComposeFile?.fileId || existingSut.composeFile.fileId,
             jarFileId: sutJarFile?.fileId || existingSut.jarFile.fileId,
             sqlSeedFileId: sutSqlSeedFile?.fileId || existingSut.sqlSeedFile?.fileId || undefined,
+            dbContainerName: formData.dbContainerName || undefined,
+            dbPort: formData.dbPort || undefined,
+            dbName: formData.dbName || undefined,
+            dbUsername: formData.dbUsername || undefined,
           },
         })
 
@@ -479,6 +510,10 @@ export function ExperimentDetailPage() {
             composeFileId: sutComposeFile.fileId,
             jarFileId: sutJarFile.fileId,
             sqlSeedFileId: sutSqlSeedFile?.fileId || undefined,
+            dbContainerName: formData.dbContainerName || undefined,
+            dbPort: formData.dbPort || undefined,
+            dbName: formData.dbName || undefined,
+            dbUsername: formData.dbUsername || undefined,
           },
         })
 
@@ -956,34 +991,133 @@ export function ExperimentDetailPage() {
                     />
                   </div>
 
-                  <FileSelector
-                    id="sut-compose"
-                    label={`Docker Compose File ${editingSutId ? '(leave empty to keep current)' : '*'}`}
-                    accept=".yml,.yaml"
-                    required={!editingSutId}
-                    onFileSelected={handleComposeFileSelected}
-                    selectedFile={sutComposeFile}
-                    mimeTypeFilter="yaml"
-                  />
+                  <div className="space-y-2">
+                    <FileSelector
+                      id="sut-compose"
+                      label={`Docker Compose File ${editingSutId ? '(leave empty to keep current)' : '*'}`}
+                      accept=".yml,.yaml"
+                      required={!editingSutId}
+                      onFileSelected={handleComposeFileSelected}
+                      selectedFile={sutComposeFile}
+                      mimeTypeFilter="yaml"
+                    />
+                    {editingSutId && !sutComposeFile && (() => {
+                      const existingSut = data.systemsUnderTest.find((s: any) => s.systemUnderTestId === editingSutId)
+                      if (!existingSut) return null
+                      return (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border text-xs">
+                          <FileArchive className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Current:</span>
+                          <span className="font-mono">{existingSut.composeFile.filename}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {formatFileSize(existingSut.composeFile.fileSize)}
+                          </Badge>
+                        </div>
+                      )
+                    })()}
+                  </div>
 
-                  <FileSelector
-                    id="sut-jar"
-                    label={`JAR File ${editingSutId ? '(leave empty to keep current)' : '*'}`}
-                    accept=".jar"
-                    required={!editingSutId}
-                    onFileSelected={handleJarFileSelected}
-                    selectedFile={sutJarFile}
-                    mimeTypeFilter="jar"
-                  />
+                  <div className="space-y-2">
+                    <FileSelector
+                      id="sut-jar"
+                      label={`JAR File ${editingSutId ? '(leave empty to keep current)' : '*'}`}
+                      accept=".jar"
+                      required={!editingSutId}
+                      onFileSelected={handleJarFileSelected}
+                      selectedFile={sutJarFile}
+                      mimeTypeFilter="jar"
+                    />
+                    {editingSutId && !sutJarFile && (() => {
+                      const existingSut = data.systemsUnderTest.find((s: any) => s.systemUnderTestId === editingSutId)
+                      if (!existingSut) return null
+                      return (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border text-xs">
+                          <Package className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Current:</span>
+                          <span className="font-mono">{existingSut.jarFile.filename}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {formatFileSize(existingSut.jarFile.fileSize)}
+                          </Badge>
+                        </div>
+                      )
+                    })()}
+                  </div>
 
-                  <FileSelector
-                    id="sut-sql-seed"
-                    label="SQL Seed File (optional)"
-                    accept=".sql"
-                    onFileSelected={handleSqlSeedFileSelected}
-                    selectedFile={sutSqlSeedFile}
-                    mimeTypeFilter="sql"
-                  />
+                  <div className="space-y-2">
+                    <FileSelector
+                      id="sut-sql-seed"
+                      label="SQL Seed File (optional)"
+                      accept=".sql"
+                      onFileSelected={handleSqlSeedFileSelected}
+                      selectedFile={sutSqlSeedFile}
+                      mimeTypeFilter="sql"
+                    />
+                    {editingSutId && !sutSqlSeedFile && (() => {
+                      const existingSut = data.systemsUnderTest.find((s: any) => s.systemUnderTestId === editingSutId)
+                      if (!existingSut || !existingSut.sqlSeedFile) return null
+                      return (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border text-xs">
+                          <FileCode className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Current:</span>
+                          <span className="font-mono">{existingSut.sqlSeedFile.filename}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {formatFileSize(existingSut.sqlSeedFile.fileSize)}
+                          </Badge>
+                        </div>
+                      )
+                    })()}
+                  </div>
+
+                  {/* Database Configuration (required if SQL seed file is provided) */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-semibold">Database Configuration</Label>
+                      <p className="text-xs text-muted-foreground">Required if SQL seed file is provided</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="sut-db-container">DB Container Name</Label>
+                        <Input
+                          id="sut-db-container"
+                          {...sutForm.register('dbContainerName')}
+                          placeholder="postgres"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="sut-db-port">DB Port</Label>
+                        <Input
+                          id="sut-db-port"
+                          type="number"
+                          {...sutForm.register('dbPort')}
+                          placeholder="5432"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="sut-db-name">Database Name</Label>
+                        <Input
+                          id="sut-db-name"
+                          {...sutForm.register('dbName')}
+                          placeholder="realworld"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="sut-db-username">DB Username</Label>
+                        <Input
+                          id="sut-db-username"
+                          {...sutForm.register('dbUsername')}
+                          placeholder="realworld"
+                        />
+                      </div>
+                    </div>
+
+                    {sutForm.formState.errors.dbContainerName && (
+                      <p className="text-xs text-destructive">{sutForm.formState.errors.dbContainerName.message}</p>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1131,6 +1265,39 @@ export function ExperimentDetailPage() {
                             {formatFileSize(system.sqlSeedFile.fileSize)}
                           </Badge>
                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Database Configuration */}
+                  {(system.dbContainerName || system.dbPort || system.dbName || system.dbUsername) && (
+                    <div className="p-3 rounded-lg bg-muted/30 border space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground">Database Configuration</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {system.dbContainerName && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Container</p>
+                            <p className="text-sm font-mono">{system.dbContainerName}</p>
+                          </div>
+                        )}
+                        {system.dbPort && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Port</p>
+                            <p className="text-sm font-mono">{system.dbPort}</p>
+                          </div>
+                        )}
+                        {system.dbName && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Database</p>
+                            <p className="text-sm font-mono">{system.dbName}</p>
+                          </div>
+                        )}
+                        {system.dbUsername && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Username</p>
+                            <p className="text-sm font-mono">{system.dbUsername}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

@@ -72,4 +72,21 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="add-database-config-fields" author="Norbert Bodnar">
+        <addColumn tableName="system_under_test">
+            <column name="db_container_name" type="varchar(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="db_port" type="int">
+                <constraints nullable="true"/>
+            </column>
+            <column name="db_name" type="varchar(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="db_username" type="varchar(255)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

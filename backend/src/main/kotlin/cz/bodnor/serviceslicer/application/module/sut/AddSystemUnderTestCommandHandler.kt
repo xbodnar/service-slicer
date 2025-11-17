@@ -16,6 +16,18 @@ class AddSystemUnderTestCommandHandler(
 
     @Transactional
     override fun handle(command: AddSystemUnderTestCommand): AddSystemUnderTestCommand.Result {
+        // Validate that DB config is provided if SQL seed file is specified
+        if (command.sqlSeedFileId != null) {
+            require(
+                command.dbContainerName != null &&
+                    command.dbPort != null &&
+                    command.dbName != null &&
+                    command.dbUsername != null,
+            ) {
+                "When sqlSeedFileId is provided, all database configuration fields (dbContainerName, dbPort, dbName, dbUsername) must be provided"
+            }
+        }
+
         val loadTestExperiment = loadTestExperimentReadService.getById(command.experimentId)
         val newSystemUnderTest = SystemUnderTest(
             experimentId = loadTestExperiment.id,
@@ -27,6 +39,10 @@ class AddSystemUnderTestCommandHandler(
             healthCheckPath = command.healthCheckPath,
             appPort = command.appPort,
             startupTimeoutSeconds = command.startupTimeoutSeconds,
+            dbContainerName = command.dbContainerName,
+            dbPort = command.dbPort,
+            dbName = command.dbName,
+            dbUsername = command.dbUsername,
         )
 
         loadTestExperiment.addSystemUnderTest(newSystemUnderTest)

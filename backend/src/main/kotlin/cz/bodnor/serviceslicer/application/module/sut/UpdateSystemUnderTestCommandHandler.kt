@@ -16,6 +16,18 @@ class UpdateSystemUnderTestCommandHandler(
 
     @Transactional
     override fun handle(command: UpdateSystemUnderTestCommand): UpdateSystemUnderTestCommand.Result {
+        // Validate that DB config is provided if SQL seed file is specified
+        if (command.sqlSeedFileId != null) {
+            require(
+                command.dbContainerName != null &&
+                    command.dbPort != null &&
+                    command.dbName != null &&
+                    command.dbUsername != null,
+            ) {
+                "When sqlSeedFileId is provided, all database configuration fields (dbContainerName, dbPort, dbName, dbUsername) must be provided"
+            }
+        }
+
         val loadTestExperiment = loadTestExperimentReadService.getById(command.experimentId)
         val sut =
             loadTestExperiment.systemsUnderTest.find { it.id == command.sutId } ?: applicationError("SUT not found")
@@ -27,6 +39,10 @@ class UpdateSystemUnderTestCommandHandler(
         sut.jarFileId = command.jarFileId
         sut.composeFileId = command.composeFileId
         sut.sqlSeedFileId = command.sqlSeedFileId
+        sut.dbContainerName = command.dbContainerName
+        sut.dbPort = command.dbPort
+        sut.dbName = command.dbName
+        sut.dbUsername = command.dbUsername
 
         return UpdateSystemUnderTestCommand.Result(
             systemUnderTestId = sut.id,

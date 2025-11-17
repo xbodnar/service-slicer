@@ -1,4 +1,4 @@
-INSERT INTO main.users (id, username, password, email, bio, image) VALUES
+INSERT INTO users (id, username, password, email, bio, image) VALUES
 ('2b4dd6e4-2de4-4e95-9a17-2cbd92e0e001', 'alice',  'pass_alice',  'alice@example.com',  'Bio of Alice',  'https://img.com/alice.png'),
 ('5c1f41e3-6c1b-4a19-86b7-0eac0c5db002', 'bob',    'pass_bob',    'bob@example.com',    'Bio of Bob',    'https://img.com/bob.png'),
 ('a7d9f2c8-9b52-4fa1-8ef0-14e3b1da4003', 'charlie','pass_charlie','charlie@example.com','Bio of Charlie','https://img.com/charlie.png'),
