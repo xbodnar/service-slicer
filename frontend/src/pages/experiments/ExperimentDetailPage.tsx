@@ -51,7 +51,19 @@ const loadTestConfigSchema = z.object({
           path: z.string().min(1, 'Path is required'),
           headers: z.string().default('{}'),
           params: z.string().default('{}'),
-          body: z.string().optional(),
+          body: z.string().default('{}').refine(
+            (val) => {
+              if (!val || val.trim() === '') return true
+              try {
+                const parsed = JSON.parse(val)
+                return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+              } catch {
+                return false
+              }
+            },
+            { message: 'Body must be a valid JSON object' }
+          ),
+          save: z.string().default('{}'),
         })
       ).min(1, 'At least one step is required'),
       thinkFrom: z.coerce.number().min(0),
@@ -100,9 +112,10 @@ interface BehaviorModelStepsProps {
   behaviorIndex: number
   control: any
   register: any
+  errors: any
 }
 
-function BehaviorModelSteps({ behaviorIndex, control, register }: BehaviorModelStepsProps) {
+function BehaviorModelSteps({ behaviorIndex, control, register, errors }: BehaviorModelStepsProps) {
   const { fields: stepFields, append: appendStep, remove: removeStep, move: moveStep } = useFieldArray({
     control,
     name: `behaviorModels.${behaviorIndex}.steps`,
@@ -116,7 +129,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register }: BehaviorModelS
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => appendStep({ method: 'GET', path: '/', headers: '{}', params: '{}', body: '' })}
+          onClick={() => appendStep({ method: 'GET', path: '/', headers: '{}', params: '{}', body: '{}', save: '{}' })}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Step
@@ -225,7 +238,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register }: BehaviorModelS
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-body`}>Body (optional)</Label>
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-body`}>Body (JSON object)</Label>
               <Textarea
                 id={`behavior-${behaviorIndex}-step-${stepIndex}-body`}
                 {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.body`)}
@@ -233,6 +246,25 @@ function BehaviorModelSteps({ behaviorIndex, control, register }: BehaviorModelS
                 rows={3}
                 className="font-mono text-xs"
               />
+              {errors?.behaviorModels?.[behaviorIndex]?.steps?.[stepIndex]?.body && (
+                <p className="text-sm text-destructive">
+                  {errors.behaviorModels[behaviorIndex].steps[stepIndex].body.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-save`}>Save Fields (JSON)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-save`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.save`)}
+                placeholder='{"userId": "$.id", "token": "$.auth.token"}'
+                rows={2}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Save response fields for use in subsequent requests (JSONPath syntax)
+              </p>
             </div>
           </div>
         </Card>
@@ -315,7 +347,8 @@ export function ExperimentDetailPage() {
         path: step.path,
         headers: JSON.stringify(step.headers),
         params: JSON.stringify(step.params),
-        body: step.body || '',
+        body: JSON.stringify(step.body || {}),
+        save: JSON.stringify(step.save || {}),
       })),
       thinkFrom: model.thinkFrom,
       thinkTo: model.thinkTo,
@@ -344,7 +377,7 @@ export function ExperimentDetailPage() {
       id: '',
       actor: '',
       usageProfile: 0.5,
-      steps: [{ method: 'GET', path: '/', headers: '{}', params: '{}', body: '' }],
+      steps: [{ method: 'GET', path: '/', headers: '{}', params: '{}', body: '{}', save: '{}' }],
       thinkFrom: 1000,
       thinkTo: 3000,
     })
@@ -369,19 +402,22 @@ export function ExperimentDetailPage() {
       if (formData.behaviorModels && formData.behaviorModels.length > 0) {
         behaviorModels = formData.behaviorModels.map((model) => {
           const steps = model.steps.map((step) => {
-            let headers, params
+            let headers, params, save, body
             try {
               headers = JSON.parse(step.headers || '{}')
               params = JSON.parse(step.params || '{}')
+              save = JSON.parse(step.save || '{}')
+              body = step.body && step.body.trim() !== '' ? JSON.parse(step.body) : {}
             } catch (e) {
-              throw new Error(`Invalid JSON for headers/params in step "${step.path}": ${e}`)
+              throw new Error(`Invalid JSON in step "${step.path}": ${e}`)
             }
             return {
               method: step.method,
               path: step.path,
               headers,
               params,
-              body: step.body || undefined,
+              body,
+              save,
             }
           })
           return {
@@ -769,6 +805,7 @@ export function ExperimentDetailPage() {
                           behaviorIndex={index}
                           control={form.control}
                           register={form.register}
+                          errors={form.formState.errors}
                         />
                       </div>
                     </Card>

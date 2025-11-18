@@ -104,7 +104,8 @@ export interface ApiRequest {
   path: string
   headers: Record<string, string>
   params: Record<string, string>
-  body?: string
+  body: Record<string, any>
+  save: Record<string, string>
 }
 
 export interface BehaviorModel {
