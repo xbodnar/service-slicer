@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.domain.loadtestconfig
 
 import org.springframework.stereotype.Service
-import java.util.UUID
 
 @Service
 class LoadTestConfigWriteService(

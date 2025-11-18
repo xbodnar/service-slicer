@@ -1,9 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.loadtestconfig.service
 
 import cz.bodnor.serviceslicer.domain.apiop.ApiOperation
-import cz.bodnor.serviceslicer.domain.loadtestconfig.BehaviorModel
 import cz.bodnor.serviceslicer.domain.loadtestconfig.LoadTestConfig
-import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalLoad
 import cz.bodnor.serviceslicer.infrastructure.exception.verify
 import kotlin.math.roundToInt
 
