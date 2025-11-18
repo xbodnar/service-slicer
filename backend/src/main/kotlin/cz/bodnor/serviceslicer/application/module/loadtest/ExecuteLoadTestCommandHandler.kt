@@ -103,7 +103,10 @@ class ExecuteLoadTestCommandHandler(
         }
     }
 
-    private fun prepareLoadTestConfigFile(loadTestConfig: LoadTestConfig, workDir: Path): Path {
+    private fun prepareLoadTestConfigFile(
+        loadTestConfig: LoadTestConfig,
+        workDir: Path,
+    ): Path {
         val configFile = workDir.resolve("load-test-config.json")
         configFile.writeText(objectMapper.writeValueAsString(loadTestConfig))
 
