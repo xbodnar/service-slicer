@@ -111,7 +111,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
         </Button>
       </div>
 
-      {stepFields.map((field, stepIndex) => (
+      {stepFields.map((field: any, stepIndex) => (
         <Card key={field.id} className="p-3 bg-muted/30">
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-2">
@@ -518,7 +518,7 @@ export function ExperimentCreatePage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Behavioral Models</Label>
+                    <Label>Behavior Models</Label>
                     <p className="text-xs text-muted-foreground mt-1">
                       Define the user behavior patterns for load testing
                     </p>

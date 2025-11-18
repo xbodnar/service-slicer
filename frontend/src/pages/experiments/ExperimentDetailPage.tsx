@@ -136,7 +136,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
         </Button>
       </div>
 
-      {stepFields.map((field, stepIndex) => (
+      {stepFields.map((field: any, stepIndex) => (
         <Card key={field.id} className="p-3 bg-muted/30">
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-2">
@@ -356,7 +356,9 @@ export function ExperimentDetailPage() {
 
     form.reset({
       behaviorModels: behaviorModels.length > 0 ? behaviorModels : [],
-      operationalProfile: data.loadTestConfig.operationalProfile || [],
+      operationalProfile: Array.isArray(data.loadTestConfig.operationalProfile)
+        ? data.loadTestConfig.operationalProfile
+        : [],
     })
 
     setIsEditing(true)
@@ -678,7 +680,7 @@ export function ExperimentDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Load Test Configuration */}
         <Card className="border-2 transition-shadow hover:shadow-md">
           <CardHeader>
@@ -723,7 +725,7 @@ export function ExperimentDetailPage() {
                 {/* Behavioral Models */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label>Behavioral Models</Label>
+                    <Label>Behavior Models</Label>
                     <Button
                       type="button"
                       variant="outline"
@@ -980,18 +982,18 @@ export function ExperimentDetailPage() {
             )}
 
             {/* Operational Profile */}
-            {data.loadTestConfig.operationalProfile && data.loadTestConfig.operationalProfile.length > 0 && (
+            {Array.isArray(data.loadTestConfig.operationalProfile) && data.loadTestConfig.operationalProfile.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Activity className="h-4 w-4" />
                   <span>Operational Profile</span>
                 </div>
                 <div className="pl-6 text-sm space-y-1">
-                  <p><span className="text-muted-foreground">Loads:</span> {data.loadTestConfig.operationalProfile.map(p => p.load).join(', ')}</p>
+                  <p><span className="text-muted-foreground">Loads:</span> {data.loadTestConfig.operationalProfile.map((p: any) => p.load).join(', ')}</p>
                   <p>
                     <span className="text-muted-foreground">Frequencies:</span>{' '}
                     {data.loadTestConfig.operationalProfile
-                      .map((p) => (p.frequency * 100).toFixed(0) + '%')
+                      .map((p: any) => (p.frequency * 100).toFixed(0) + '%')
                       .join(', ')}
                   </p>
                 </div>
