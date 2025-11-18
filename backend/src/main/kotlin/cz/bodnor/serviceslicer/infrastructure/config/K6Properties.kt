@@ -18,6 +18,11 @@ data class K6Properties(
      * Prometheus configuration for k6 metrics.
      */
     val prometheus: PrometheusConfig = PrometheusConfig(),
+
+    /**
+     * Default test duration for k6 tests.
+     */
+    val testDuration: String = "30s",
 ) {
     data class PrometheusConfig(
         /**

@@ -6,7 +6,6 @@ import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTestReposito
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PreDestroy
-import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 import java.net.HttpURLConnection
 import java.net.URL
@@ -36,7 +35,6 @@ class SystemUnderTestRunner(
     private val logger = KotlinLogging.logger {}
     private val currentRun = AtomicReference<RunInfo?>(null)
 
-    @Async
     fun startSUT(systemUnderTestId: UUID) {
         val sut = sutRepository.findById(systemUnderTestId).orElseThrow { IllegalStateException("SUT not found") }
 
@@ -78,11 +76,11 @@ class SystemUnderTestRunner(
                 info.state = RunState.WAITING_HEALTHY
                 waitHealthy(sut.appPort, sut.healthCheckPath, timeout = Duration.ofSeconds(sut.startupTimeoutSeconds))
 
-                logger.info { "SUT is healthy" }
-
                 // 4) Execute SQL seed file if provided
                 if (sut.sqlSeedFileId != null) {
-                    logger.info { "SQL seed file specified, executing SQL script..." }
+                    logger.info { "SQL seed file specified, waiting for database schema to be ready..." }
+                    waitForDatabaseSchema(project, workDir, sut)
+                    logger.info { "Database schema is ready, executing SQL script..." }
                     executeSqlSeedFile(sut, project, workDir)
                     logger.info { "SQL seed file executed successfully" }
                 }
@@ -92,8 +90,8 @@ class SystemUnderTestRunner(
                 info.state = RunState.RUNNING
             } catch (t: Throwable) {
                 logger.error(t) { "Failed to start SUT" }
-
-                currentRun.set(null)
+                stopSUT()
+                throw t
             }
         }
     }
@@ -109,6 +107,7 @@ class SystemUnderTestRunner(
                 listOf("docker", "compose", "-p", info.project, "down", "-v"),
                 null,
             )
+            logger.info { "SUT stopped" }
         }
 
         currentRun.set(null)
@@ -322,6 +321,70 @@ class SystemUnderTestRunner(
             workDir,
         )
         logger.debug { "All tables in database '$dbName':\n${listAllTablesResult.output}" }
+    }
+
+    private fun waitForDatabaseSchema(
+        project: String,
+        workDir: java.io.File,
+        sut: SystemUnderTest,
+    ) {
+        val dbContainerName = requireNotNull(sut.dbContainerName) { "DB container name must be provided" }
+        val dbUsername = requireNotNull(sut.dbUsername) { "DB username must be provided" }
+        val dbName = requireNotNull(sut.dbName) { "DB name must be provided" }
+
+        val deadline = System.currentTimeMillis() + Duration.ofSeconds(30).toMillis()
+        var attemptCount = 0
+
+        while (System.currentTimeMillis() < deadline) {
+            attemptCount++
+            logger.debug { "Checking if database tables exist (attempt $attemptCount)..." }
+
+            val checkTablesResult = commandExecutor.execute(
+                listOf(
+                    "docker",
+                    "compose",
+                    "-p",
+                    project,
+                    "exec",
+                    "-T",
+                    dbContainerName,
+                    "psql",
+                    "-U",
+                    dbUsername,
+                    "-d",
+                    dbName,
+                    "-c",
+                    "SELECT COUNT(*) FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema');",
+                ),
+                workDir,
+            )
+
+            if (checkTablesResult.exitCode == 0) {
+                // Parse the count from output (format is: " count \n-------\n   X\n")
+                val tableCount = checkTablesResult.output
+                    .lines()
+                    .dropWhile { !it.contains("---") }
+                    .drop(1)
+                    .firstOrNull()
+                    ?.trim()
+                    ?.toIntOrNull() ?: 0
+
+                logger.debug { "Found $tableCount user tables in database" }
+
+                if (tableCount > 0) {
+                    logger.info { "Database schema is ready with $tableCount tables" }
+                    return
+                }
+            }
+
+            logger.debug { "No tables found yet, waiting..." }
+            Thread.sleep(2000)
+        }
+
+        throw IllegalStateException(
+            "Timed out waiting for database schema to be created. " +
+                "Make sure your application creates tables before the SQL seed file runs.",
+        )
     }
 
     private fun waitHealthy(

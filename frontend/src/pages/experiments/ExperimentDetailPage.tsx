@@ -35,6 +35,8 @@ import {
   X,
   Plus,
   Trash2,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react'
 
 const loadTestConfigSchema = z.object({
@@ -101,7 +103,7 @@ interface BehaviorModelStepsProps {
 }
 
 function BehaviorModelSteps({ behaviorIndex, control, register }: BehaviorModelStepsProps) {
-  const { fields: stepFields, append: appendStep, remove: removeStep } = useFieldArray({
+  const { fields: stepFields, append: appendStep, remove: removeStep, move: moveStep } = useFieldArray({
     control,
     name: `behaviorModels.${behaviorIndex}.steps`,
   })
@@ -126,14 +128,40 @@ function BehaviorModelSteps({ behaviorIndex, control, register }: BehaviorModelS
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Step {stepIndex + 1}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => removeStep(stepIndex)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => moveStep(stepIndex, stepIndex - 1)}
+                  disabled={stepIndex === 0}
+                  title="Move up"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => moveStep(stepIndex, stepIndex + 1)}
+                  disabled={stepIndex === stepFields.length - 1}
+                  title="Move down"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={() => removeStep(stepIndex)}
+                  title="Delete step"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

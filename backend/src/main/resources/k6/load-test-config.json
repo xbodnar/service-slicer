@@ -24,12 +24,14 @@
           {
             "method": "POST",
             "path": "/users/login",
-            "headers": {},
+            "headers": {
+              "Content-Type": "application/json"
+            },
             "params": {},
             "body": {
               "user": {
-                "email": "user1@test.com",
-                "password": "password"
+                "email": "alice@example.com",
+                "password": "pass_alice"
               }
             },
             "save": {

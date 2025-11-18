@@ -1,15 +1,17 @@
 import http from 'k6/http';
-import {sleep} from 'k6';
+import { check, sleep } from 'k6';
 
 // --- CONFIG FROM ORCHESTRATOR / GENERATED ---
 const BASE_URL = __ENV.BASE_URL;
 const TARGET_VUS = parseInt(__ENV.TARGET_VUS);
 const DURATION = __ENV.DURATION;
 const LOAD_TEST_CONFIG_FILE = __ENV.LOAD_TEST_CONFIG_FILE;
+const EXPERIMENT_ID = __ENV.EXPERIMENT_ID;
+const SUT_ID = __ENV.SUT_ID;
 
-const experiment = JSON.parse(open(LOAD_TEST_CONFIG_FILE));
+const loadTestConfig = JSON.parse(open(LOAD_TEST_CONFIG_FILE));
 
-const behaviorModels = experiment.loadTestConfig.behaviorModels;
+const behaviorModels = loadTestConfig.behaviorModels;
 
 export const options = {
     scenarios: {
@@ -17,7 +19,7 @@ export const options = {
             executor: 'ramping-vus',
             stages: [
                 { duration: '20s', target: TARGET_VUS },
-                { duration: DURATION, target: TARGET_VUS },
+                { duration: '20s', target: TARGET_VUS },
                 { duration: '20s', target: 0 },
             ],
             gracefulStop: '10s',
@@ -112,16 +114,28 @@ function executeStep(step, ctx) {
             res = http.get(url, reqParams);
             break;
         case 'POST':
-            res = http.post(url, body, reqParams);
+            res = http.post(url, JSON.stringify(body), reqParams);
             break;
         case 'PUT':
-            res = http.put(url, body, reqParams);
+            res = http.put(url, JSON.stringify(body), reqParams);
             break;
         case 'DELETE':
-            res = http.del(url, body, reqParams);
+            res = http.del(url, reqParams);
             break;
         default:
             throw new Error(`Unsupported method: ${step.method}`);
+    }
+
+    const ok = check(res, {
+        'status is 2xx': (r) => r.status >= 200 && r.status < 300,
+    });
+
+    if (!ok) {
+        console.error(
+            `❌ Request failed: ${step.method} ${url}\n` +
+            `   Status: ${res.status}\n` +
+            `   Response Body: "${res.body}"\n`
+        );
     }
 
     // Save response fields into context

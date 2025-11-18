@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.domain.loadtestconfig
 
+import com.fasterxml.jackson.databind.JsonNode
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -56,7 +57,7 @@ data class ApiRequest(
     val path: String,
     val headers: Map<String, String> = emptyMap(),
     val params: Map<String, String> = emptyMap(),
-    val body: String? = null,
+    val body: Map<String, Any?> = emptyMap(),
 )
 
 data class OperationalLoad(

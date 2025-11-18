@@ -2,6 +2,7 @@ package cz.bodnor.serviceslicer.adapter.`in`.web
 
 import cz.bodnor.serviceslicer.adapter.`in`.web.requests.AddSystemUnderTestRequest
 import cz.bodnor.serviceslicer.adapter.`in`.web.requests.UpdateSystemUnderTestRequest
+import cz.bodnor.serviceslicer.application.module.loadtest.command.ExecuteLoadTestCommand
 import cz.bodnor.serviceslicer.application.module.sut.command.DeleteSystemUnderTestCommand
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -37,4 +38,10 @@ class SystemUnderTestController(
         @PathVariable experimentId: UUID,
         @PathVariable sutId: UUID,
     ) = commandBus(DeleteSystemUnderTestCommand(experimentId, sutId))
+
+    @PostMapping("/{sutId}/execute")
+    fun startSystemUnderTest(
+        @PathVariable experimentId: UUID,
+        @PathVariable sutId: UUID,
+    ) = commandBus(ExecuteLoadTestCommand(experimentId, sutId, 10))
 }
