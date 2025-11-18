@@ -54,7 +54,7 @@ class UpdateLoadTestConfigCommandHandler(
             apiOperationReadService.getByOpenApiFileId(loadTestConfig.openApiFileId)
         }
 
-        val behaviorModels = command.behaviorModels.map { model ->
+        loadTestConfig.behaviorModels = command.behaviorModels.map { model ->
             BehaviorModel(
                 id = model.id,
                 actor = model.actor,
@@ -64,9 +64,8 @@ class UpdateLoadTestConfigCommandHandler(
                 thinkTo = model.thinkTo,
             )
         }
-        ValidateLoadTestConfig(behaviorModels, apiOperations, command.operationalProfile)
-        loadTestConfig.behaviorModels = behaviorModels
         loadTestConfig.operationalProfile = command.operationalProfile
+        ValidateLoadTestConfig(loadTestConfig, apiOperations)
 
         return UpdateLoadTestConfigCommand.Result(
             loadTestConfigId = loadTestConfig.id,

@@ -8,18 +8,5 @@ class LoadTestConfigWriteService(
     private val repository: LoadTestConfigurationRepository,
 ) {
 
-    fun create(
-        openApiFileId: UUID,
-        behaviorModels: List<BehaviorModel>,
-        operationalProfile: List<OperationalLoad>,
-        k6Configuration: K6Configuration? = null,
-    ): LoadTestConfig = repository.save(
-        LoadTestConfig(
-            id = UUID.randomUUID(),
-            openApiFileId = openApiFileId,
-            behaviorModels = behaviorModels,
-            operationalProfile = operationalProfile,
-            k6Configuration = k6Configuration,
-        ),
-    )
+    fun create(loadTestConfig: LoadTestConfig): LoadTestConfig = repository.save(loadTestConfig)
 }

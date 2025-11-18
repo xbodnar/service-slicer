@@ -49,9 +49,10 @@ class ExecuteLoadTestCommandHandler(
         sutRunner.startSUT(command.systemUnderTestId)
         logger.info { "SUT is ready!" }
 
+        var k6WorkDir: Path? = null
         try {
             // 3. Create a dedicated temporary directory for this k6 run
-            val k6WorkDir = Files.createTempDirectory("k6-run-")
+            k6WorkDir = Files.createTempDirectory("k6-run-")
             logger.info { "Created k6 work directory: ${k6WorkDir.toFile().absolutePath}" }
 
             // 4. Copy k6 script to the work directory
@@ -100,6 +101,8 @@ class ExecuteLoadTestCommandHandler(
         } finally {
             logger.info { "Load test execution completed. Stopping SUT..." }
             sutRunner.stopSUT()
+            logger.info { "Load test execution completed. Cleaning up temp files..." }
+            k6WorkDir?.toFile()?.deleteRecursively()
         }
     }
 
