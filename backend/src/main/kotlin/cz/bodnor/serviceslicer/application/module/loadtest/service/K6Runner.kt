@@ -1,5 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.loadtest.service
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.service.LocalCommandExecutor
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -10,6 +12,7 @@ import java.nio.file.Path
 class K6Runner(
     private val localCommandExecutor: LocalCommandExecutor,
     private val k6Properties: K6Properties,
+    private val objectMapper: ObjectMapper,
 ) {
 
     private val logger = KotlinLogging.logger {}
@@ -17,7 +20,7 @@ class K6Runner(
     data class K6Result(
         val exitCode: Int,
         val output: String,
-        val summaryJson: String? = null,
+        val summaryJson: JsonNode? = null,
     )
 
     fun runTest(
@@ -46,7 +49,7 @@ class K6Runner(
         return K6Result(
             exitCode = result.exitCode,
             output = result.output,
-            summaryJson = summaryJsonContent,
+            summaryJson = objectMapper.readTree(summaryJsonContent),
         )
     }
 

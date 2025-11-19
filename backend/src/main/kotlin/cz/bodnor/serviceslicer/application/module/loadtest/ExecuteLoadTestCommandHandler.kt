@@ -94,7 +94,7 @@ class ExecuteLoadTestCommandHandler(
 
             // 8. Return results
             return ExecuteLoadTestCommand.Result(
-                summaryJson = k6Result.summaryJson ?: "",
+                summaryJson = k6Result.summaryJson,
                 exitCode = k6Result.exitCode,
                 stdOut = k6Result.output,
             )
