@@ -53,4 +53,15 @@
     <changeSet id="add-unique-key" author="Norbert Bodnar">
         <addUniqueConstraint tableName="api_operation" columnNames="open_api_file_id, method, path"/>
     </changeSet>
+
+    <changeSet id="add-parameters-and-responses-columns" author="Norbert Bodnar">
+        <addColumn tableName="api_operation">
+            <column name="parameters" type="jsonb" defaultValueComputed="'[]'::jsonb">
+                <constraints nullable="false"/>
+            </column>
+            <column name="responses" type="jsonb" defaultValueComputed="'{}'::jsonb">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

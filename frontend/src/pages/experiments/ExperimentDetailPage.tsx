@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { FileSelector } from '@/components/ui/file-selector'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import {
   Loader2,
@@ -34,6 +35,8 @@ import {
   X,
   Plus,
   Trash2,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react'
 
 const loadTestConfigSchema = z.object({
@@ -42,7 +45,27 @@ const loadTestConfigSchema = z.object({
       id: z.string().min(1, 'ID is required'),
       actor: z.string().min(1, 'Actor name is required'),
       usageProfile: z.coerce.number().min(0).max(1),
-      steps: z.string().min(1, 'At least one step is required'),
+      steps: z.array(
+        z.object({
+          method: z.string().min(1, 'Method is required'),
+          path: z.string().min(1, 'Path is required'),
+          headers: z.string().default('{}'),
+          params: z.string().default('{}'),
+          body: z.string().default('{}').refine(
+            (val) => {
+              if (!val || val.trim() === '') return true
+              try {
+                const parsed = JSON.parse(val)
+                return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+              } catch {
+                return false
+              }
+            },
+            { message: 'Body must be a valid JSON object' }
+          ),
+          save: z.string().default('{}'),
+        })
+      ).min(1, 'At least one step is required'),
       thinkFrom: z.coerce.number().min(0),
       thinkTo: z.coerce.number().min(0),
     })
@@ -61,10 +84,194 @@ const systemUnderTestSchema = z.object({
   healthCheckPath: z.string().min(1, 'Health check path is required'),
   appPort: z.coerce.number().min(1).max(65535, 'Port must be between 1 and 65535'),
   startupTimeoutSeconds: z.coerce.number().min(1, 'Timeout must be at least 1 second'),
-})
+  dbContainerName: z.string().optional(),
+  dbPort: z.coerce.number().optional(),
+  dbName: z.string().optional(),
+  dbUsername: z.string().optional(),
+}).refine(
+  (data) => {
+    // If any DB field is filled, all must be filled
+    const hasDbContainerName = data.dbContainerName && data.dbContainerName.trim() !== ''
+    const hasDbPort = data.dbPort !== undefined && data.dbPort !== null && String(data.dbPort).trim() !== ''
+    const hasDbName = data.dbName && data.dbName.trim() !== ''
+    const hasDbUsername = data.dbUsername && data.dbUsername.trim() !== ''
+
+    const filledCount = [hasDbContainerName, hasDbPort, hasDbName, hasDbUsername].filter(Boolean).length
+    return filledCount === 0 || filledCount === 4
+  },
+  {
+    message: 'All database config fields (container name, port, database name, username) must be filled together',
+    path: ['dbContainerName'],
+  }
+)
 
 type LoadTestConfigFormData = z.infer<typeof loadTestConfigSchema>
 type SystemUnderTestFormData = z.infer<typeof systemUnderTestSchema>
+
+interface BehaviorModelStepsProps {
+  behaviorIndex: number
+  control: any
+  register: any
+  errors: any
+}
+
+function BehaviorModelSteps({ behaviorIndex, control, register, errors }: BehaviorModelStepsProps) {
+  const { fields: stepFields, append: appendStep, remove: removeStep, move: moveStep } = useFieldArray({
+    control,
+    name: `behaviorModels.${behaviorIndex}.steps`,
+  })
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label>API Request Steps</Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => appendStep({ method: 'GET', path: '/', headers: '{}', params: '{}', body: '{}', save: '{}' })}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Step
+        </Button>
+      </div>
+
+      {stepFields.map((field: any, stepIndex) => (
+        <Card key={field.id} className="p-3 bg-muted/30">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Step {stepIndex + 1}</span>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => moveStep(stepIndex, stepIndex - 1)}
+                  disabled={stepIndex === 0}
+                  title="Move up"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => moveStep(stepIndex, stepIndex + 1)}
+                  disabled={stepIndex === stepFields.length - 1}
+                  title="Move down"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={() => removeStep(stepIndex)}
+                  title="Delete step"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-method`}>Method</Label>
+                <Select
+                  defaultValue={field.method}
+                  onValueChange={(value) => {
+                    const input = document.getElementById(`behavior-${behaviorIndex}-step-${stepIndex}-method-hidden`) as HTMLInputElement
+                    if (input) input.value = value
+                  }}
+                >
+                  <SelectTrigger id={`behavior-${behaviorIndex}-step-${stepIndex}-method`}>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GET">GET</SelectItem>
+                    <SelectItem value="POST">POST</SelectItem>
+                    <SelectItem value="PUT">PUT</SelectItem>
+                    <SelectItem value="PATCH">PATCH</SelectItem>
+                    <SelectItem value="DELETE">DELETE</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input
+                  type="hidden"
+                  id={`behavior-${behaviorIndex}-step-${stepIndex}-method-hidden`}
+                  {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.method`)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-path`}>Path</Label>
+                <Input
+                  id={`behavior-${behaviorIndex}-step-${stepIndex}-path`}
+                  {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.path`)}
+                  placeholder="/api/resource"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-headers`}>Headers (JSON)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-headers`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.headers`)}
+                placeholder='{"Content-Type": "application/json"}'
+                rows={2}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-params`}>Query Params (JSON)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-params`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.params`)}
+                placeholder='{"filter": "active"}'
+                rows={2}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-body`}>Body (JSON object)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-body`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.body`)}
+                placeholder='{"key": "value"}'
+                rows={3}
+                className="font-mono text-xs"
+              />
+              {errors?.behaviorModels?.[behaviorIndex]?.steps?.[stepIndex]?.body && (
+                <p className="text-sm text-destructive">
+                  {errors.behaviorModels[behaviorIndex].steps[stepIndex].body.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-save`}>Save Fields (JSON)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-save`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.save`)}
+                placeholder='{"userId": "$.id", "token": "$.auth.token"}'
+                rows={2}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Save response fields for use in subsequent requests (JSONPath syntax)
+              </p>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -92,6 +299,7 @@ export function ExperimentDetailPage() {
   const [editingSutId, setEditingSutId] = useState<string | null>(null)
   const [sutComposeFile, setSutComposeFile] = useState<UploadedFile | null>(null)
   const [sutJarFile, setSutJarFile] = useState<UploadedFile | null>(null)
+  const [sutSqlSeedFile, setSutSqlSeedFile] = useState<UploadedFile | null>(null)
 
   const form = useForm<LoadTestConfigFormData>({
     resolver: zodResolver(loadTestConfigSchema),
@@ -119,6 +327,10 @@ export function ExperimentDetailPage() {
       healthCheckPath: '/actuator/health',
       appPort: 8080,
       startupTimeoutSeconds: 60,
+      dbContainerName: '',
+      dbPort: undefined,
+      dbName: '',
+      dbUsername: '',
     },
   })
 
@@ -130,18 +342,22 @@ export function ExperimentDetailPage() {
       id: model.id,
       actor: model.actor,
       usageProfile: model.usageProfile,
-      steps: model.steps.join(', '),
+      steps: model.steps.map((step: any) => ({
+        method: step.method,
+        path: step.path,
+        headers: JSON.stringify(step.headers),
+        params: JSON.stringify(step.params),
+        body: JSON.stringify(step.body || {}),
+        save: JSON.stringify(step.save || {}),
+      })),
       thinkFrom: model.thinkFrom,
       thinkTo: model.thinkTo,
     }))
 
     form.reset({
       behaviorModels: behaviorModels.length > 0 ? behaviorModels : [],
-      operationalProfile: data.loadTestConfig.operationalProfile
-        ? data.loadTestConfig.operationalProfile.loadsToFreq.map(p => ({
-            load: p.first,
-            frequency: p.second,
-          }))
+      operationalProfile: Array.isArray(data.loadTestConfig.operationalProfile)
+        ? data.loadTestConfig.operationalProfile
         : [],
     })
 
@@ -163,7 +379,7 @@ export function ExperimentDetailPage() {
       id: '',
       actor: '',
       usageProfile: 0.5,
-      steps: '',
+      steps: [{ method: 'GET', path: '/', headers: '{}', params: '{}', body: '{}', save: '{}' }],
       thinkFrom: 1000,
       thinkTo: 3000,
     })
@@ -186,14 +402,35 @@ export function ExperimentDetailPage() {
       // Process behavioral models
       let behaviorModels: any[] = []
       if (formData.behaviorModels && formData.behaviorModels.length > 0) {
-        behaviorModels = formData.behaviorModels.map((model) => ({
-          id: model.id,
-          actor: model.actor,
-          usageProfile: model.usageProfile,
-          steps: model.steps.split(',').map((s) => s.trim()),
-          thinkFrom: model.thinkFrom,
-          thinkTo: model.thinkTo,
-        }))
+        behaviorModels = formData.behaviorModels.map((model) => {
+          const steps = model.steps.map((step) => {
+            let headers, params, save, body
+            try {
+              headers = JSON.parse(step.headers || '{}')
+              params = JSON.parse(step.params || '{}')
+              save = JSON.parse(step.save || '{}')
+              body = step.body && step.body.trim() !== '' ? JSON.parse(step.body) : {}
+            } catch (e) {
+              throw new Error(`Invalid JSON in step "${step.path}": ${e}`)
+            }
+            return {
+              method: step.method,
+              path: step.path,
+              headers,
+              params,
+              body,
+              save,
+            }
+          })
+          return {
+            id: model.id,
+            actor: model.actor,
+            usageProfile: model.usageProfile,
+            steps,
+            thinkFrom: model.thinkFrom,
+            thinkTo: model.thinkTo,
+          }
+        })
       }
 
       // Process operational profile
@@ -209,12 +446,7 @@ export function ExperimentDetailPage() {
           return
         }
 
-        // Convert to loadsToFreq format
-        const loadsToFreq = formData.operationalProfile.map(p => ({
-          first: p.load,
-          second: p.frequency,
-        }))
-        operationalProfile = { loadsToFreq }
+        operationalProfile = formData.operationalProfile
       }
 
       await updateLoadTestConfig.mutateAsync({
@@ -258,9 +490,14 @@ export function ExperimentDetailPage() {
       healthCheckPath: sut.healthCheckPath,
       appPort: sut.appPort,
       startupTimeoutSeconds: sut.startupTimeoutSeconds,
+      dbContainerName: sut.dbContainerName || '',
+      dbPort: sut.dbPort || undefined,
+      dbName: sut.dbName || '',
+      dbUsername: sut.dbUsername || '',
     })
     setSutComposeFile(null)
     setSutJarFile(null)
+    setSutSqlSeedFile(null)
     setEditingSutId(sut.systemUnderTestId)
   }
 
@@ -269,6 +506,7 @@ export function ExperimentDetailPage() {
     setEditingSutId(null)
     setSutComposeFile(null)
     setSutJarFile(null)
+    setSutSqlSeedFile(null)
     sutForm.reset()
   }
 
@@ -278,6 +516,10 @@ export function ExperimentDetailPage() {
 
   const handleJarFileSelected = (file: UploadedFile | null) => {
     setSutJarFile(file)
+  }
+
+  const handleSqlSeedFileSelected = (file: UploadedFile | null) => {
+    setSutSqlSeedFile(file)
   }
 
   const onSubmitSut = async (formData: SystemUnderTestFormData) => {
@@ -300,6 +542,11 @@ export function ExperimentDetailPage() {
             startupTimeoutSeconds: formData.startupTimeoutSeconds,
             composeFileId: sutComposeFile?.fileId || existingSut.composeFile.fileId,
             jarFileId: sutJarFile?.fileId || existingSut.jarFile.fileId,
+            sqlSeedFileId: sutSqlSeedFile?.fileId || existingSut.sqlSeedFile?.fileId || undefined,
+            dbContainerName: formData.dbContainerName || undefined,
+            dbPort: formData.dbPort || undefined,
+            dbName: formData.dbName || undefined,
+            dbUsername: formData.dbUsername || undefined,
           },
         })
 
@@ -328,6 +575,11 @@ export function ExperimentDetailPage() {
             startupTimeoutSeconds: formData.startupTimeoutSeconds,
             composeFileId: sutComposeFile.fileId,
             jarFileId: sutJarFile.fileId,
+            sqlSeedFileId: sutSqlSeedFile?.fileId || undefined,
+            dbContainerName: formData.dbContainerName || undefined,
+            dbPort: formData.dbPort || undefined,
+            dbName: formData.dbName || undefined,
+            dbUsername: formData.dbUsername || undefined,
           },
         })
 
@@ -428,7 +680,7 @@ export function ExperimentDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Load Test Configuration */}
         <Card className="border-2 transition-shadow hover:shadow-md">
           <CardHeader>
@@ -473,7 +725,7 @@ export function ExperimentDetailPage() {
                 {/* Behavioral Models */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label>Behavioral Models</Label>
+                    <Label>Behavior Models</Label>
                     <Button
                       type="button"
                       variant="outline"
@@ -551,15 +803,12 @@ export function ExperimentDetailPage() {
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor={`behavior-steps-${index}`}>Steps</Label>
-                          <Textarea
-                            id={`behavior-steps-${index}`}
-                            {...form.register(`behaviorModels.${index}.steps`)}
-                            placeholder="createOrder, addPayment, confirmOrder"
-                            rows={2}
-                          />
-                        </div>
+                        <BehaviorModelSteps
+                          behaviorIndex={index}
+                          control={form.control}
+                          register={form.register}
+                          errors={form.formState.errors}
+                        />
                       </div>
                     </Card>
                   ))}
@@ -724,7 +973,7 @@ export function ExperimentDetailPage() {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {model.steps.join(' → ')} • Think: {model.thinkFrom}-{model.thinkTo}ms
+                        {model.steps.map((step: any) => `${step.method} ${step.path}`).join(' → ')} • Think: {model.thinkFrom}-{model.thinkTo}ms
                       </p>
                     </div>
                   ))}
@@ -733,18 +982,18 @@ export function ExperimentDetailPage() {
             )}
 
             {/* Operational Profile */}
-            {data.loadTestConfig.operationalProfile && (
+            {Array.isArray(data.loadTestConfig.operationalProfile) && data.loadTestConfig.operationalProfile.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Activity className="h-4 w-4" />
                   <span>Operational Profile</span>
                 </div>
                 <div className="pl-6 text-sm space-y-1">
-                  <p><span className="text-muted-foreground">Loads:</span> {data.loadTestConfig.operationalProfile.loadsToFreq.map(p => p.first).join(', ')}</p>
+                  <p><span className="text-muted-foreground">Loads:</span> {data.loadTestConfig.operationalProfile.map((p: any) => p.load).join(', ')}</p>
                   <p>
                     <span className="text-muted-foreground">Frequencies:</span>{' '}
-                    {data.loadTestConfig.operationalProfile.loadsToFreq
-                      .map((p) => (p.second * 100).toFixed(0) + '%')
+                    {data.loadTestConfig.operationalProfile
+                      .map((p: any) => (p.frequency * 100).toFixed(0) + '%')
                       .join(', ')}
                   </p>
                 </div>
@@ -809,25 +1058,133 @@ export function ExperimentDetailPage() {
                     />
                   </div>
 
-                  <FileSelector
-                    id="sut-compose"
-                    label={`Docker Compose File ${editingSutId ? '(leave empty to keep current)' : '*'}`}
-                    accept=".yml,.yaml"
-                    required={!editingSutId}
-                    onFileSelected={handleComposeFileSelected}
-                    selectedFile={sutComposeFile}
-                    mimeTypeFilter="yaml"
-                  />
+                  <div className="space-y-2">
+                    <FileSelector
+                      id="sut-compose"
+                      label={`Docker Compose File ${editingSutId ? '(leave empty to keep current)' : '*'}`}
+                      accept=".yml,.yaml"
+                      required={!editingSutId}
+                      onFileSelected={handleComposeFileSelected}
+                      selectedFile={sutComposeFile}
+                      mimeTypeFilter="yaml"
+                    />
+                    {editingSutId && !sutComposeFile && (() => {
+                      const existingSut = data.systemsUnderTest.find((s: any) => s.systemUnderTestId === editingSutId)
+                      if (!existingSut) return null
+                      return (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border text-xs">
+                          <FileArchive className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Current:</span>
+                          <span className="font-mono">{existingSut.composeFile.filename}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {formatFileSize(existingSut.composeFile.fileSize)}
+                          </Badge>
+                        </div>
+                      )
+                    })()}
+                  </div>
 
-                  <FileSelector
-                    id="sut-jar"
-                    label={`JAR File ${editingSutId ? '(leave empty to keep current)' : '*'}`}
-                    accept=".jar"
-                    required={!editingSutId}
-                    onFileSelected={handleJarFileSelected}
-                    selectedFile={sutJarFile}
-                    mimeTypeFilter="jar"
-                  />
+                  <div className="space-y-2">
+                    <FileSelector
+                      id="sut-jar"
+                      label={`JAR File ${editingSutId ? '(leave empty to keep current)' : '*'}`}
+                      accept=".jar"
+                      required={!editingSutId}
+                      onFileSelected={handleJarFileSelected}
+                      selectedFile={sutJarFile}
+                      mimeTypeFilter="jar"
+                    />
+                    {editingSutId && !sutJarFile && (() => {
+                      const existingSut = data.systemsUnderTest.find((s: any) => s.systemUnderTestId === editingSutId)
+                      if (!existingSut) return null
+                      return (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border text-xs">
+                          <Package className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Current:</span>
+                          <span className="font-mono">{existingSut.jarFile.filename}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {formatFileSize(existingSut.jarFile.fileSize)}
+                          </Badge>
+                        </div>
+                      )
+                    })()}
+                  </div>
+
+                  <div className="space-y-2">
+                    <FileSelector
+                      id="sut-sql-seed"
+                      label="SQL Seed File (optional)"
+                      accept=".sql"
+                      onFileSelected={handleSqlSeedFileSelected}
+                      selectedFile={sutSqlSeedFile}
+                      mimeTypeFilter="sql"
+                    />
+                    {editingSutId && !sutSqlSeedFile && (() => {
+                      const existingSut = data.systemsUnderTest.find((s: any) => s.systemUnderTestId === editingSutId)
+                      if (!existingSut || !existingSut.sqlSeedFile) return null
+                      return (
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border text-xs">
+                          <FileCode className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Current:</span>
+                          <span className="font-mono">{existingSut.sqlSeedFile.filename}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {formatFileSize(existingSut.sqlSeedFile.fileSize)}
+                          </Badge>
+                        </div>
+                      )
+                    })()}
+                  </div>
+
+                  {/* Database Configuration (required if SQL seed file is provided) */}
+                  <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-semibold">Database Configuration</Label>
+                      <p className="text-xs text-muted-foreground">Required if SQL seed file is provided</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="sut-db-container">DB Container Name</Label>
+                        <Input
+                          id="sut-db-container"
+                          {...sutForm.register('dbContainerName')}
+                          placeholder="postgres"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="sut-db-port">DB Port</Label>
+                        <Input
+                          id="sut-db-port"
+                          type="number"
+                          {...sutForm.register('dbPort')}
+                          placeholder="5432"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="sut-db-name">Database Name</Label>
+                        <Input
+                          id="sut-db-name"
+                          {...sutForm.register('dbName')}
+                          placeholder="realworld"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="sut-db-username">DB Username</Label>
+                        <Input
+                          id="sut-db-username"
+                          {...sutForm.register('dbUsername')}
+                          placeholder="realworld"
+                        />
+                      </div>
+                    </div>
+
+                    {sutForm.formState.errors.dbContainerName && (
+                      <p className="text-xs text-destructive">{sutForm.formState.errors.dbContainerName.message}</p>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -962,6 +1319,55 @@ export function ExperimentDetailPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* SQL Seed File (optional) */}
+                  {system.sqlSeedFile && (
+                    <div className="flex items-start gap-2">
+                      <FileCode className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">SQL Seed File</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-sm truncate">{system.sqlSeedFile.filename}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {formatFileSize(system.sqlSeedFile.fileSize)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Database Configuration */}
+                  {(system.dbContainerName || system.dbPort || system.dbName || system.dbUsername) && (
+                    <div className="p-3 rounded-lg bg-muted/30 border space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground">Database Configuration</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {system.dbContainerName && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Container</p>
+                            <p className="text-sm font-mono">{system.dbContainerName}</p>
+                          </div>
+                        )}
+                        {system.dbPort && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Port</p>
+                            <p className="text-sm font-mono">{system.dbPort}</p>
+                          </div>
+                        )}
+                        {system.dbName && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Database</p>
+                            <p className="text-sm font-mono">{system.dbName}</p>
+                          </div>
+                        )}
+                        {system.dbUsername && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Username</p>
+                            <p className="text-sm font-mono">{system.dbUsername}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Health & Port */}
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t">

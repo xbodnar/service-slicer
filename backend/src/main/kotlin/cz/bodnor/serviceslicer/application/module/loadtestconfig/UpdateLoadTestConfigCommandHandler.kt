@@ -1,10 +1,10 @@
-package cz.bodnor.serviceslicer.application.module.loadtestexperiment
+package cz.bodnor.serviceslicer.application.module.loadtestconfig
 
 import cz.bodnor.serviceslicer.application.module.file.port.out.DeleteFileFromStorage
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.UpdateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.port.out.SaveApiOperations
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.service.OpenApiParsingService
 import cz.bodnor.serviceslicer.application.module.loadtestconfig.service.ValidateLoadTestConfig
-import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.UpdateLoadTestConfigCommand
 import cz.bodnor.serviceslicer.domain.apiop.ApiOperationReadService
 import cz.bodnor.serviceslicer.domain.apiop.ApiOperationWriteService
 import cz.bodnor.serviceslicer.domain.file.FileReadService
@@ -38,24 +38,23 @@ class UpdateLoadTestConfigCommandHandler(
         val loadTestConfig = loadTestConfigReadService.getById(loadTestExperiment.loadTestConfigId)
 
         val apiOperations = if (loadTestConfig.openApiFileId != command.openApiFileId) {
-            val oldFile = fileReadService.getById(loadTestConfig.openApiFileId)
-            deleteFileFromStorage(oldFile.storageKey)
-
             val newFile = fileReadService.getById(command.openApiFileId)
             require(newFile.status == FileStatus.READY) { "File is not uploaded yet" }
-
-            apiOperationWriteService.deleteByOpenApiFileId(oldFile.id)
 
             val apiOperations = openApiParsingService.parse(command.openApiFileId)
             saveApiOperations(apiOperations)
             loadTestConfig.openApiFileId = newFile.id
+
+            val oldFile = fileReadService.getById(loadTestConfig.openApiFileId)
+            deleteFileFromStorage(oldFile.storageKey)
+            apiOperationWriteService.deleteByOpenApiFileId(oldFile.id)
 
             apiOperations
         } else {
             apiOperationReadService.getByOpenApiFileId(loadTestConfig.openApiFileId)
         }
 
-        val behaviorModels = command.behaviorModels.map { model ->
+        loadTestConfig.behaviorModels = command.behaviorModels.map { model ->
             BehaviorModel(
                 id = model.id,
                 actor = model.actor,
@@ -65,9 +64,8 @@ class UpdateLoadTestConfigCommandHandler(
                 thinkTo = model.thinkTo,
             )
         }
-        ValidateLoadTestConfig(behaviorModels, apiOperations, command.operationalProfile)
-        loadTestConfig.behaviorModels = behaviorModels
         loadTestConfig.operationalProfile = command.operationalProfile
+        ValidateLoadTestConfig(loadTestConfig, apiOperations)
 
         return UpdateLoadTestConfigCommand.Result(
             loadTestConfigId = loadTestConfig.id,

@@ -31,6 +31,8 @@ class SaveApiOperationsJooq(
                     apiOperation.path,
                     apiOperation.name,
                     JSONB.valueOf(objectMapper.writeValueAsString(apiOperation.requestBody)),
+                    JSONB.valueOf(objectMapper.writeValueAsString(apiOperation.parameters)),
+                    JSONB.valueOf(objectMapper.writeValueAsString(apiOperation.responses)),
                 )
             }
 
@@ -47,6 +49,8 @@ class SaveApiOperationsJooq(
                 API_OPERATION.PATH,
                 API_OPERATION.NAME,
                 API_OPERATION.REQUEST_BODY,
+                API_OPERATION.PARAMETERS,
+                API_OPERATION.RESPONSES,
             ).valuesOfRows(rows)
             .onConflict(API_OPERATION.OPEN_API_FILE_ID, API_OPERATION.METHOD, API_OPERATION.PATH)
             .doUpdate()

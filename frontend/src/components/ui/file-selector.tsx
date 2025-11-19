@@ -49,6 +49,8 @@ export function FileSelector({
           return mimeType.includes('json') && file.filename.toLowerCase().endsWith('.json')
         } else if (filter === 'zip') {
           return mimeType.includes('zip')
+        } else if (filter === 'sql') {
+          return mimeType === 'application/sql' || (mimeType.includes('text/plain') && file.filename.toLowerCase().endsWith('.sql'))
         } else {
           return mimeType.includes(filter)
         }

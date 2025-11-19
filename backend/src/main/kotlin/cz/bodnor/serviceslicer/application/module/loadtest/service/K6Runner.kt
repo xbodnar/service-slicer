@@ -1,5 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.loadtest.service
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.service.LocalCommandExecutor
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -10,6 +12,7 @@ import java.nio.file.Path
 class K6Runner(
     private val localCommandExecutor: LocalCommandExecutor,
     private val k6Properties: K6Properties,
+    private val objectMapper: ObjectMapper,
 ) {
 
     private val logger = KotlinLogging.logger {}
@@ -17,16 +20,17 @@ class K6Runner(
     data class K6Result(
         val exitCode: Int,
         val output: String,
-        val summaryJson: String? = null,
+        val summaryJson: JsonNode? = null,
     )
 
     fun runTest(
         scriptPath: Path,
+        configPath: Path,
         environmentVariables: Map<String, String> = emptyMap(),
     ): K6Result {
         logger.info { "Starting k6 load test with script: ${scriptPath.toFile().absolutePath}" }
 
-        val command = buildK6Command(scriptPath, environmentVariables)
+        val command = buildK6Command(scriptPath, configPath, environmentVariables)
 
         logger.info { "Executing k6 command: ${command.joinToString(" ")}" }
 
@@ -45,12 +49,13 @@ class K6Runner(
         return K6Result(
             exitCode = result.exitCode,
             output = result.output,
-            summaryJson = summaryJsonContent,
+            summaryJson = objectMapper.readTree(summaryJsonContent),
         )
     }
 
     private fun buildK6Command(
         scriptPath: Path,
+        configPath: Path,
         environmentVariables: Map<String, String>,
     ): List<String> {
         val command = mutableListOf(
@@ -65,12 +70,15 @@ class K6Runner(
         // Mount script directory (read-write so k6 can write summary.json)
         val scriptDir = scriptPath.parent.toFile().absolutePath
         val scriptName = scriptPath.fileName.toString()
+        val configName = configPath.fileName.toString()
         command.addAll(
             listOf(
                 "-v",
                 "$scriptDir:/scripts",
             ),
         )
+
+        command.addAll(listOf("-e", "LOAD_TEST_CONFIG_FILE=/scripts/$configName"))
 
         // Add environment variables
         environmentVariables.forEach { (key, value) ->

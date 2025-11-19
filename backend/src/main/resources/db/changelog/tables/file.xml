@@ -48,4 +48,8 @@
         </createIndex>
     </changeSet>
 
+    <changeSet id="remove-content-hash-column" author="Norbert Bodnar">
+        <dropColumn tableName="file" columnName="content_hash"/>
+    </changeSet>
+
 </databaseChangeLog>

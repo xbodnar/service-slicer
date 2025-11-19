@@ -6,7 +6,6 @@ export interface InitiateFileUploadRequest {
   filename: string
   size: number
   mimeType: string
-  contentHash: string
 }
 
 export interface InitiateFileUploadResponse {
@@ -100,11 +99,20 @@ export interface FileDto {
   fileSize: number
 }
 
+export interface ApiRequest {
+  method: string
+  path: string
+  headers: Record<string, string>
+  params: Record<string, string>
+  body: Record<string, any>
+  save: Record<string, string>
+}
+
 export interface BehaviorModel {
   id: string
   actor: string
   usageProfile: number
-  steps: string[]
+  steps: ApiRequest[]
   thinkFrom: number
   thinkTo: number
 }

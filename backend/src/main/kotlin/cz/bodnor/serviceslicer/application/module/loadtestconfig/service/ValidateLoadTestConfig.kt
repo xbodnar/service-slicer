@@ -1,34 +1,35 @@
 package cz.bodnor.serviceslicer.application.module.loadtestconfig.service
 
 import cz.bodnor.serviceslicer.domain.apiop.ApiOperation
-import cz.bodnor.serviceslicer.domain.loadtestconfig.BehaviorModel
-import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
+import cz.bodnor.serviceslicer.domain.loadtestconfig.LoadTestConfig
 import cz.bodnor.serviceslicer.infrastructure.exception.verify
 import kotlin.math.roundToInt
 
 object ValidateLoadTestConfig {
 
     operator fun invoke(
-        behaviorModels: List<BehaviorModel>,
+        loadTestConfig: LoadTestConfig,
         apiOperations: List<ApiOperation>,
-        operationalProfile: OperationalProfile? = null,
     ) {
-        if (behaviorModels.isNotEmpty()) {
-            val sumOfUsageProfiles = (behaviorModels.sumOf { (it.usageProfile * 100).roundToInt() }) / 100.0
+        if (loadTestConfig.behaviorModels.isNotEmpty()) {
+            val sumOfUsageProfiles =
+                (loadTestConfig.behaviorModels.sumOf { (it.usageProfile * 100).roundToInt() }) / 100.0
             verify(sumOfUsageProfiles == 1.0) {
                 "Sum of behavior probabilities must be 1.0, but was $sumOfUsageProfiles"
             }
         }
-        operationalProfile?.let {
-            val sumOfFreq = operationalProfile.loadsToFreq.sumOf { (it.second * 100).roundToInt() } / 100.0
-            verify(sumOfFreq == 1.0) {
-                "Sum of load probabilities must be 1.0, but was $sumOfFreq"
-            }
+
+        val sumOfFreq = loadTestConfig.operationalProfile.sumOf { (it.frequency * 100).roundToInt() } / 100.0
+        verify(sumOfFreq == 1.0) {
+            "Sum of load probabilities must be 1.0, but was $sumOfFreq"
         }
 
-        // Validate that all operation IDs in behavior models exist
-        val operationToEntityMap = apiOperations.associateBy { it.name }
-        verify(behaviorModels.flatMap { it.steps }.all { operationToEntityMap.containsKey(it) }) {
+        // Validate that all ApiRequests in behavior models exist (at least the correct PATH and METHOD)
+        verify(
+            loadTestConfig.behaviorModels.flatMap { it.steps }.all { apiRequest ->
+                apiOperations.any { op -> op.method == apiRequest.method && op.path == apiRequest.path }
+            },
+        ) {
             "Unknown operation ID in behavior model steps"
         }
     }

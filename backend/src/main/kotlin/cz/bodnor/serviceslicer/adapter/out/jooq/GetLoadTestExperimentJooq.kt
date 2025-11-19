@@ -10,7 +10,7 @@ import cz.bodnor.serviceslicer.application.module.loadtestexperiment.port.out.Ge
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.query.FileDto
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.query.GetLoadTestExperimentQuery
 import cz.bodnor.serviceslicer.domain.loadtestconfig.BehaviorModel
-import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
+import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalLoad
 import org.jooq.DSLContext
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -48,6 +48,7 @@ class GetLoadTestExperimentJooq(
         // Fetch systems under test with their compose and jar files
         val composeFileAlias = FILE.`as`("compose_file")
         val jarFileAlias = FILE.`as`("jar_file")
+        val sqlSeedFileAlias = FILE.`as`("sql_seed_file")
 
         val sutRecords = dsl
             .select(
@@ -57,27 +58,35 @@ class GetLoadTestExperimentJooq(
                 SYSTEM_UNDER_TEST.HEALTH_CHECK_PATH,
                 SYSTEM_UNDER_TEST.APP_PORT,
                 SYSTEM_UNDER_TEST.STARTUP_TIMEOUT_SECONDS,
+                SYSTEM_UNDER_TEST.DB_CONTAINER_NAME,
+                SYSTEM_UNDER_TEST.DB_PORT,
+                SYSTEM_UNDER_TEST.DB_NAME,
+                SYSTEM_UNDER_TEST.DB_USERNAME,
                 composeFileAlias.ID.`as`("compose_file_id"),
                 composeFileAlias.FILENAME.`as`("compose_filename"),
                 composeFileAlias.EXPECTED_SIZE.`as`("compose_file_size"),
                 jarFileAlias.ID.`as`("jar_file_id"),
                 jarFileAlias.FILENAME.`as`("jar_filename"),
                 jarFileAlias.EXPECTED_SIZE.`as`("jar_file_size"),
+                sqlSeedFileAlias.ID.`as`("sql_seed_file_id"),
+                sqlSeedFileAlias.FILENAME.`as`("sql_seed_filename"),
+                sqlSeedFileAlias.EXPECTED_SIZE.`as`("sql_seed_file_size"),
             )
             .from(SYSTEM_UNDER_TEST)
             .join(composeFileAlias).on(SYSTEM_UNDER_TEST.COMPOSE_FILE_ID.eq(composeFileAlias.ID))
             .join(jarFileAlias).on(SYSTEM_UNDER_TEST.JAR_FILE_ID.eq(jarFileAlias.ID))
+            .leftJoin(sqlSeedFileAlias).on(SYSTEM_UNDER_TEST.SQL_SEED_FILE_ID.eq(sqlSeedFileAlias.ID))
             .where(SYSTEM_UNDER_TEST.EXPERIMENT_ID.eq(experimentId))
             .fetch()
 
         // Parse JSON fields
         val behaviorModels = experimentRecord.get(LOAD_TEST_CONFIG.BEHAVIOR_MODELS)?.data()?.let {
             objectMapper.readValue<List<BehaviorModel>>(it)
-        } ?: emptyList()
+        } ?: error("BehaviorModels for LoadTestExperiment with id: $experimentId not specified!")
 
         val operationalProfile = experimentRecord.get(LOAD_TEST_CONFIG.OPERATIONAL_PROFILE)?.data()?.let {
-            objectMapper.readValue<OperationalProfile>(it)
-        }
+            objectMapper.readValue<List<OperationalLoad>>(it)
+        } ?: error("OperationalProfile for LoadTestExperiment with id: $experimentId not specified!")
 
         return GetLoadTestExperimentQuery.Result(
             experimentId = experimentRecord.get(LOAD_TEST_EXPERIMENT.ID)!!,
@@ -107,10 +116,21 @@ class GetLoadTestExperimentJooq(
                         filename = sut.get("jar_filename", String::class.java)!!,
                         fileSize = sut.get("jar_file_size", Long::class.java)!!,
                     ),
+                    sqlSeedFile = sut.get("sql_seed_file_id", UUID::class.java)?.let {
+                        FileDto(
+                            fileId = it,
+                            filename = sut.get("sql_seed_filename", String::class.java)!!,
+                            fileSize = sut.get("sql_seed_file_size", Long::class.java)!!,
+                        )
+                    },
                     description = sut.get(SYSTEM_UNDER_TEST.DESCRIPTION),
                     healthCheckPath = sut.get(SYSTEM_UNDER_TEST.HEALTH_CHECK_PATH)!!,
                     appPort = sut.get(SYSTEM_UNDER_TEST.APP_PORT)!!,
                     startupTimeoutSeconds = sut.get(SYSTEM_UNDER_TEST.STARTUP_TIMEOUT_SECONDS)!!,
+                    dbContainerName = sut.get(SYSTEM_UNDER_TEST.DB_CONTAINER_NAME),
+                    dbPort = sut.get(SYSTEM_UNDER_TEST.DB_PORT),
+                    dbName = sut.get(SYSTEM_UNDER_TEST.DB_NAME),
+                    dbUsername = sut.get(SYSTEM_UNDER_TEST.DB_USERNAME),
                 )
             },
             createdAt = experimentRecord.get(LOAD_TEST_EXPERIMENT.CREATED_AT)!!,

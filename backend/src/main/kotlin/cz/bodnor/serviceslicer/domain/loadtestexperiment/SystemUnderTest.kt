@@ -21,6 +21,8 @@ class SystemUnderTest(
     var composeFileId: UUID,
     // Reference to the JAR file
     var jarFileId: UUID,
+    // Reference to the SQL seed file
+    var sqlSeedFileId: UUID? = null,
     // Description of this system configuration (e.g., "Baseline monolith", "3-service decomposition")
     var description: String? = null,
     // Health check endpoint path (e.g., "/actuator/health")
@@ -29,6 +31,14 @@ class SystemUnderTest(
     var appPort: Int,
     // Startup timeout in seconds
     var startupTimeoutSeconds: Long,
+    // Database container name in docker-compose (required if sqlSeedFileId is set)
+    var dbContainerName: String? = null,
+    // Database port inside container (required if sqlSeedFileId is set)
+    var dbPort: Int? = null,
+    // Database name (required if sqlSeedFileId is set)
+    var dbName: String? = null,
+    // Database username (required if sqlSeedFileId is set)
+    var dbUsername: String? = null,
 ) : UpdatableEntity(id)
 
 @Repository

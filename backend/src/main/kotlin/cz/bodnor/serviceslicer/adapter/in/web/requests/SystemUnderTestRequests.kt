@@ -13,6 +13,8 @@ data class AddSystemUnderTestRequest(
     val composeFileId: UUID,
     @Schema(description = "ID of the JAR file to test")
     val jarFileId: UUID,
+    @Schema(description = "ID of the SQL seed file (optional)")
+    val sqlSeedFileId: UUID? = null,
     @Schema(description = "Description of the system under test", example = "Original monolithic implementation")
     val description: String? = null,
     @Schema(description = "Health check endpoint path", example = "/actuator/health")
@@ -21,16 +23,30 @@ data class AddSystemUnderTestRequest(
     val appPort: Int = 9090,
     @Schema(description = "Startup timeout in seconds", example = "180")
     val startupTimeoutSeconds: Long = 180,
+    @Schema(description = "Database container name in docker-compose (required if sqlSeedFileId is provided)")
+    val dbContainerName: String? = null,
+    @Schema(description = "Database port inside container (required if sqlSeedFileId is provided)")
+    val dbPort: Int? = null,
+    @Schema(description = "Database name (required if sqlSeedFileId is provided)")
+    val dbName: String? = null,
+    @Schema(description = "Database username (required if sqlSeedFileId is provided)")
+    val dbUsername: String? = null,
 ) {
+
     fun toCommand(experimentId: UUID) = AddSystemUnderTestCommand(
         experimentId = experimentId,
         name = name,
-        composeFileId = composeFileId,
-        jarFileId = jarFileId,
         description = description,
         healthCheckPath = healthCheckPath,
         appPort = appPort,
         startupTimeoutSeconds = startupTimeoutSeconds,
+        jarFileId = jarFileId,
+        composeFileId = composeFileId,
+        sqlSeedFileId = sqlSeedFileId,
+        dbContainerName = dbContainerName,
+        dbPort = dbPort,
+        dbName = dbName,
+        dbUsername = dbUsername,
     )
 }
 
@@ -42,6 +58,8 @@ data class UpdateSystemUnderTestRequest(
     val composeFileId: UUID,
     @Schema(description = "ID of the JAR file to test")
     val jarFileId: UUID,
+    @Schema(description = "ID of the SQL seed file (optional)")
+    val sqlSeedFileId: UUID? = null,
     @Schema(description = "Description of the system under test", example = "Original monolithic implementation")
     val description: String? = null,
     @Schema(description = "Health check endpoint path", example = "/actuator/health")
@@ -50,6 +68,14 @@ data class UpdateSystemUnderTestRequest(
     val appPort: Int = 9090,
     @Schema(description = "Startup timeout in seconds", example = "180")
     val startupTimeoutSeconds: Long = 180,
+    @Schema(description = "Database container name in docker-compose (required if sqlSeedFileId is provided)")
+    val dbContainerName: String? = null,
+    @Schema(description = "Database port inside container (required if sqlSeedFileId is provided)")
+    val dbPort: Int? = null,
+    @Schema(description = "Database name (required if sqlSeedFileId is provided)")
+    val dbName: String? = null,
+    @Schema(description = "Database username (required if sqlSeedFileId is provided)")
+    val dbUsername: String? = null,
 ) {
     fun toCommand(
         experimentId: UUID,
@@ -60,9 +86,14 @@ data class UpdateSystemUnderTestRequest(
         name = name,
         composeFileId = composeFileId,
         jarFileId = jarFileId,
+        sqlSeedFileId = sqlSeedFileId,
         description = description,
         healthCheckPath = healthCheckPath,
         appPort = appPort,
         startupTimeoutSeconds = startupTimeoutSeconds,
+        dbContainerName = dbContainerName,
+        dbPort = dbPort,
+        dbName = dbName,
+        dbUsername = dbUsername,
     )
 }

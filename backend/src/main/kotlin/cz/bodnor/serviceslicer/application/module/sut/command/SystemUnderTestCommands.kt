@@ -9,10 +9,15 @@ data class UpdateSystemUnderTestCommand(
     val name: String,
     val composeFileId: UUID,
     val jarFileId: UUID,
+    val sqlSeedFileId: UUID? = null,
     val description: String? = null,
     val healthCheckPath: String = "/actuator/health",
     val appPort: Int = 9090,
     val startupTimeoutSeconds: Long = 180,
+    val dbContainerName: String? = null,
+    val dbPort: Int? = null,
+    val dbName: String? = null,
+    val dbUsername: String? = null,
 ) : Command<UpdateSystemUnderTestCommand.Result> {
 
     data class Result(
@@ -30,10 +35,15 @@ data class AddSystemUnderTestCommand(
     val name: String,
     val composeFileId: UUID,
     val jarFileId: UUID,
+    val sqlSeedFileId: UUID? = null,
     val description: String? = null,
     val healthCheckPath: String = "/actuator/health",
     val appPort: Int = 9090,
     val startupTimeoutSeconds: Long = 180,
+    val dbContainerName: String? = null,
+    val dbPort: Int? = null,
+    val dbName: String? = null,
+    val dbUsername: String? = null,
 ) : Command<AddSystemUnderTestCommand.Result> {
 
     data class Result(

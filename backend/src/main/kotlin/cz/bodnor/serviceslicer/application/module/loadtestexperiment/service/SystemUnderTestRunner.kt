@@ -1,11 +1,11 @@
 package cz.bodnor.serviceslicer.application.module.loadtestexperiment.service
 
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
+import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTest
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTestRepository
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PreDestroy
-import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Service
 import java.net.HttpURLConnection
 import java.net.URL
@@ -35,7 +35,6 @@ class SystemUnderTestRunner(
     private val logger = KotlinLogging.logger {}
     private val currentRun = AtomicReference<RunInfo?>(null)
 
-    @Async
     fun startSUT(systemUnderTestId: UUID) {
         val sut = sutRepository.findById(systemUnderTestId).orElseThrow { IllegalStateException("SUT not found") }
 
@@ -77,13 +76,22 @@ class SystemUnderTestRunner(
                 info.state = RunState.WAITING_HEALTHY
                 waitHealthy(sut.appPort, sut.healthCheckPath, timeout = Duration.ofSeconds(sut.startupTimeoutSeconds))
 
-                logger.info { "SUT is healthy, ready to run tests" }
+                // 4) Execute SQL seed file if provided
+                if (sut.sqlSeedFileId != null) {
+                    logger.info { "SQL seed file specified, waiting for database schema to be ready..." }
+                    waitForDatabaseSchema(project, workDir, sut)
+                    logger.info { "Database schema is ready, executing SQL script..." }
+                    executeSqlSeedFile(sut, project, workDir)
+                    logger.info { "SQL seed file executed successfully" }
+                }
+
+                logger.info { "SUT is ready to run tests" }
 
                 info.state = RunState.RUNNING
             } catch (t: Throwable) {
                 logger.error(t) { "Failed to start SUT" }
-
-                currentRun.set(null)
+                stopSUT()
+                throw t
             }
         }
     }
@@ -99,6 +107,7 @@ class SystemUnderTestRunner(
                 listOf("docker", "compose", "-p", info.project, "down", "-v"),
                 null,
             )
+            logger.info { "SUT stopped" }
         }
 
         currentRun.set(null)
@@ -111,6 +120,272 @@ class SystemUnderTestRunner(
     )
 
     // --- helpers ---
+
+    private fun executeSqlSeedFile(
+        sut: SystemUnderTest,
+        project: String,
+        workDir: java.io.File,
+    ) {
+        // Extract and validate required fields
+        val sqlSeedFileId = requireNotNull(sut.sqlSeedFileId) { "SQL seed file ID must be provided" }
+        val dbContainerName = requireNotNull(sut.dbContainerName) { "DB container name must be provided" }
+        val dbPort = requireNotNull(sut.dbPort) { "DB port must be provided" }
+        val dbName = requireNotNull(sut.dbName) { "DB name must be provided" }
+        val dbUsername = requireNotNull(sut.dbUsername) { "DB username must be provided" }
+
+        diskOperations.withFile(sqlSeedFileId) { sqlFilePath ->
+            logger.info { "Transferring SQL seed file to execution environment..." }
+
+            // Transfer SQL file to execution environment
+            val remoteSqlPath = commandExecutor.transferFile(
+                sqlFilePath,
+                "$project/seed.sql",
+            )
+
+            // Copy SQL file into database container
+            logger.info { "Copying SQL file into database container $dbContainerName..." }
+            val copyResult = commandExecutor.execute(
+                listOf(
+                    "docker",
+                    "compose",
+                    "-p",
+                    project,
+                    "cp",
+                    remoteSqlPath.toFile().name,
+                    "$dbContainerName:/tmp/seed.sql",
+                ),
+                workDir,
+            )
+            if (copyResult.exitCode != 0) {
+                throw IllegalStateException(
+                    "Failed to copy SQL file into container (exit=${copyResult.exitCode})\n${copyResult.output}",
+                )
+            }
+
+            // Debug: Check database connection and available databases
+            logger.debug { "Running database diagnostics before SQL execution..." }
+            debugDatabaseConnection(project, workDir, dbContainerName, dbUsername, dbName)
+
+            // Execute SQL script inside the container
+            logger.info { "Executing SQL script in database '$dbName' as user '$dbUsername'..." }
+            val psqlCommand = listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-d",
+                dbName,
+                "-v",
+                "ON_ERROR_STOP=1", // Stop on first error
+                "-a", // Echo all input from script
+                "-f",
+                "/tmp/seed.sql",
+            )
+            logger.debug { "Executing command: ${psqlCommand.joinToString(" ")}" }
+
+            val execResult = commandExecutor.execute(psqlCommand, workDir)
+
+            logger.info { "SQL execution output:\n${execResult.output}" }
+
+            if (execResult.exitCode != 0) {
+                throw IllegalStateException(
+                    "Failed to execute SQL script against database '$dbName' (exit=${execResult.exitCode})\n" +
+                        "Command: ${psqlCommand.joinToString(" ")}\n" +
+                        "Output:\n${execResult.output}",
+                )
+            }
+        }
+    }
+
+    private fun debugDatabaseConnection(
+        project: String,
+        workDir: java.io.File,
+        dbContainerName: String,
+        dbUsername: String,
+        dbName: String,
+    ) {
+        // 1. List all databases
+        logger.debug { "Listing all databases in container '$dbContainerName'..." }
+        val listDbResult = commandExecutor.execute(
+            listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-l",
+            ),
+            workDir,
+        )
+        logger.debug { "Available databases:\n${listDbResult.output}" }
+
+        // 2. Check current database connection
+        logger.debug { "Checking connection to database '$dbName'..." }
+        val checkDbResult = commandExecutor.execute(
+            listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-d",
+                dbName,
+                "-c",
+                "SELECT current_database();",
+            ),
+            workDir,
+        )
+        logger.debug { "Current database connection:\n${checkDbResult.output}" }
+
+        // 3. Show search_path
+        logger.debug { "Checking search_path in database '$dbName'..." }
+        val searchPathResult = commandExecutor.execute(
+            listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-d",
+                dbName,
+                "-c",
+                "SHOW search_path;",
+            ),
+            workDir,
+        )
+        logger.debug { "Search path:\n${searchPathResult.output}" }
+
+        // 4. List all schemas
+        logger.debug { "Listing all schemas in database '$dbName'..." }
+        val listSchemasResult = commandExecutor.execute(
+            listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-d",
+                dbName,
+                "-c",
+                "SELECT schema_name FROM information_schema.schemata ORDER BY schema_name;",
+            ),
+            workDir,
+        )
+        logger.debug { "Available schemas:\n${listSchemasResult.output}" }
+
+        // 5. List tables across ALL schemas
+        logger.debug { "Listing ALL tables in database '$dbName' (all schemas)..." }
+        val listAllTablesResult = commandExecutor.execute(
+            listOf(
+                "docker",
+                "compose",
+                "-p",
+                project,
+                "exec",
+                "-T",
+                dbContainerName,
+                "psql",
+                "-U",
+                dbUsername,
+                "-d",
+                dbName,
+                "-c",
+                "SELECT schemaname, tablename FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY schemaname, tablename;",
+            ),
+            workDir,
+        )
+        logger.debug { "All tables in database '$dbName':\n${listAllTablesResult.output}" }
+    }
+
+    private fun waitForDatabaseSchema(
+        project: String,
+        workDir: java.io.File,
+        sut: SystemUnderTest,
+    ) {
+        val dbContainerName = requireNotNull(sut.dbContainerName) { "DB container name must be provided" }
+        val dbUsername = requireNotNull(sut.dbUsername) { "DB username must be provided" }
+        val dbName = requireNotNull(sut.dbName) { "DB name must be provided" }
+
+        val deadline = System.currentTimeMillis() + Duration.ofSeconds(30).toMillis()
+        var attemptCount = 0
+
+        while (System.currentTimeMillis() < deadline) {
+            attemptCount++
+            logger.debug { "Checking if database tables exist (attempt $attemptCount)..." }
+
+            val checkTablesResult = commandExecutor.execute(
+                listOf(
+                    "docker",
+                    "compose",
+                    "-p",
+                    project,
+                    "exec",
+                    "-T",
+                    dbContainerName,
+                    "psql",
+                    "-U",
+                    dbUsername,
+                    "-d",
+                    dbName,
+                    "-c",
+                    "SELECT COUNT(*) FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema');",
+                ),
+                workDir,
+            )
+
+            if (checkTablesResult.exitCode == 0) {
+                // Parse the count from output (format is: " count \n-------\n   X\n")
+                val tableCount = checkTablesResult.output
+                    .lines()
+                    .dropWhile { !it.contains("---") }
+                    .drop(1)
+                    .firstOrNull()
+                    ?.trim()
+                    ?.toIntOrNull() ?: 0
+
+                logger.debug { "Found $tableCount user tables in database" }
+
+                if (tableCount > 0) {
+                    logger.info { "Database schema is ready with $tableCount tables" }
+                    return
+                }
+            }
+
+            logger.debug { "No tables found yet, waiting..." }
+            Thread.sleep(2000)
+        }
+
+        throw IllegalStateException(
+            "Timed out waiting for database schema to be created. " +
+                "Make sure your application creates tables before the SQL seed file runs.",
+        )
+    }
 
     private fun waitHealthy(
         port: Int,

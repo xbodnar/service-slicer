@@ -31,6 +31,10 @@ class LoadTestExperiment(
     fun addSystemUnderTest(systemUnderTest: SystemUnderTest) {
         _systemsUnderTest.add(systemUnderTest)
     }
+
+    fun removeSystemUnderTest(systemUnderTestId: UUID) {
+        _systemsUnderTest.removeIf { it.id == systemUnderTestId }
+    }
 }
 
 @Repository

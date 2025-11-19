@@ -12,14 +12,12 @@ class FileWriteService(
         filename: String,
         mimeType: String,
         expectedSize: Long,
-        contentHash: String,
     ): File = repository.save(
         File(
             id = UUID.randomUUID(),
             filename = filename,
             mimeType = mimeType,
             expectedSize = expectedSize,
-            contentHash = contentHash,
         ),
     )
 }

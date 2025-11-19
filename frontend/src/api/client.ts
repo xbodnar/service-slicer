@@ -14,7 +14,22 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Optionally log or transform errors
+    // Extract detail from error responses (prioritize "detail" field for 400 errors)
+    if (error.response?.data?.detail) {
+      // Create a new error with the detail message
+      const enhancedError = new Error(error.response.data.detail)
+      // Preserve the original error properties
+      Object.assign(enhancedError, {
+        response: error.response,
+        request: error.request,
+        config: error.config,
+        code: error.code,
+      })
+      console.error(`API Error (${error.response.status}):`, error.response.data.detail)
+      return Promise.reject(enhancedError)
+    }
+
+    // For other errors, log and pass through
     console.error('API Error:', error)
     return Promise.reject(error)
   }

@@ -164,7 +164,7 @@ function DecompositionView({ results }: DecompositionViewProps) {
       {communities.map(([communityId, classes]) => (
         <Card key={communityId}>
           <CardHeader>
-            <CardTitle className="text-lg">Community {communityId}</CardTitle>
+            <CardTitle className="text-lg">Cluster {communityId}</CardTitle>
             <CardDescription>{classes.length} classes</CardDescription>
           </CardHeader>
           <CardContent>

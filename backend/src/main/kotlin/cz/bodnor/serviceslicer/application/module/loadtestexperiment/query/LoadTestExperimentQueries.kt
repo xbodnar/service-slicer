@@ -1,7 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.loadtestexperiment.query
 
 import cz.bodnor.serviceslicer.domain.loadtestconfig.BehaviorModel
-import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalProfile
+import cz.bodnor.serviceslicer.domain.loadtestconfig.OperationalLoad
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.Query
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
@@ -66,7 +66,7 @@ data class GetLoadTestExperimentQuery(val experimentId: UUID) : Query<GetLoadTes
         @Schema(description = "List of user behavior models")
         val behaviorModels: List<BehaviorModel>,
         @Schema(description = "Operational profile")
-        val operationalProfile: OperationalProfile?,
+        val operationalProfile: List<OperationalLoad>,
     )
 
     @Schema(description = "System under test")
@@ -79,6 +79,8 @@ data class GetLoadTestExperimentQuery(val experimentId: UUID) : Query<GetLoadTes
         val composeFile: FileDto,
         @Schema(description = "JAR file to test")
         val jarFile: FileDto,
+        @Schema(description = "SQL seed file (optional)")
+        val sqlSeedFile: FileDto?,
         @Schema(description = "Description of the system under test")
         val description: String?,
         @Schema(description = "Health check endpoint path")
@@ -87,5 +89,13 @@ data class GetLoadTestExperimentQuery(val experimentId: UUID) : Query<GetLoadTes
         val appPort: Int,
         @Schema(description = "Startup timeout in seconds")
         val startupTimeoutSeconds: Long,
+        @Schema(description = "Database container name in docker-compose")
+        val dbContainerName: String?,
+        @Schema(description = "Database port inside container")
+        val dbPort: Int?,
+        @Schema(description = "Database name")
+        val dbName: String?,
+        @Schema(description = "Database username")
+        val dbUsername: String?,
     )
 }

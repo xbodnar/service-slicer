@@ -2,7 +2,7 @@ package cz.bodnor.serviceslicer.adapter.`in`.web
 
 import cz.bodnor.serviceslicer.adapter.`in`.web.requests.CreateLoadTestExperimentRequest
 import cz.bodnor.serviceslicer.adapter.`in`.web.requests.UpdateLoadTestConfigRequest
-import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.GenerateBehaviorModelsCommand
+import cz.bodnor.serviceslicer.application.module.loadtestconfig.command.GenerateBehaviorModelsCommand
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.query.GetLoadTestExperimentQuery
 import cz.bodnor.serviceslicer.application.module.loadtestexperiment.query.ListLoadTestExperimentsQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus

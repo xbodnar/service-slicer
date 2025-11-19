@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FileSelector } from '@/components/ui/file-selector'
 import { useToast } from '@/components/ui/use-toast'
 import { type UploadedFile } from '@/hooks/useFileUpload'
@@ -17,12 +18,33 @@ import { ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react'
 const experimentSchema = z.object({
   name: z.string().min(1, 'Experiment name is required'),
   description: z.string().optional(),
+  generateBehaviorModels: z.boolean().default(false),
   behaviorModels: z.array(
     z.object({
       id: z.string().min(1, 'ID is required'),
       actor: z.string().min(1, 'Actor name is required'),
       usageProfile: z.coerce.number().min(0).max(1),
-      steps: z.string().min(1, 'At least one step is required'),
+      steps: z.array(
+        z.object({
+          method: z.string().min(1, 'Method is required'),
+          path: z.string().min(1, 'Path is required'),
+          headers: z.string().default('{}'),
+          params: z.string().default('{}'),
+          body: z.string().default('{}').refine(
+            (val) => {
+              if (!val || val.trim() === '') return true
+              try {
+                const parsed = JSON.parse(val)
+                return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+              } catch {
+                return false
+              }
+            },
+            { message: 'Body must be a valid JSON object' }
+          ),
+          save: z.string().default('{}'),
+        })
+      ).min(1, 'At least one step is required'),
       thinkFrom: z.coerce.number().min(0),
       thinkTo: z.coerce.number().min(0),
     })
@@ -32,7 +54,7 @@ const experimentSchema = z.object({
       load: z.coerce.number().min(1, 'Load must be at least 1'),
       frequency: z.coerce.number().min(0).max(1, 'Frequency must be between 0 and 1'),
     })
-  ).optional(),
+  ).min(1, 'At least one operational load is required'),
   systemsUnderTest: z.array(
     z.object({
       name: z.string().min(1, 'System name is required'),
@@ -42,6 +64,15 @@ const experimentSchema = z.object({
       startupTimeoutSeconds: z.coerce.number().default(180),
     })
   ).min(1, 'At least one system under test is required'),
+}).refine((data) => {
+  // If not generating behavior models, require at least one behavior model to be defined
+  if (!data.generateBehaviorModels && (!data.behaviorModels || data.behaviorModels.length === 0)) {
+    return false
+  }
+  return true
+}, {
+  message: 'Either enable auto-generation or define at least one behavior model',
+  path: ['behaviorModels'],
 })
 
 type ExperimentFormData = z.infer<typeof experimentSchema>
@@ -49,6 +80,146 @@ type ExperimentFormData = z.infer<typeof experimentSchema>
 interface SystemFiles {
   composeFile: UploadedFile | null
   jarFile: UploadedFile | null
+  sqlSeedFile: UploadedFile | null
+}
+
+interface BehaviorModelStepsProps {
+  behaviorIndex: number
+  control: any
+  register: any
+  errors: any
+}
+
+function BehaviorModelSteps({ behaviorIndex, control, register, errors }: BehaviorModelStepsProps) {
+  const { fields: stepFields, append: appendStep, remove: removeStep } = useFieldArray({
+    control,
+    name: `behaviorModels.${behaviorIndex}.steps`,
+  })
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label>API Request Steps</Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => appendStep({ method: 'GET', path: '/', headers: '{}', params: '{}', body: '{}', save: '{}' })}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Step
+        </Button>
+      </div>
+
+      {stepFields.map((field: any, stepIndex) => (
+        <Card key={field.id} className="p-3 bg-muted/30">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Step {stepIndex + 1}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeStep(stepIndex)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-method`}>Method</Label>
+                <Select
+                  defaultValue={field.method}
+                  onValueChange={(value) => {
+                    const input = document.getElementById(`behavior-${behaviorIndex}-step-${stepIndex}-method-hidden`) as HTMLInputElement
+                    if (input) input.value = value
+                  }}
+                >
+                  <SelectTrigger id={`behavior-${behaviorIndex}-step-${stepIndex}-method`}>
+                    <SelectValue placeholder="Select method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="GET">GET</SelectItem>
+                    <SelectItem value="POST">POST</SelectItem>
+                    <SelectItem value="PUT">PUT</SelectItem>
+                    <SelectItem value="PATCH">PATCH</SelectItem>
+                    <SelectItem value="DELETE">DELETE</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input
+                  type="hidden"
+                  id={`behavior-${behaviorIndex}-step-${stepIndex}-method-hidden`}
+                  {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.method`)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-path`}>Path</Label>
+                <Input
+                  id={`behavior-${behaviorIndex}-step-${stepIndex}-path`}
+                  {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.path`)}
+                  placeholder="/api/resource"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-headers`}>Headers (JSON)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-headers`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.headers`)}
+                placeholder='{"Content-Type": "application/json"}'
+                rows={2}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-params`}>Query Params (JSON)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-params`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.params`)}
+                placeholder='{"filter": "active"}'
+                rows={2}
+                className="font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-body`}>Body (JSON object)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-body`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.body`)}
+                placeholder='{"key": "value"}'
+                rows={3}
+                className="font-mono text-xs"
+              />
+              {errors?.behaviorModels?.[behaviorIndex]?.steps?.[stepIndex]?.body && (
+                <p className="text-sm text-destructive">
+                  {errors.behaviorModels[behaviorIndex].steps[stepIndex].body.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-save`}>Save Fields (JSON)</Label>
+              <Textarea
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-save`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.save`)}
+                placeholder='{"userId": "$.id", "token": "$.auth.token"}'
+                rows={2}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Save response fields for use in subsequent requests (JSONPath syntax)
+              </p>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
 }
 
 export function ExperimentCreatePage() {
@@ -58,7 +229,7 @@ export function ExperimentCreatePage() {
 
   const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
   const [systemFiles, setSystemFiles] = useState<SystemFiles[]>([
-    { composeFile: null, jarFile: null },
+    { composeFile: null, jarFile: null, sqlSeedFile: null },
   ])
 
   const form = useForm<ExperimentFormData>({
@@ -66,8 +237,14 @@ export function ExperimentCreatePage() {
     defaultValues: {
       name: '',
       description: '',
+      generateBehaviorModels: false,
       behaviorModels: [],
-      operationalProfile: [],
+      operationalProfile: [
+        {
+          load: 25,
+          frequency: 1.0,
+        },
+      ],
       systemsUnderTest: [
         {
           name: '',
@@ -115,6 +292,14 @@ export function ExperimentCreatePage() {
     })
   }
 
+  const handleSqlSeedFileSelected = (index: number, file: UploadedFile | null) => {
+    setSystemFiles((prev) => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], sqlSeedFile: file }
+      return updated
+    })
+  }
+
   const handleAddSystem = () => {
     appendSystem({
       name: '',
@@ -123,7 +308,7 @@ export function ExperimentCreatePage() {
       appPort: 9090,
       startupTimeoutSeconds: 180,
     })
-    setSystemFiles((prev) => [...prev, { composeFile: null, jarFile: null }])
+    setSystemFiles((prev) => [...prev, { composeFile: null, jarFile: null, sqlSeedFile: null }])
   }
 
   const handleRemoveSystem = (index: number) => {
@@ -136,7 +321,7 @@ export function ExperimentCreatePage() {
       id: '',
       actor: '',
       usageProfile: 0.5,
-      steps: '',
+      steps: [{ method: 'GET', path: '/', headers: '{}', params: '{}', body: '{}', save: '{}' }],
       thinkFrom: 1000,
       thinkTo: 3000,
     })
@@ -171,38 +356,49 @@ export function ExperimentCreatePage() {
     }
 
     try {
-      // Process behavioral models if provided
-      let behaviorModels: any[] | undefined
-      if (data.behaviorModels && data.behaviorModels.length > 0) {
-        behaviorModels = data.behaviorModels.map((model) => ({
-          id: model.id,
-          actor: model.actor,
-          usageProfile: model.usageProfile,
-          steps: model.steps.split(',').map((s) => s.trim()),
-          thinkFrom: model.thinkFrom,
-          thinkTo: model.thinkTo,
-        }))
+      // Process behavioral models based on generateBehaviorModels flag
+      let behaviorModels: any[] = []
+      if (!data.generateBehaviorModels && data.behaviorModels && data.behaviorModels.length > 0) {
+        behaviorModels = data.behaviorModels.map((model) => {
+          const steps = model.steps.map((step) => {
+            let headers, params, save, body
+            try {
+              headers = JSON.parse(step.headers || '{}')
+              params = JSON.parse(step.params || '{}')
+              save = JSON.parse(step.save || '{}')
+              body = step.body && step.body.trim() !== '' ? JSON.parse(step.body) : {}
+            } catch (e) {
+              throw new Error(`Invalid JSON in step "${step.path}": ${e}`)
+            }
+            return {
+              method: step.method,
+              path: step.path,
+              headers,
+              params,
+              body,
+              save,
+            }
+          })
+          return {
+            id: model.id,
+            actor: model.actor,
+            usageProfile: model.usageProfile,
+            steps,
+            thinkFrom: model.thinkFrom,
+            thinkTo: model.thinkTo,
+          }
+        })
       }
 
-      // Process operational profile if provided
-      let operationalProfile: any | null = null
-      if (data.operationalProfile && data.operationalProfile.length > 0) {
-        const freqSum = data.operationalProfile.reduce((sum, p) => sum + p.frequency, 0)
-        if (Math.abs(freqSum - 1.0) > 0.001) {
-          toast({
-            variant: 'destructive',
-            title: 'Invalid operational profile',
-            description: `Frequencies must sum to 1.0 (current sum: ${freqSum.toFixed(3)})`,
-          })
-          return
-        }
-
-        // Convert to loadsToFreq format
-        const loadsToFreq = data.operationalProfile.map(p => ({
-          first: p.load,
-          second: p.frequency,
-        }))
-        operationalProfile = { loadsToFreq }
+      // Validate operational profile frequencies sum to 1.0
+      const freqSum = data.operationalProfile.reduce((sum, p) => sum + p.frequency, 0)
+      if (Math.abs(freqSum - 1.0) > 0.001) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid operational profile',
+          description: `Frequencies must sum to 1.0 (current sum: ${freqSum.toFixed(3)})`,
+        })
+        return
       }
 
       const result = await createExperiment.mutateAsync({
@@ -212,12 +408,14 @@ export function ExperimentCreatePage() {
           loadTestConfig: {
             openApiFileId: openApiFile.fileId,
             behaviorModels,
-            operationalProfile,
+            operationalProfile: data.operationalProfile,
+            generateBehaviorModels: data.generateBehaviorModels,
           },
           systemsUnderTest: data.systemsUnderTest.map((system, index) => ({
             name: system.name,
             composeFileId: systemFiles[index].composeFile!.fileId,
             jarFileId: systemFiles[index].jarFile!.fileId,
+            sqlSeedFileId: systemFiles[index].sqlSeedFile?.fileId || undefined,
             description: system.description || undefined,
             healthCheckPath: system.healthCheckPath,
             appPort: system.appPort,
@@ -304,24 +502,37 @@ export function ExperimentCreatePage() {
               mimeTypeFilter="json"
             />
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Behavioral Models (optional)</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    If left empty, AI will generate behavioral models based on the OpenAPI specification
-                  </p>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="generateBehaviorModels"
+                {...form.register('generateBehaviorModels')}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="generateBehaviorModels" className="cursor-pointer">
+                Auto-generate behavior models from OpenAPI specification
+              </Label>
+            </div>
+
+            {!form.watch('generateBehaviorModels') && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Behavior Models</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Define the user behavior patterns for load testing
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddBehaviorModel}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Model
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddBehaviorModel}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Model
-                </Button>
-              </div>
 
               {behaviorFields.map((field, index) => (
                 <Card key={field.id} className="p-4">
@@ -382,20 +593,12 @@ export function ExperimentCreatePage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor={`behavior-steps-${index}`}>
-                        Steps (comma-separated operation IDs)
-                      </Label>
-                      <Textarea
-                        id={`behavior-steps-${index}`}
-                        {...form.register(`behaviorModels.${index}.steps`)}
-                        placeholder="createOrder,addPayment,confirmOrder"
-                        rows={2}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Enter operation IDs from your OpenAPI spec, separated by commas
-                      </p>
-                    </div>
+                    <BehaviorModelSteps
+                      behaviorIndex={index}
+                      control={form.control}
+                      register={form.register}
+                      errors={form.formState.errors}
+                    />
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -423,14 +626,21 @@ export function ExperimentCreatePage() {
                   </div>
                 </Card>
               ))}
-            </div>
+
+                {form.formState.errors.behaviorModels && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.behaviorModels.message}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Operational Profile (optional)</Label>
+                  <Label>Operational Profile</Label>
                   <p className="text-xs text-muted-foreground mt-1">
-                    If left empty, AI will generate an operational profile based on the OpenAPI specification
+                    Define load levels and their frequency distribution (frequencies must sum to 1.0)
                   </p>
                 </div>
                 <Button
@@ -440,7 +650,7 @@ export function ExperimentCreatePage() {
                   onClick={handleAddOperationalProfile}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Load & Frequency
+                  Add Operational Load
                 </Button>
               </div>
 
@@ -485,9 +695,10 @@ export function ExperimentCreatePage() {
                 </Card>
               ))}
 
-              {operationalProfileFields.length > 0 && (() => {
+              {(() => {
                 const opProfile = form.watch('operationalProfile')
-                const sum = opProfile?.reduce((s, p) => s + (Number(p.frequency) || 0), 0) || 0
+                if (!opProfile || opProfile.length === 0) return null
+                const sum = opProfile.reduce((s, p) => s + (Number(p.frequency) || 0), 0)
                 const isValid = Math.abs(sum - 1.0) <= 0.001
                 if (isValid) return null
                 return (
@@ -496,6 +707,12 @@ export function ExperimentCreatePage() {
                   </p>
                 )
               })()}
+
+              {form.formState.errors.operationalProfile && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.operationalProfile.message}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -569,6 +786,15 @@ export function ExperimentCreatePage() {
                     mimeTypeFilter="jar"
                   />
 
+                  <FileSelector
+                    id={`sql-seed-file-${index}`}
+                    label="SQL Seed File (optional)"
+                    accept=".sql"
+                    onFileSelected={(file) => handleSqlSeedFileSelected(index, file)}
+                    selectedFile={systemFiles[index]?.sqlSeedFile}
+                    mimeTypeFilter="sql"
+                  />
+
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor={`health-check-${index}`}>Health Check Path</Label>
@@ -615,7 +841,7 @@ export function ExperimentCreatePage() {
               !openApiFile ||
               (() => {
                 const opProfile = form.watch('operationalProfile')
-                if (!opProfile || opProfile.length === 0) return false
+                if (!opProfile || opProfile.length === 0) return true // Must have at least one
                 const sum = opProfile.reduce((s, p) => s + (Number(p.frequency) || 0), 0)
                 return Math.abs(sum - 1.0) > 0.001
               })()
