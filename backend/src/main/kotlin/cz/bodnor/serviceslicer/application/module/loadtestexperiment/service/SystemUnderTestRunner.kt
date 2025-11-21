@@ -1,12 +1,14 @@
 package cz.bodnor.serviceslicer.application.module.loadtestexperiment.service
 
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
-import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTest
+import cz.bodnor.serviceslicer.domain.loadtestexperiment.DatabaseSeedConfig
+import cz.bodnor.serviceslicer.domain.loadtestexperiment.DockerConfig
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTestRepository
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PreDestroy
 import org.springframework.stereotype.Service
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.Duration
@@ -49,7 +51,7 @@ class SystemUnderTestRunner(
             )
         }
 
-        diskOperations.withFile(sut.composeFileId) { composeFilePath ->
+        diskOperations.withFile(sut.dockerConfig.composeFileId) { composeFilePath ->
             logger.info { "Starting SUT from docker-compose file: ${composeFilePath.toFile().absolutePath}" }
 
             try {
@@ -74,14 +76,12 @@ class SystemUnderTestRunner(
 
                 // 3) Wait for SUT healthy
                 info.state = RunState.WAITING_HEALTHY
-                waitHealthy(sut.appPort, sut.healthCheckPath, timeout = Duration.ofSeconds(sut.startupTimeoutSeconds))
+                waitHealthy(sut.dockerConfig)
 
                 // 4) Execute SQL seed file if provided
-                if (sut.sqlSeedFileId != null) {
-                    logger.info { "SQL seed file specified, waiting for database schema to be ready..." }
-                    waitForDatabaseSchema(project, workDir, sut)
-                    logger.info { "Database schema is ready, executing SQL script..." }
-                    executeSqlSeedFile(sut, project, workDir)
+                sut.databaseSeedConfig?.let {
+                    it.waitForDatabaseSchema(project, workDir)
+                    it.executeSqlSeedFile(project, workDir)
                     logger.info { "SQL seed file executed successfully" }
                 }
 
@@ -120,19 +120,10 @@ class SystemUnderTestRunner(
     )
 
     // --- helpers ---
-
-    private fun executeSqlSeedFile(
-        sut: SystemUnderTest,
+    private fun DatabaseSeedConfig.executeSqlSeedFile(
         project: String,
-        workDir: java.io.File,
+        workDir: File,
     ) {
-        // Extract and validate required fields
-        val sqlSeedFileId = requireNotNull(sut.sqlSeedFileId) { "SQL seed file ID must be provided" }
-        val dbContainerName = requireNotNull(sut.dbContainerName) { "DB container name must be provided" }
-        val dbPort = requireNotNull(sut.dbPort) { "DB port must be provided" }
-        val dbName = requireNotNull(sut.dbName) { "DB name must be provided" }
-        val dbUsername = requireNotNull(sut.dbUsername) { "DB username must be provided" }
-
         diskOperations.withFile(sqlSeedFileId) { sqlFilePath ->
             logger.info { "Transferring SQL seed file to execution environment..." }
 
@@ -164,7 +155,9 @@ class SystemUnderTestRunner(
 
             // Debug: Check database connection and available databases
             logger.debug { "Running database diagnostics before SQL execution..." }
-            debugDatabaseConnection(project, workDir, dbContainerName, dbUsername, dbName)
+            if (logger.isDebugEnabled()) {
+                debugDatabaseConnection(project, workDir)
+            }
 
             // Execute SQL script inside the container
             logger.info { "Executing SQL script in database '$dbName' as user '$dbUsername'..." }
@@ -203,12 +196,9 @@ class SystemUnderTestRunner(
         }
     }
 
-    private fun debugDatabaseConnection(
+    private fun DatabaseSeedConfig.debugDatabaseConnection(
         project: String,
-        workDir: java.io.File,
-        dbContainerName: String,
-        dbUsername: String,
-        dbName: String,
+        workDir: File,
     ) {
         // 1. List all databases
         logger.debug { "Listing all databases in container '$dbContainerName'..." }
@@ -323,15 +313,10 @@ class SystemUnderTestRunner(
         logger.debug { "All tables in database '$dbName':\n${listAllTablesResult.output}" }
     }
 
-    private fun waitForDatabaseSchema(
+    private fun DatabaseSeedConfig.waitForDatabaseSchema(
         project: String,
-        workDir: java.io.File,
-        sut: SystemUnderTest,
+        workDir: File,
     ) {
-        val dbContainerName = requireNotNull(sut.dbContainerName) { "DB container name must be provided" }
-        val dbUsername = requireNotNull(sut.dbUsername) { "DB username must be provided" }
-        val dbName = requireNotNull(sut.dbName) { "DB name must be provided" }
-
         val deadline = System.currentTimeMillis() + Duration.ofSeconds(30).toMillis()
         var attemptCount = 0
 
@@ -387,14 +372,10 @@ class SystemUnderTestRunner(
         )
     }
 
-    private fun waitHealthy(
-        port: Int,
-        healthCheckPath: String,
-        timeout: Duration,
-    ) {
-        val deadline = System.currentTimeMillis() + timeout.toMillis()
+    private fun waitHealthy(dockerConfig: DockerConfig) {
+        val deadline = System.currentTimeMillis() + dockerConfig.startupTimeoutSeconds * 1000
         val targetHost = commandExecutor.getTargetHost()
-        val url = URL("http://$targetHost:$port$healthCheckPath")
+        val url = URL("http://$targetHost:${dockerConfig.appPort}${dockerConfig.healthCheckPath}")
 
         while (System.currentTimeMillis() < deadline) {
             try {

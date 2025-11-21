@@ -10,28 +10,28 @@ import java.util.UUID
 
 @Schema(description = "Request to create a load test experiment")
 data class CreateLoadTestExperimentRequest(
-    @Schema(description = "Name of the experiment", example = "Baseline Performance Test")
+    @field:Schema(description = "Name of the experiment", example = "Baseline Performance Test")
     val name: String,
-    @Schema(
+    @field:Schema(
         description = "Description of the experiment",
         example = "Testing baseline performance with monolithic architecture",
     )
     val description: String? = null,
-    @Schema(description = "Load test configuration")
+    @field:Schema(description = "Load test configuration")
     val loadTestConfig: CreateLoadTestConfig,
-    @Schema(description = "List of systems under test to compare")
-    val systemsUnderTest: List<CreateLoadTestExperimentCommand.CreateSystemUnderTest>,
+    @field:Schema(description = "List of systems under test to compare")
+    val systemsUnderTest: List<AddSystemUnderTestRequest>,
 ) {
 
     @Schema(description = "Load test configuration")
     data class CreateLoadTestConfig(
-        @Schema(description = "ID of the OpenAPI specification file")
+        @field:Schema(description = "ID of the OpenAPI specification file")
         val openApiFileId: UUID,
-        @Schema(description = "List of user behavior models")
+        @field:Schema(description = "List of user behavior models")
         val behaviorModels: List<CreateUserBehaviorModelDto>,
-        @Schema(description = "Operational profile defining load patterns")
+        @field:Schema(description = "Operational profile defining load patterns")
         val operationalProfile: List<OperationalLoad>,
-        @Schema(description = "Whether to generate behavior models automatically")
+        @field:Schema(description = "Whether to generate behavior models automatically")
         val generateBehaviorModels: Boolean = false,
     ) {
         init {
@@ -57,11 +57,11 @@ data class CreateLoadTestExperimentRequest(
 
 @Schema(description = "Request to update load test configuration")
 data class UpdateLoadTestConfigRequest(
-    @Schema(description = "ID of the OpenAPI specification file")
+    @field:Schema(description = "ID of the OpenAPI specification file")
     val openApiFileId: UUID,
-    @Schema(description = "List of user behavior models")
+    @field:Schema(description = "List of user behavior models")
     val behaviorModels: List<CreateLoadTestConfigCommand.CreateUserBehaviorModelDto> = emptyList(),
-    @Schema(description = "Operational profile defining load patterns")
+    @field:Schema(description = "Operational profile defining load patterns")
     val operationalProfile: List<OperationalLoad>,
 ) {
     fun toCommand(experimentId: UUID) = UpdateLoadTestConfigCommand(

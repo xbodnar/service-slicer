@@ -89,4 +89,13 @@
             </column>
         </addColumn>
     </changeSet>
+    
+    <changeSet id="add-baseline-sut-flag" author="Norbert Bodnar">
+        <dropColumn tableName="system_under_test" columnName="jar_file_id"/>
+        <addColumn tableName="system_under_test">
+            <column name="is_baseline" type="boolean" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

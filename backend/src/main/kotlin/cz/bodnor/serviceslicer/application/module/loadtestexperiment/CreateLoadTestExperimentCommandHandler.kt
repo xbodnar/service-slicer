@@ -4,11 +4,11 @@ import cz.bodnor.serviceslicer.application.module.loadtestexperiment.command.Cre
 import cz.bodnor.serviceslicer.domain.file.FileReadService
 import cz.bodnor.serviceslicer.domain.file.FileStatus
 import cz.bodnor.serviceslicer.domain.loadtestconfig.LoadTestConfigReadService
+import cz.bodnor.serviceslicer.domain.loadtestexperiment.DatabaseSeedConfig
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.LoadTestExperimentWriteService
 import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTest
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
-import org.neo4j.cypherdsl.core.Cypher.file
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
@@ -38,30 +38,10 @@ class CreateLoadTestExperimentCommandHandler(
             description = command.description,
         )
 
-        command.systemsUnderTest.forEach { sut ->
-            validateFileExists(sut.jarFileId)
-            validateFileExists(sut.composeFileId)
-            sut.sqlSeedFileId?.let { validateFileExists(it) }
-            experiment.addSystemUnderTest(sut.toEntity(experimentId = experiment.id))
+        command.systemsUnderTest.forEach {
+            commandBus(it.toCommand(experiment.id))
         }
 
         return CreateLoadTestExperimentCommand.Result(experimentId = experiment.id)
     }
-
-    private fun validateFileExists(zipFileId: UUID) {
-        val file = fileReadService.getById(zipFileId)
-        require(file.status == FileStatus.READY) { "File is not uploaded yet" }
-    }
-
-    private fun CreateLoadTestExperimentCommand.CreateSystemUnderTest.toEntity(experimentId: UUID) = SystemUnderTest(
-        experimentId = experimentId,
-        name = name,
-        jarFileId = jarFileId,
-        composeFileId = composeFileId,
-        sqlSeedFileId = sqlSeedFileId,
-        description = description,
-        healthCheckPath = healthCheckPath,
-        appPort = appPort,
-        startupTimeoutSeconds = startupTimeoutSeconds,
-    )
 }

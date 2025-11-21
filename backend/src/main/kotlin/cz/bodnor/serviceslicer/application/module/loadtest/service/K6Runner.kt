@@ -7,17 +7,21 @@ import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.nio.file.Path
+import java.time.Instant
 
 @Service
 class K6Runner(
     private val localCommandExecutor: LocalCommandExecutor,
     private val k6Properties: K6Properties,
+    private val prometheusProperties: cz.bodnor.serviceslicer.infrastructure.config.PrometheusProperties,
     private val objectMapper: ObjectMapper,
 ) {
 
     private val logger = KotlinLogging.logger {}
 
     data class K6Result(
+        val startTime: Instant,
+        val endTime: Instant,
         val exitCode: Int,
         val output: String,
         val summaryJson: JsonNode? = null,
@@ -27,18 +31,21 @@ class K6Runner(
         scriptPath: Path,
         configPath: Path,
         environmentVariables: Map<String, String> = emptyMap(),
+        ignoreMetrics: Boolean = false,
     ): K6Result {
         logger.info { "Starting k6 load test with script: ${scriptPath.toFile().absolutePath}" }
 
-        val command = buildK6Command(scriptPath, configPath, environmentVariables)
+        val command = buildK6Command(scriptPath, configPath, environmentVariables, ignoreMetrics)
 
         logger.info { "Executing k6 command: ${command.joinToString(" ")}" }
 
+        val startTime = Instant.now()
         val result = localCommandExecutor.execute(command, null)
+        val endTime = Instant.now()
 
         logger.info { "k6 test completed with exit code: ${result.exitCode}" }
 
-        // Log the full output so you can see what k6 did
+        // Log the full output so we can see what k6 did
         if (result.output.isNotEmpty()) {
             logger.info { "k6 output:\n${result.output}" }
         }
@@ -47,6 +54,8 @@ class K6Runner(
         val summaryJsonContent = readSummaryJson(scriptPath)
 
         return K6Result(
+            startTime = startTime,
+            endTime = endTime,
             exitCode = result.exitCode,
             output = result.output,
             summaryJson = objectMapper.readTree(summaryJsonContent),
@@ -57,6 +66,7 @@ class K6Runner(
         scriptPath: Path,
         configPath: Path,
         environmentVariables: Map<String, String>,
+        ignoreMetrics: Boolean,
     ): List<String> {
         val command = mutableListOf(
             "docker",
@@ -69,16 +79,14 @@ class K6Runner(
 
         // Mount script directory (read-write so k6 can write summary.json)
         val scriptDir = scriptPath.parent.toFile().absolutePath
-        val scriptName = scriptPath.fileName.toString()
-        val configName = configPath.fileName.toString()
         command.addAll(
             listOf(
                 "-v",
-                "$scriptDir:/scripts",
+                "$scriptDir:$CONTAINER_WORKDIR",
             ),
         )
 
-        command.addAll(listOf("-e", "LOAD_TEST_CONFIG_FILE=/scripts/$configName"))
+        command.addAll(listOf("-e", "LOAD_TEST_CONFIG_FILE=$CONTAINER_WORKDIR/${configPath.fileName}"))
 
         // Add environment variables
         environmentVariables.forEach { (key, value) ->
@@ -86,16 +94,16 @@ class K6Runner(
         }
 
         // Configure Prometheus remote write if enabled
-        if (!k6Properties.prometheus.remoteWriteUrl.isNullOrBlank()) {
+        if (!ignoreMetrics && !prometheusProperties.remoteWriteUrl.isNullOrBlank()) {
             command.addAll(
                 listOf(
                     "-e",
-                    "K6_PROMETHEUS_RW_SERVER_URL=${k6Properties.prometheus.remoteWriteUrl}",
+                    "K6_PROMETHEUS_RW_SERVER_URL=${prometheusProperties.remoteWriteUrl}",
                     "-e",
                     "K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true",
                 ),
             )
-            logger.debug { "Configured Prometheus remote write to: ${k6Properties.prometheus.remoteWriteUrl}" }
+            logger.debug { "Configured Prometheus remote write to: ${prometheusProperties.remoteWriteUrl}" }
         }
 
         // Add k6 image and command
@@ -107,35 +115,40 @@ class K6Runner(
         )
 
         // Add Prometheus output if configured
-        if (!k6Properties.prometheus.remoteWriteUrl.isNullOrBlank()) {
+        if (!ignoreMetrics && !prometheusProperties.remoteWriteUrl.isNullOrBlank()) {
             command.add("--out")
             command.add("experimental-prometheus-rw")
         }
 
         // Add JSON summary export for structured results
         command.add("--summary-export")
-        command.add("/scripts/summary.json")
+        command.add("$CONTAINER_WORKDIR/$SUMMARY_FILENAME")
 
         // Add script path (inside container)
-        command.add("/scripts/$scriptName")
+        command.add("$CONTAINER_WORKDIR/${scriptPath.fileName}")
 
         return command
     }
 
     private fun readSummaryJson(scriptPath: Path): String? {
-        val summaryJsonPath = scriptPath.parent.resolve("summary.json")
+        val summaryJsonPath = scriptPath.parent.resolve(SUMMARY_FILENAME)
         return try {
             if (summaryJsonPath.toFile().exists()) {
                 val content = summaryJsonPath.toFile().readText()
-                logger.info { "Successfully read summary.json from ${summaryJsonPath.toFile().absolutePath}" }
+                logger.info { "Successfully read $SUMMARY_FILENAME from ${summaryJsonPath.toFile().absolutePath}" }
                 content
             } else {
-                logger.warn { "summary.json not found at ${summaryJsonPath.toFile().absolutePath}" }
+                logger.warn { "$SUMMARY_FILENAME not found at ${summaryJsonPath.toFile().absolutePath}" }
                 null
             }
         } catch (e: Exception) {
-            logger.error(e) { "Failed to read summary.json from ${summaryJsonPath.toFile().absolutePath}" }
+            logger.error(e) { "Failed to read $SUMMARY_FILENAME from ${summaryJsonPath.toFile().absolutePath}" }
             null
         }
+    }
+
+    companion object {
+        private const val SUMMARY_FILENAME = "summary.json"
+        private const val CONTAINER_WORKDIR = "/scripts"
     }
 }

@@ -31,7 +31,7 @@ abstract class DomainEntity(
 
 @MappedSuperclass
 abstract class CreatableEntity(
-    id: UUID,
+    id: UUID = UUID.randomUUID(),
 ) : DomainEntity(id) {
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
@@ -43,7 +43,7 @@ abstract class CreatableEntity(
 
 @MappedSuperclass
 abstract class UpdatableEntity(
-    id: UUID,
+    id: UUID = UUID.randomUUID(),
 ) : CreatableEntity(id) {
     @LastModifiedDate
     @Column(name = "updated_at", updatable = true, nullable = false)

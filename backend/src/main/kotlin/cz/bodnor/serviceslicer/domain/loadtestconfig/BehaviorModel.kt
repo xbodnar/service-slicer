@@ -25,4 +25,6 @@ data class ApiRequest(
     val params: Map<String, String> = emptyMap(),
     val body: Map<String, Any?> = emptyMap(),
     val save: Map<String, String> = emptyMap(),
+    val component: String? = null,
+    val operationId: String,
 )

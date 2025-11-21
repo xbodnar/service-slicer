@@ -9,22 +9,32 @@ const LOAD_TEST_CONFIG_FILE = __ENV.LOAD_TEST_CONFIG_FILE;
 const EXPERIMENT_ID = __ENV.EXPERIMENT_ID;
 const SUT_ID = __ENV.SUT_ID;
 
+// Validate required environment variables
+const requiredEnvVars = {
+    BASE_URL,
+    TARGET_VUS, // load
+    DURATION,
+    LOAD_TEST_CONFIG_FILE,
+    EXPERIMENT_ID,
+    SUT_ID,
+};
+
+const missingVars = Object.entries(requiredEnvVars)
+    .filter(([name, value]) => !value)
+    .map(([name]) => name);
+
+if (missingVars.length > 0) {
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+}
+
 const loadTestConfig = JSON.parse(open(LOAD_TEST_CONFIG_FILE));
 
 const behaviorModels = loadTestConfig.behaviorModels;
 
 export const options = {
-    scenarios: {
-        main: {
-            executor: 'ramping-vus',
-            stages: [
-                { duration: '20s', target: TARGET_VUS },
-                { duration: '20s', target: TARGET_VUS },
-                { duration: '20s', target: 0 },
-            ],
-            gracefulStop: '10s',
-        }
-    },
+    executor: 'constant-vus',
+    vus: TARGET_VUS,
+    duration: DURATION,
 };
 
 function randomThinkTime(thinkFromMs, thinkToMs) {
@@ -101,8 +111,13 @@ function executeStep(step, ctx) {
         headers: headers,
         params: params,
         tags: {
+            experiment_id: EXPERIMENT_ID,
+            sut_id: SUT_ID,
+            load: TARGET_VUS,
             behavior_id: ctx.behaviorId,
             actor: ctx.actor,
+            component: step.component || 'unknown',
+            operation: step.operationId,
             method: step.method,
             path: step.path,
         },

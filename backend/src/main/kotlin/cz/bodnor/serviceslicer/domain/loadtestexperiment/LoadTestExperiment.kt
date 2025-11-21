@@ -3,7 +3,10 @@ package cz.bodnor.serviceslicer.domain.loadtestexperiment
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
+import jakarta.persistence.JoinColumn
 import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
+import org.jooq.meta.derby.sys.Sys
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.util.UUID
@@ -28,12 +31,26 @@ class LoadTestExperiment(
     val systemsUnderTest: List<SystemUnderTest>
         get() = _systemsUnderTest.toList()
 
+    val baselineSut: SystemUnderTest
+        get() = _systemsUnderTest.find { it.isBaseline } ?: error("No baseline SUT found")
+
+    val targetSuts: List<SystemUnderTest>
+        get() = _systemsUnderTest.filter { !it.isBaseline }
+
     fun addSystemUnderTest(systemUnderTest: SystemUnderTest) {
+        val containsBaseline = _systemsUnderTest.any { it.isBaseline }
+        require(!containsBaseline || !systemUnderTest.isBaseline) {
+            "Can't add another baseline SUT"
+        }
         _systemsUnderTest.add(systemUnderTest)
     }
 
     fun removeSystemUnderTest(systemUnderTestId: UUID) {
-        _systemsUnderTest.removeIf { it.id == systemUnderTestId }
+        val sutToRemove = _systemsUnderTest.find { it.id == systemUnderTestId } ?: return
+        require(!sutToRemove.isBaseline) {
+            "Can't remove baseline SUT"
+        }
+        _systemsUnderTest.remove(sutToRemove)
     }
 }
 
