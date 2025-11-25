@@ -1,0 +1,297 @@
+{
+  "id": "ff37aa51-55e7-4609-b354-213e35c88177",
+  "openApiFileId": "c079d2c4-50c6-4007-bef9-424171e26234",
+  "behaviorModels": [
+    {
+      "id": "reader-passive",
+      "actor": "Reader",
+      "steps": [
+        {
+          "body": {},
+          "path": "/articles",
+          "save": {
+            "articleSlug": "$.articles[0].slug"
+          },
+          "method": "GET",
+          "params": {},
+          "headers": {},
+          "operationId": "getArticles"
+        },
+        {
+          "body": {},
+          "path": "/tags",
+          "save": {},
+          "method": "GET",
+          "params": {},
+          "headers": {},
+          "operationId": "getTags"
+        },
+        {
+          "body": {},
+          "path": "/articles/${articleSlug}",
+          "save": {},
+          "method": "GET",
+          "params": {},
+          "headers": {},
+          "operationId": "getArticle"
+        },
+        {
+          "body": {},
+          "path": "/articles/${articleSlug}/comments",
+          "save": {},
+          "method": "GET",
+          "params": {},
+          "headers": {},
+          "operationId": "getComments"
+        },
+        {
+          "body": {},
+          "path": "/articles",
+          "save": {
+            "articleSlug2": "$.articles[1].slug"
+          },
+          "method": "GET",
+          "params": {},
+          "headers": {},
+          "operationId": "getArticles"
+        },
+        {
+          "body": {},
+          "path": "/tags",
+          "save": {},
+          "method": "GET",
+          "params": {},
+          "headers": {},
+          "operationId": "getTags"
+        },
+        {
+          "body": {},
+          "path": "/articles/${articleSlug2}",
+          "save": {},
+          "method": "GET",
+          "params": {},
+          "headers": {},
+          "operationId": "getArticle"
+        }
+      ],
+      "thinkTo": 3000,
+      "thinkFrom": 1000,
+      "usageProfile": 0.6
+    },
+    {
+      "id": "reader-active",
+      "actor": "Reader",
+      "steps": [
+        {
+          "body": {
+            "user": {
+              "email": "john@example.com",
+              "password": "password"
+            }
+          },
+          "path": "/users/login",
+          "save": {
+            "token": "$.user.token"
+          },
+          "method": "POST",
+          "params": {},
+          "headers": {},
+          "operationId": "userLogin"
+        },
+        {
+          "body": {},
+          "path": "/articles",
+          "save": {
+            "articleSlug": "$.articles[3].slug"
+          },
+          "method": "GET",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "getArticles"
+        },
+        {
+          "body": {},
+          "path": "/tags",
+          "save": {},
+          "method": "GET",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "getTags"
+        },
+        {
+          "body": {},
+          "path": "/articles/feed",
+          "save": {},
+          "method": "GET",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "getTags"
+        },
+        {
+          "body": {},
+          "path": "/articles/${articleSlug}",
+          "save": {
+            "articleAuthor": "$.article.author.username"
+          },
+          "method": "GET",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "getArticle"
+        },
+        {
+          "body": {},
+          "path": "/articles/${articleSlug}/comments",
+          "save": {},
+          "method": "GET",
+          "params": {},
+          "headers": {},
+          "operationId": "getComments"
+        },
+        {
+          "body": {},
+          "path": "/profiles/${articleAuthor}/follow",
+          "save": {},
+          "method": "POST",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "follow"
+        },
+        {
+          "body": {},
+          "path": "/articles/${articleSlug}/favorite",
+          "save": {},
+          "method": "POST",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "favoriteArticle"
+        },
+        {
+          "body": {
+            "comment": {
+              "body": "This is a great article! Thanks for sharing!"
+            }
+          },
+          "path": "/articles/${articleSlug}/comments",
+          "save": {},
+          "method": "POST",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "addComment"
+        }
+      ],
+      "thinkTo": 3000,
+      "thinkFrom": 1000,
+      "usageProfile": 0.3
+    },
+    {
+      "id": "writer",
+      "actor": "Writer",
+      "steps": [
+        {
+          "body": {
+            "user": {
+              "email": "bob@example.com",
+              "password": "password"
+            }
+          },
+          "path": "/users/login",
+          "save": {
+            "token": "$.user.token"
+          },
+          "method": "POST",
+          "params": {},
+          "headers": {},
+          "operationId": "userLogin"
+        },
+        {
+          "body": {},
+          "path": "/articles",
+          "save": {
+            "articleSlug": "$.articles[6].slug"
+          },
+          "method": "GET",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "getArticles"
+        },
+        {
+          "body": {},
+          "path": "/tags",
+          "save": {},
+          "method": "GET",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "getTags"
+        },
+        {
+          "body": {
+            "article": {
+              "title": "Why Kotlin Is Better Than Java",
+              "description": "This article explains why Kotlin is a stronger choice than Java, highlighting its concise syntax, built-in null safety, modern language features like coroutines, and seamless interoperability with existing Java code.",
+              "body": "Kotlin improves on Java by offering a more concise, expressive, and safer programming experience, while remaining fully compatible with existing JVM projects.\n\n**Conciseness**  \nKotlin removes much of Java’s boilerplate. Data classes, type inference, smart casts, and extension functions lead to shorter and clearer code.\n\n**Null Safety**  \nIts type system distinguishes between nullable and non-nullable values, preventing many runtime errors that Java typically allows.\n\n**Modern Language Features**  \nFirst-class functions, coroutines for structured concurrency, and improved standard library utilities enable cleaner asynchronous and functional programming than Java’s traditional approaches.\n\n**Seamless Interoperability**  \nKotlin integrates with all Java libraries and frameworks, making adoption gradual and low-risk for existing teams.\n\nIn practice, Kotlin delivers safer code with less effort, offering a modern alternative that fits naturally into the JVM ecosystem.\n\n\n\n\n\n\n",
+              "tagList": ["kotlin", "java", "jvm"]
+            }
+          },
+          "path": "/articles",
+          "save": {},
+          "method": "POST",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "createArticle"
+        },
+        {
+          "body": {
+            "article": {
+              "title": "The Value of Type Inference in Modern Programming Languages",
+              "description": "A short overview of how type inference reduces boilerplate while preserving type safety.",
+              "body": "## The Value of Type Inference in Modern Programming Languages\n\nType inference has become an essential feature in contemporary languages, reducing verbosity without sacrificing safety. Instead of manually specifying every variable type, developers let the compiler deduce types from context, producing cleaner and more readable code.\n\nThis approach streamlines development by minimizing boilerplate and allowing programmers to focus on application logic rather than repetitive annotations. At the same time, strong static typing remains intact. The compiler still enforces correctness, catches incompatible assignments, and provides reliable tooling support.\n\nBy combining clarity with safety, type inference contributes to faster iteration, fewer errors, and more maintainable code, making it a core component of modern language design.",
+              "tagList": [
+                "programming",
+                "type-inference",
+                "static-typing",
+                "language-design"
+              ]
+            }
+          },
+          "path": "/articles",
+          "save": {},
+          "method": "POST",
+          "params": {},
+          "headers": {
+            "Authorization": "Bearer ${token}"
+          },
+          "operationId": "createArticle"
+        }
+      ],
+      "thinkTo": 3000,
+      "thinkFrom": 1000,
+      "usageProfile": 0.1
+    }
+  ],
+  "operationalProfile": [
+    {
+      "load": 25,
+      "frequency": 1
+    }
+  ]
+}

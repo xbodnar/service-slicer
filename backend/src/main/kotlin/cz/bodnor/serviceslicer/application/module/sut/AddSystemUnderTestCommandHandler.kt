@@ -1,10 +1,10 @@
 package cz.bodnor.serviceslicer.application.module.sut
 
 import cz.bodnor.serviceslicer.application.module.sut.command.AddSystemUnderTestCommand
+import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
+import cz.bodnor.serviceslicer.domain.benchmark.SystemUnderTest
 import cz.bodnor.serviceslicer.domain.file.FileReadService
 import cz.bodnor.serviceslicer.domain.file.FileStatus
-import cz.bodnor.serviceslicer.domain.loadtestexperiment.LoadTestExperimentReadService
-import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTest
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -12,7 +12,7 @@ import java.util.UUID
 
 @Component
 class AddSystemUnderTestCommandHandler(
-    private val loadTestExperimentReadService: LoadTestExperimentReadService,
+    private val benchmarkReadService: BenchmarkReadService,
     private val fileReadService: FileReadService,
 ) : CommandHandler<AddSystemUnderTestCommand.Result, AddSystemUnderTestCommand> {
 
@@ -25,9 +25,8 @@ class AddSystemUnderTestCommandHandler(
             validateFileExists(it.sqlSeedFileId)
         }
 
-        val loadTestExperiment = loadTestExperimentReadService.getById(command.experimentId)
+        val benchmark = benchmarkReadService.getById(command.benchmarkId)
         val newSystemUnderTest = SystemUnderTest(
-            experimentId = loadTestExperiment.id,
             name = command.name,
             description = command.description,
             isBaseline = command.isBaseline,
@@ -35,7 +34,7 @@ class AddSystemUnderTestCommandHandler(
             databaseSeedConfig = command.databaseSeedConfig,
         )
 
-        loadTestExperiment.addSystemUnderTest(newSystemUnderTest)
+        benchmark.addSystemUnderTest(newSystemUnderTest)
 
         return AddSystemUnderTestCommand.Result(
             systemUnderTestId = newSystemUnderTest.id,

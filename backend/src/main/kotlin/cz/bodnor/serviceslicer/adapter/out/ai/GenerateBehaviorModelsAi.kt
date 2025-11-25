@@ -1,9 +1,9 @@
 package cz.bodnor.serviceslicer.adapter.out.ai
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import cz.bodnor.serviceslicer.application.module.benchmark.port.out.GenerateBehaviorModels
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
-import cz.bodnor.serviceslicer.application.module.loadtestconfig.port.out.GenerateBehaviorModels
-import cz.bodnor.serviceslicer.domain.loadtestconfig.BehaviorModel
+import cz.bodnor.serviceslicer.domain.benchmark.BehaviorModel
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.stereotype.Component
 import java.nio.file.Files

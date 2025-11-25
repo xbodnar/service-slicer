@@ -1,12 +1,12 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import {check, sleep} from 'k6';
 
 // --- CONFIG FROM ORCHESTRATOR / GENERATED ---
 const BASE_URL = __ENV.BASE_URL;
 const TARGET_VUS = parseInt(__ENV.TARGET_VUS);
 const DURATION = __ENV.DURATION;
 const LOAD_TEST_CONFIG_FILE = __ENV.LOAD_TEST_CONFIG_FILE;
-const EXPERIMENT_ID = __ENV.EXPERIMENT_ID;
+const BENCHMARK_ID = __ENV.BENCHMARK_ID;
 const SUT_ID = __ENV.SUT_ID;
 
 // Validate required environment variables
@@ -15,7 +15,7 @@ const requiredEnvVars = {
     TARGET_VUS, // load
     DURATION,
     LOAD_TEST_CONFIG_FILE,
-    EXPERIMENT_ID,
+    BENCHMARK_ID,
     SUT_ID,
 };
 
@@ -32,9 +32,29 @@ const loadTestConfig = JSON.parse(open(LOAD_TEST_CONFIG_FILE));
 const behaviorModels = loadTestConfig.behaviorModels;
 
 export const options = {
-    executor: 'constant-vus',
     vus: TARGET_VUS,
     duration: DURATION,
+};
+
+// Random value generators for creating unique test data
+const randomGenerators = {
+    'uuid': () => crypto.randomUUID(),
+    'string': (length) => {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const len = length || 10;
+        return Array.from({length: len}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    },
+    'number': (min, max) => {
+        const minVal = min !== undefined ? min : 0;
+        const maxVal = max !== undefined ? max : 100;
+        return Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
+    },
+    'alphanumeric': (length) => {
+        const len = length || 10;
+        return Math.random().toString(36).substring(2, len + 2).padEnd(len, '0');
+    },
+    'timestamp': () => Date.now(),
+    'timestampSeconds': () => Math.floor(Date.now() / 1000)
 };
 
 function randomThinkTime(thinkFromMs, thinkToMs) {
@@ -56,10 +76,36 @@ function pickBehaviorModel() {
 
 function applyTemplateToString(str, ctx) {
     if (!str || typeof str !== 'string') return str;
-    return str.replace(/\$\{(\w+)\}/g, (_, name) => {
-        const value = ctx[name];
+
+    // Replace template variables: ${varName} or ${random.func(args)}
+    return str.replace(/\$\{([^}]+)\}/g, (match, expr) => {
+        expr = expr.trim();
+
+        // Check if it's a function call (contains parentheses)
+        const functionCallMatch = expr.match(/^random\.(\w+)\((.*)\)$/);
+        if (functionCallMatch) {
+            const funcName = functionCallMatch[1];
+            const argsStr = functionCallMatch[2].trim();
+
+            if (randomGenerators[funcName]) {
+                // Parse arguments (simple comma-separated values)
+                const args = argsStr ? argsStr.split(',').map(arg => {
+                    arg = arg.trim();
+                    // Try to parse as number, otherwise keep as string
+                    const num = Number(arg);
+                    return isNaN(num) ? arg.replace(/['"]/g, '') : num;
+                }) : [];
+
+                return String(randomGenerators[funcName](...args));
+            } else {
+                console.warn(`Unknown random function: ${funcName}`);
+                return match;
+            }
+        }
+
+        // Otherwise, treat as context variable
+        const value = ctx[expr];
         if (value === undefined) {
-            // Optionally log or throw
             return '';
         }
         return String(value);
@@ -101,17 +147,21 @@ function getFromJsonPath(json, path) {
 }
 
 function executeStep(step, ctx) {
-    const path= applyTemplate(step.path, ctx);
-    const url = BASE_URL + path;
+    const url = BASE_URL + applyTemplate(step.path, ctx);
     const headers = applyTemplate(step.headers || {}, ctx);
     const params = applyTemplate(step.params || {}, ctx);
     const body = applyTemplate(step.body || null, ctx);
+
+    // Add Content-Type header for JSON requests if not already set
+    if (body && !headers['Content-Type'] && !headers['content-type']) {
+        headers['Content-Type'] = 'application/json';
+    }
 
     const reqParams = {
         headers: headers,
         params: params,
         tags: {
-            experiment_id: EXPERIMENT_ID,
+            benchmark_id: BENCHMARK_ID,
             sut_id: SUT_ID,
             load: TARGET_VUS,
             behavior_id: ctx.behaviorId,
@@ -174,7 +224,6 @@ export default function () {
     const context = {
         behaviorId: bm.id,
         actor: bm.actor,
-        // token: ... (if you later add auth)
     };
 
     for (const step of bm.steps) {

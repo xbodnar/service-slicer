@@ -1,12 +1,12 @@
 package cz.bodnor.serviceslicer.application.module.sut.command
 
-import cz.bodnor.serviceslicer.domain.loadtestexperiment.DatabaseSeedConfig
-import cz.bodnor.serviceslicer.domain.loadtestexperiment.DockerConfig
+import cz.bodnor.serviceslicer.domain.benchmark.DatabaseSeedConfig
+import cz.bodnor.serviceslicer.domain.benchmark.DockerConfig
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import java.util.UUID
 
 data class AddSystemUnderTestCommand(
-    val experimentId: UUID,
+    val benchmarkId: UUID,
     val name: String,
     val description: String? = null,
     val isBaseline: Boolean,
@@ -20,7 +20,7 @@ data class AddSystemUnderTestCommand(
 }
 
 data class UpdateSystemUnderTestCommand(
-    val experimentId: UUID,
+    val benchmarkId: UUID,
     val sutId: UUID,
     val name: String,
     val description: String? = null,
@@ -34,6 +34,6 @@ data class UpdateSystemUnderTestCommand(
 }
 
 data class DeleteSystemUnderTestCommand(
-    val experimentId: UUID,
+    val benchmarkId: UUID,
     val sutId: UUID,
 ) : Command<Unit>

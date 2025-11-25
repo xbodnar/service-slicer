@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="create-benchmark-run-table" author="Norbert Bodnar">
+        <createTable tableName="benchmark_run">
+            <!-- Updatable entity -->
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="version" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="benchmark_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state" type="text">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sut_load_test_runs" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="benchmark_run" columnNames="benchmark_id"/>
+    </changeSet>
+    <changeSet id="remove-unique-constraint" author="Norbert Bodnar">
+        <dropUniqueConstraint tableName="benchmark_run" constraintName="benchmark_run_benchmark_id_key"/>
+    </changeSet>
+</databaseChangeLog>

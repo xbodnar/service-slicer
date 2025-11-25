@@ -46,8 +46,8 @@ export function LandingPage() {
     },
     {
       number: '03',
-      title: 'Run Experiments',
-      description: 'Create load test experiments to compare different decomposition strategies',
+      title: 'Run Benchmarks',
+      description: 'Create load test benchmarks to compare different decomposition strategies',
       icon: FlaskConical,
     },
   ]
@@ -166,7 +166,7 @@ export function LandingPage() {
                 'Dependency graphs with community detection algorithms',
                 'Multiple decomposition strategies (Louvain, Leiden, Label Propagation)',
                 'Domain-driven and actor-driven decomposition suggestions',
-                'Load test experiments to compare architectures',
+                'Load test benchmarks to compare architectures',
                 'Performance metrics and comparative analysis',
                 'Export results and recommendations',
               ].map((item) => (

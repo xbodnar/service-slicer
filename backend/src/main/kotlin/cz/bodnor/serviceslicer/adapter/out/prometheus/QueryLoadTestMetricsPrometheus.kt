@@ -1,12 +1,11 @@
 package cz.bodnor.serviceslicer.adapter.out.prometheus
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import cz.bodnor.serviceslicer.application.module.loadtest.port.out.QueryLoadTestMetrics
-import cz.bodnor.serviceslicer.domain.loadtestrun.OperationRunMetrics
+import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
+import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationRunMetrics
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.Instant
 import java.util.UUID
 
@@ -20,7 +19,7 @@ class QueryLoadTestMetricsPrometheus(
 
     @Suppress("ktlint:standard:max-line-length")
     override fun invoke(
-        experimentId: UUID,
+        benchmarkId: UUID,
         sutId: UUID,
         targetVus: Int,
         start: Instant,
@@ -29,7 +28,7 @@ class QueryLoadTestMetricsPrometheus(
         logger.info { "Querying Prometheus for time range: start=$start, end=$end" }
 
         // Build label filter for k6 metrics
-        val labelFilter = """experiment_id="$experimentId",sut_id="$sutId",load="$targetVus""""
+        val labelFilter = """benchmark_id="$benchmarkId",sut_id="$sutId",load="$targetVus""""
         logger.info { "Using label filter: $labelFilter" }
 
         val duration = end.epochSecond - start.epochSecond

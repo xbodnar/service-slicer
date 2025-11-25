@@ -2,7 +2,7 @@ package cz.bodnor.serviceslicer.adapter.out.jooq
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.Tables.API_OPERATION
-import cz.bodnor.serviceslicer.application.module.loadtestconfig.port.out.SaveApiOperations
+import cz.bodnor.serviceslicer.application.module.benchmark.port.out.SaveApiOperations
 import cz.bodnor.serviceslicer.domain.apiop.ApiOperation
 import org.jooq.DSLContext
 import org.jooq.JSONB

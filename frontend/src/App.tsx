@@ -5,9 +5,9 @@ import { LandingPage } from '@/pages/LandingPage'
 import { ProjectListPage } from '@/pages/projects/ProjectListPage'
 import { ProjectDetailPage } from '@/pages/projects/ProjectDetailPage'
 import { ProjectCreatePage } from '@/pages/projects/ProjectCreatePage'
-import { ExperimentListPage } from '@/pages/experiments/ExperimentListPage'
-import { ExperimentDetailPage } from '@/pages/experiments/ExperimentDetailPage'
-import { ExperimentCreatePage } from '@/pages/experiments/ExperimentCreatePage'
+import { BenchmarkListPage } from '@/pages/benchmarks/BenchmarkListPage'
+import { BenchmarkDetailPage } from '@/pages/benchmarks/BenchmarkDetailPage'
+import { BenchmarkCreatePage } from '@/pages/benchmarks/BenchmarkCreatePage'
 import { FileListPage } from '@/pages/files/FileListPage'
 
 function App() {
@@ -22,10 +22,10 @@ function App() {
           <Route path="projects/new" element={<ProjectCreatePage />} />
           <Route path="projects/:projectId" element={<ProjectDetailPage />} />
 
-          {/* Experiments */}
-          <Route path="experiments" element={<ExperimentListPage />} />
-          <Route path="experiments/new" element={<ExperimentCreatePage />} />
-          <Route path="experiments/:experimentId" element={<ExperimentDetailPage />} />
+          {/* Benchmarks */}
+          <Route path="benchmarks" element={<BenchmarkListPage />} />
+          <Route path="benchmarks/new" element={<BenchmarkCreatePage />} />
+          <Route path="benchmarks/:benchmarkId" element={<BenchmarkDetailPage />} />
 
           {/* Files */}
           <Route path="files" element={<FileListPage />} />
