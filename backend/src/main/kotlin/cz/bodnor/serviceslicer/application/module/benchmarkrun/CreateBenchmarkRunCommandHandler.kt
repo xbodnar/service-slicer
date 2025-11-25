@@ -5,7 +5,6 @@ import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.CreateBen
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRunReadService
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRunWriteService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
-import cz.bodnor.serviceslicer.infrastructure.exception.applicationError
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
