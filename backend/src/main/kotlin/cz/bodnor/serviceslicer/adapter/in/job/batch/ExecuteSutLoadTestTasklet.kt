@@ -10,11 +10,15 @@ import cz.bodnor.serviceslicer.domain.job.JobParameterLabel.BENCHMARK_ID
 import cz.bodnor.serviceslicer.domain.job.JobParameterLabel.BENCHMARK_RUN_ID
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
+import org.springframework.batch.core.BatchStatus
+import org.springframework.batch.core.ExitStatus
 import org.springframework.batch.core.StepContribution
 import org.springframework.batch.core.configuration.annotation.JobScope
+import org.springframework.batch.core.repository.persistence.StepExecution
 import org.springframework.batch.core.scope.context.ChunkContext
 import org.springframework.batch.core.step.tasklet.Tasklet
 import org.springframework.batch.repeat.RepeatStatus
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.time.Instant
@@ -35,6 +39,9 @@ class ExecuteSutLoadTestTasklet(
     private val benchmarkRunReadService: BenchmarkRunReadService,
     private val benchmarkRunWriteService: BenchmarkRunWriteService,
 ) : Tasklet {
+
+    @Autowired
+    private lateinit var stepExecution: StepExecution
 
     private val logger = logger()
 
@@ -96,6 +103,9 @@ class ExecuteSutLoadTestTasklet(
             sutRun.updateOverallStatus()
             benchmarkRun.markFailed()
             benchmarkRunWriteService.save(benchmarkRun)
+
+            contribution.exitStatus = ExitStatus.FAILED
+            stepExecution.status = BatchStatus.FAILED
             return RepeatStatus.FINISHED
         }
 

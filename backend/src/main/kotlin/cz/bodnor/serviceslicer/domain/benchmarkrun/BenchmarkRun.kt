@@ -37,7 +37,6 @@ interface BenchmarkRunRepository : JpaRepository<BenchmarkRun, UUID> {
 
 enum class BenchmarkRunState {
     PENDING,
-    RUNNING,
     COMPLETED,
     FAILED,
 }
