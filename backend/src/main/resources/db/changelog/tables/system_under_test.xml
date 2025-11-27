@@ -4,9 +4,8 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <changeSet id="create-system-under-test-table" author="Norbert Bodnar">
+    <changeSet id="0" author="admin">
         <createTable tableName="system_under_test">
-            <!-- Updatable entity -->
             <column name="id" type="uuid">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
@@ -19,74 +18,36 @@
             <column name="updated_at" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
-
-            <!-- Entity -->
-            <column name="experiment_id" type="uuid">
+            <column name="benchmark_id" type="uuid">
                 <constraints nullable="false"/>
             </column>
             <column name="name" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="compose_file_id" type="uuid">
-                <constraints nullable="false"/>
-            </column>
-            <column name="jar_file_id" type="uuid">
-                <constraints nullable="false"/>
-            </column>
             <column name="description" type="text">
                 <constraints nullable="true"/>
             </column>
+            <column name="is_baseline" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="docker_config" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+            <column name="database_seed_config" type="jsonb">
+                <constraints nullable="true"/>
+            </column>
+            <column name="validation_result" type="jsonb">
+                <constraints nullable="true"/>
+            </column>
         </createTable>
-
-        <createIndex indexName="idx_system_under_test_experiment_id" tableName="system_under_test">
-            <column name="experiment_id"/>
+        <addForeignKeyConstraint
+                baseTableName="system_under_test"
+                baseColumnNames="benchmark_id"
+                constraintName="fk_system_under_test_benchmark"
+                referencedTableName="benchmark"
+                referencedColumnNames="id"/>
+        <createIndex tableName="system_under_test" indexName="idx_system_under_test_benchmark_id">
+            <column name="benchmark_id"/>
         </createIndex>
-
-        <createIndex indexName="idx_system_under_test_compose_file_id" tableName="system_under_test">
-            <column name="compose_file_id"/>
-        </createIndex>
-
-        <createIndex indexName="idx_system_under_test_jar_file_id" tableName="system_under_test">
-            <column name="jar_file_id"/>
-        </createIndex>
-    </changeSet>
-
-    <changeSet id="add-health-check-and-port-fields-to-system-under-test" author="Norbert Bodnar">
-        <addColumn tableName="system_under_test">
-            <column name="health_check_path" type="varchar(255)" defaultValue="/actuator/health">
-                <constraints nullable="false"/>
-            </column>
-            <column name="app_port" type="int" defaultValue="9090">
-                <constraints nullable="false"/>
-            </column>
-            <column name="startup_timeout_seconds" type="bigint" defaultValue="180">
-                <constraints nullable="false"/>
-            </column>
-        </addColumn>
-    </changeSet>
-
-    <changeSet id="add-sql-seed-file" author="Norbert Bodnar">
-        <addColumn tableName="system_under_test">
-            <column name="sql_seed_file_id" type="uuid">
-                <constraints nullable="true"/>
-            </column>
-        </addColumn>
-    </changeSet>
-
-    <changeSet id="add-database-config-fields" author="Norbert Bodnar">
-        <addColumn tableName="system_under_test">
-            <column name="db_container_name" type="varchar(255)">
-                <constraints nullable="true"/>
-            </column>
-            <column name="db_port" type="int">
-                <constraints nullable="true"/>
-            </column>
-            <column name="db_name" type="varchar(255)">
-                <constraints nullable="true"/>
-            </column>
-            <column name="db_username" type="varchar(255)">
-                <constraints nullable="true"/>
-            </column>
-        </addColumn>
     </changeSet>
 </databaseChangeLog>

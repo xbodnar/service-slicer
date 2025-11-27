@@ -15,21 +15,7 @@ data class K6Properties(
     val scriptsDir: String = "data/k6-scripts",
 
     /**
-     * Prometheus configuration for k6 metrics.
-     */
-    val prometheus: PrometheusConfig = PrometheusConfig(),
-
-    /**
      * Default test duration for k6 tests.
      */
     val testDuration: String = "30s",
-) {
-    data class PrometheusConfig(
-        /**
-         * Prometheus remote write URL for k6 metrics.
-         * If not set, k6 metrics will not be sent to Prometheus.
-         * Example: http://localhost:9090/api/v1/write
-         */
-        val remoteWriteUrl: String? = null,
-    )
-}
+)

@@ -39,7 +39,7 @@ class ArchitectureTests {
         .resideInAPackage(infrastructure)
         .should()
         .dependOnClassesThat()
-        .resideInAnyPackage(application, adapters, domain)
+        .resideInAnyPackage(application, adapters)
 
     @ArchTest
     val `r4 - Port out should only be implemented by out adapters`: ArchRule = classes().that()

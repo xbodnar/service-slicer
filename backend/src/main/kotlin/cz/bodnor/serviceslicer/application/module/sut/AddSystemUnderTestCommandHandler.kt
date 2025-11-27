@@ -1,54 +1,49 @@
 package cz.bodnor.serviceslicer.application.module.sut
 
 import cz.bodnor.serviceslicer.application.module.sut.command.AddSystemUnderTestCommand
-import cz.bodnor.serviceslicer.domain.loadtestexperiment.LoadTestExperimentReadService
-import cz.bodnor.serviceslicer.domain.loadtestexperiment.SystemUnderTest
+import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
+import cz.bodnor.serviceslicer.domain.file.FileReadService
+import cz.bodnor.serviceslicer.domain.file.FileStatus
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Component
 class AddSystemUnderTestCommandHandler(
-    private val loadTestExperimentReadService: LoadTestExperimentReadService,
+    private val benchmarkReadService: BenchmarkReadService,
+    private val fileReadService: FileReadService,
 ) : CommandHandler<AddSystemUnderTestCommand.Result, AddSystemUnderTestCommand> {
 
     override val command = AddSystemUnderTestCommand::class
 
     @Transactional
     override fun handle(command: AddSystemUnderTestCommand): AddSystemUnderTestCommand.Result {
-        // Validate that DB config is provided if SQL seed file is specified
-        if (command.sqlSeedFileId != null) {
-            require(
-                command.dbContainerName != null &&
-                    command.dbPort != null &&
-                    command.dbName != null &&
-                    command.dbUsername != null,
-            ) {
-                "When sqlSeedFileId is provided, all database configuration fields (dbContainerName, dbPort, dbName, dbUsername) must be provided"
-            }
+        validateFileExists(command.dockerConfig.composeFileId)
+        command.databaseSeedConfig?.let {
+            validateFileExists(it.sqlSeedFileId)
         }
 
-        val loadTestExperiment = loadTestExperimentReadService.getById(command.experimentId)
+        val benchmark = benchmarkReadService.getById(command.benchmarkId)
         val newSystemUnderTest = SystemUnderTest(
-            experimentId = loadTestExperiment.id,
+            benchmarkId = command.benchmarkId,
             name = command.name,
-            composeFileId = command.composeFileId,
-            jarFileId = command.jarFileId,
-            sqlSeedFileId = command.sqlSeedFileId,
             description = command.description,
-            healthCheckPath = command.healthCheckPath,
-            appPort = command.appPort,
-            startupTimeoutSeconds = command.startupTimeoutSeconds,
-            dbContainerName = command.dbContainerName,
-            dbPort = command.dbPort,
-            dbName = command.dbName,
-            dbUsername = command.dbUsername,
+            isBaseline = command.isBaseline,
+            dockerConfig = command.dockerConfig,
+            databaseSeedConfig = command.databaseSeedConfig,
         )
 
-        loadTestExperiment.addSystemUnderTest(newSystemUnderTest)
+        benchmark.addSystemUnderTest(newSystemUnderTest)
 
         return AddSystemUnderTestCommand.Result(
             systemUnderTestId = newSystemUnderTest.id,
         )
+    }
+
+    private fun validateFileExists(zipFileId: UUID) {
+        val file = fileReadService.getById(zipFileId)
+        require(file.status == FileStatus.READY) { "File is not uploaded yet" }
     }
 }

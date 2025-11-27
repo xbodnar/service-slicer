@@ -16,7 +16,7 @@ export function MainLayout() {
 
   const navItems = [
     { path: '/projects', label: 'Projects', icon: Layers },
-    { path: '/experiments', label: 'Experiments', icon: FlaskConical },
+    { path: '/benchmarks', label: 'Benchmarks', icon: FlaskConical },
     { path: '/files', label: 'Files', icon: FileArchive },
   ]
 

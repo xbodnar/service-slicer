@@ -33,19 +33,20 @@ services:
     volumes:
       - minio-data:/data
 
-#  prometheus:
-#    image: 'prom/prometheus:v3.0.1'
-#    ports:
-#      - '9091:9090'
-#    volumes:
-#      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-#      - prometheus-data:/prometheus
-#    command:
-#      - '--config.file=/etc/prometheus/prometheus.yml'
-#      - '--storage.tsdb.path=/prometheus'
-#      - '--web.enable-remote-write-receiver'
-#    extra_hosts:
-#      - "host.docker.internal:host-gateway"
+  prometheus:
+    image: 'prom/prometheus:v3.0.1'
+    ports:
+      - '9091:9090'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--enable-feature=native-histograms'
+      - '--web.enable-remote-write-receiver'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 #  grafana:
 #    image: 'grafana/grafana:11.3.1'

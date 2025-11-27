@@ -72,7 +72,7 @@ class BuildDependencyGraphJavaParser(
                         }
                     }
             } catch (e: Exception) {
-                logger.warn("Error while visiting ${declaration.name}")
+                logger.warn { "Error while visiting ${declaration.name}" }
             }
         }
 

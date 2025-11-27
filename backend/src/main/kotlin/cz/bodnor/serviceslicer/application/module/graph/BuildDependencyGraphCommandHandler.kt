@@ -20,12 +20,12 @@ class BuildDependencyGraphCommandHandler(
     override val command = BuildDependencyGraphCommand::class
 
     override fun handle(command: BuildDependencyGraphCommand) {
-        logger.info("Building dependency graph for project: ${command.projectId}")
+        logger.info { "Building dependency graph for project: ${command.projectId}" }
 
         val graph = buildDependencyGraphJdeps(projectId = command.projectId)
 
         classNodeWriteService.replaceGraph(command.projectId, graph.nodes)
 
-        logger.info("Successfully created graph for project: ${command.projectId}")
+        logger.info { "Successfully created graph for project: ${command.projectId}" }
     }
 }
