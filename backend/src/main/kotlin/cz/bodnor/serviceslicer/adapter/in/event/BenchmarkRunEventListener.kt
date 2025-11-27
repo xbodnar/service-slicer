@@ -5,10 +5,10 @@ import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.RunSutVal
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.event.ValidateSutBenchmarkEvent
 import cz.bodnor.serviceslicer.application.module.job.JobContainer
 import cz.bodnor.serviceslicer.application.module.job.JobLauncherService
-import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
-import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkWriteService
 import cz.bodnor.serviceslicer.domain.job.JobParameterLabel
 import cz.bodnor.serviceslicer.domain.job.JobType
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestWriteService
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.batch.core.JobParametersBuilder
@@ -20,8 +20,8 @@ import java.util.UUID
 
 @Component
 class BenchmarkRunEventListener(
-    private val benchmarkReadService: BenchmarkReadService,
-    private val benchmarkWriteService: BenchmarkWriteService,
+    private val sutReadService: SystemUnderTestReadService,
+    private val sutWriteService: SystemUnderTestWriteService,
     private val jobContainer: JobContainer,
     private val jobLauncherService: JobLauncherService,
     private val commandBus: CommandBus,
@@ -35,7 +35,6 @@ class BenchmarkRunEventListener(
         val batchJob = jobContainer[JobType.BENCHMARK]
 
         val jobParameters = JobParametersBuilder()
-            .addJobParameter(JobParameterLabel.BENCHMARK_ID, event.benchmarkId, UUID::class.java)
             .addJobParameter(JobParameterLabel.BENCHMARK_RUN_ID, event.benchmarkRunId, UUID::class.java)
             .toJobParameters()
 
@@ -56,10 +55,9 @@ class BenchmarkRunEventListener(
             ),
         )
 
-        val benchmark = benchmarkReadService.getById(event.benchmarkId)
-        val sut = benchmark.getSystemUnderTest(event.systemUnderTestId)
+        val sut = sutReadService.getById(event.systemUnderTestId)
         sut.validationResult = validationResult
-        benchmarkWriteService.save(benchmark)
+        sutWriteService.save(sut)
 
         logger.info {
             "Validation completed for SUT ${event.systemUnderTestId} with state: ${validationResult.validationState}"

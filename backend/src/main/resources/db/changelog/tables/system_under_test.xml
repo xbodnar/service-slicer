@@ -4,9 +4,8 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                    https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <changeSet id="create-benchmark-table" author="Norbert Bodnar">
-        <createTable tableName="benchmark">
-            <!-- Updatable entity -->
+    <changeSet id="0" author="admin">
+        <createTable tableName="system_under_test">
             <column name="id" type="uuid">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
@@ -19,9 +18,7 @@
             <column name="updated_at" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
-
-            <!-- Entity -->
-            <column name="config" type="jsonb">
+            <column name="benchmark_id" type="uuid">
                 <constraints nullable="false"/>
             </column>
             <column name="name" type="varchar(255)">
@@ -30,12 +27,27 @@
             <column name="description" type="text">
                 <constraints nullable="true"/>
             </column>
-            <column name="systems_under_test" type="jsonb">
+            <column name="is_baseline" type="boolean">
                 <constraints nullable="false"/>
             </column>
+            <column name="docker_config" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+            <column name="database_seed_config" type="jsonb">
+                <constraints nullable="true"/>
+            </column>
+            <column name="validation_result" type="jsonb">
+                <constraints nullable="true"/>
+            </column>
         </createTable>
-    </changeSet>
-    <changeSet id="remove-system-under-test-column" author="Norbert Bodnar">
-        <dropColumn tableName="benchmark" columnName="systems_under_test"/>
+        <addForeignKeyConstraint
+                baseTableName="system_under_test"
+                baseColumnNames="benchmark_id"
+                constraintName="fk_system_under_test_benchmark"
+                referencedTableName="benchmark"
+                referencedColumnNames="id"/>
+        <createIndex tableName="system_under_test" indexName="idx_system_under_test_benchmark_id">
+            <column name="benchmark_id"/>
+        </createIndex>
     </changeSet>
 </databaseChangeLog>

@@ -1,9 +1,9 @@
 package cz.bodnor.serviceslicer.application.module.benchmark.command
 
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
-import cz.bodnor.serviceslicer.domain.benchmark.DatabaseSeedConfig
-import cz.bodnor.serviceslicer.domain.benchmark.DockerConfig
-import cz.bodnor.serviceslicer.domain.benchmark.SystemUnderTest
+import cz.bodnor.serviceslicer.domain.sut.DatabaseSeedConfig
+import cz.bodnor.serviceslicer.domain.sut.DockerConfig
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
@@ -28,7 +28,8 @@ data class CreateBenchmarkCommand(
         val dockerConfig: DockerConfig,
         val databaseSeedConfig: DatabaseSeedConfig? = null,
     ) {
-        fun toDomain() = SystemUnderTest(
+        fun toDomain(benchmarkId: UUID) = SystemUnderTest(
+            benchmarkId = benchmarkId,
             name = name,
             description = description,
             isBaseline = isBaseline,

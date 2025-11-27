@@ -6,8 +6,9 @@ import cz.bodnor.serviceslicer.application.module.benchmarkrun.service.K6Runner
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.service.SystemUnderTestRunner
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
-import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
-import cz.bodnor.serviceslicer.domain.benchmark.ValidationState
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
+import cz.bodnor.serviceslicer.domain.sut.ValidationResult
+import cz.bodnor.serviceslicer.domain.sut.ValidationState
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -21,6 +22,7 @@ import kotlin.io.path.writeText
 @Component
 class RunSutValidationCommandHandler(
     private val benchmarkReadService: BenchmarkReadService,
+    private val sutReadService: SystemUnderTestReadService,
     private val sutRunner: SystemUnderTestRunner,
     private val k6Runner: K6Runner,
     private val objectMapper: ObjectMapper,
@@ -36,11 +38,12 @@ class RunSutValidationCommandHandler(
         logger.info { "Starting validation run for SUT ${command.systemUnderTestId}" }
 
         val benchmark = benchmarkReadService.getById(command.benchmarkId)
+        val sut = sutReadService.getById(command.systemUnderTestId)
 
         var k6WorkDir: Path? = null
         try {
             // Start the SUT (blocking call - waits until SUT is healthy and ready)
-            sutRunner.startSUT(command.benchmarkId, command.systemUnderTestId)
+            sutRunner.startSUT(sut.id)
 
             // Prepare work directory
             k6WorkDir = Files.createTempDirectory("k6-validation-")
@@ -50,7 +53,7 @@ class RunSutValidationCommandHandler(
             // Build environment variables for k6
             val envVars = buildEnvVars(
                 command = command,
-                appPort = benchmark.getSystemUnderTest(command.systemUnderTestId).dockerConfig.appPort,
+                appPort = sut.dockerConfig.appPort,
             )
 
             // Run validation test (no metrics, single iteration through all behavior models)

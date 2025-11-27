@@ -1,7 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.sut.command
 
-import cz.bodnor.serviceslicer.domain.benchmark.DatabaseSeedConfig
-import cz.bodnor.serviceslicer.domain.benchmark.DockerConfig
+import cz.bodnor.serviceslicer.domain.sut.DatabaseSeedConfig
+import cz.bodnor.serviceslicer.domain.sut.DockerConfig
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import java.util.UUID
 

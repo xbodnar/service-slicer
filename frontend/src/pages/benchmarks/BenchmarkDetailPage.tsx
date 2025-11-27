@@ -24,7 +24,6 @@ import {
   Activity,
   FileArchive,
   Users,
-  Pencil,
   X,
   Plus,
   Trash2,
@@ -34,6 +33,7 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronUp,
+  History,
 } from 'lucide-react'
 
 // Form schema matching API structure
@@ -296,6 +296,7 @@ export function BenchmarkDetailPage() {
   const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
   const [systemFiles, setSystemFiles] = useState<SystemFiles[]>([])
   const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set())
+  const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
 
   // Poll for validation results when any validation is PENDING
   useEffect(() => {
@@ -357,6 +358,7 @@ export function BenchmarkDetailPage() {
   }
 
   // Populate form when entering edit mode
+  // @ts-expect-error - Edit functionality disabled but kept for potential future use
   const handleStartEdit = () => {
     if (!data) return
 
@@ -644,6 +646,18 @@ export function BenchmarkDetailPage() {
         next.delete(modelId)
       } else {
         next.add(modelId)
+      }
+      return next
+    })
+  }
+
+  const toggleK6Output = (systemId: string) => {
+    setExpandedK6Outputs((prev) => {
+      const next = new Set(prev)
+      if (next.has(systemId)) {
+        next.delete(systemId)
+      } else {
+        next.add(systemId)
       }
       return next
     })
@@ -975,14 +989,22 @@ export function BenchmarkDetailPage() {
             {data.description && <p className="text-muted-foreground mt-1">{data.description}</p>}
           </div>
         </div>
-        <Button onClick={handleRunBenchmark} disabled={runBenchmark.isPending}>
-          {runBenchmark.isPending ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Play className="h-4 w-4 mr-2" />
-          )}
-          Run Benchmark
-        </Button>
+        <div className="flex gap-2">
+          <Link to={`/benchmarks/${benchmarkId}/runs`}>
+            <Button variant="outline">
+              <History className="h-4 w-4 mr-2" />
+              View Runs
+            </Button>
+          </Link>
+          <Button onClick={handleRunBenchmark} disabled={runBenchmark.isPending}>
+            {runBenchmark.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4 mr-2" />
+            )}
+            Run Benchmark
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -1203,7 +1225,14 @@ export function BenchmarkDetailPage() {
               <div key={system.systemUnderTestId} className="p-4 rounded-lg bg-muted/50 space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h4 className="font-semibold">{system.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold">{system.name}</h4>
+                      {system.isBaseline && (
+                        <Badge variant="default" className="bg-blue-600 text-white">
+                          Baseline
+                        </Badge>
+                      )}
+                    </div>
                     {system.description && (
                       <p className="text-sm text-muted-foreground">{system.description}</p>
                     )}
@@ -1253,11 +1282,41 @@ export function BenchmarkDetailPage() {
                               <p className="text-xs text-destructive">{system.validationResult.errorMessage}</p>
                             </div>
                           )}
+                          {(isValid || isInvalid) && system.validationResult?.k6Output && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleK6Output(system.systemUnderTestId)}
+                              className="text-xs"
+                            >
+                              {expandedK6Outputs.has(system.systemUnderTestId) ? (
+                                <>
+                                  <ChevronUp className="h-3 w-3 mr-1" />
+                                  Hide Output
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="h-3 w-3 mr-1" />
+                                  Show Output
+                                </>
+                              )}
+                            </Button>
+                          )}
                         </>
                       )
                     })()}
                   </div>
                 </div>
+
+                {/* K6 Output Section */}
+                {expandedK6Outputs.has(system.systemUnderTestId) && system.validationResult?.k6Output && (
+                  <div className="p-3 rounded-lg bg-background border">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">Validation Output:</p>
+                    <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto p-2 rounded bg-muted/30">
+                      {system.validationResult.k6Output}
+                    </pre>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {/* Left Column: Docker Configuration */}

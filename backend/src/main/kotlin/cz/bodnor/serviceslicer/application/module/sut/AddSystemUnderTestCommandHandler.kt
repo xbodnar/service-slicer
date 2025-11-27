@@ -2,9 +2,9 @@ package cz.bodnor.serviceslicer.application.module.sut
 
 import cz.bodnor.serviceslicer.application.module.sut.command.AddSystemUnderTestCommand
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
-import cz.bodnor.serviceslicer.domain.benchmark.SystemUnderTest
 import cz.bodnor.serviceslicer.domain.file.FileReadService
 import cz.bodnor.serviceslicer.domain.file.FileStatus
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -27,6 +27,7 @@ class AddSystemUnderTestCommandHandler(
 
         val benchmark = benchmarkReadService.getById(command.benchmarkId)
         val newSystemUnderTest = SystemUnderTest(
+            benchmarkId = command.benchmarkId,
             name = command.name,
             description = command.description,
             isBaseline = command.isBaseline,

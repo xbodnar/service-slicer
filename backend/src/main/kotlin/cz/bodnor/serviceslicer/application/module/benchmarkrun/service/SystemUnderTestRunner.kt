@@ -1,9 +1,9 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun.service
 
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
-import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
-import cz.bodnor.serviceslicer.domain.benchmark.DatabaseSeedConfig
-import cz.bodnor.serviceslicer.domain.benchmark.DockerConfig
+import cz.bodnor.serviceslicer.domain.sut.DatabaseSeedConfig
+import cz.bodnor.serviceslicer.domain.sut.DockerConfig
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PreDestroy
@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 @Service
 class SystemUnderTestRunner(
-    private val benchmarkReadService: BenchmarkReadService,
+    private val sutReadService: SystemUnderTestReadService,
     private val diskOperations: DiskOperations,
     private val remoteProperties: RemoteExecutionProperties,
     localCommandExecutor: LocalCommandExecutor,
@@ -37,12 +37,8 @@ class SystemUnderTestRunner(
     private val logger = KotlinLogging.logger {}
     private val currentRun = AtomicReference<RunInfo?>(null)
 
-    fun startSUT(
-        benchmarkId: UUID,
-        systemUnderTestId: UUID,
-    ) {
-        val benchmark = benchmarkReadService.getById(benchmarkId)
-        val sut = benchmark.getSystemUnderTest(systemUnderTestId)
+    fun startSUT(systemUnderTestId: UUID) {
+        val sut = sutReadService.getById(systemUnderTestId)
 
         val project = "ss_run_$systemUnderTestId" // compose project name
         val info = RunInfo(systemUnderTestId, project, sut.name, RunState.STARTING)

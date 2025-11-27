@@ -4,11 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import cz.bodnor.serviceslicer.Tables.BENCHMARK
 import cz.bodnor.serviceslicer.Tables.FILE
+import cz.bodnor.serviceslicer.Tables.SYSTEM_UNDER_TEST
 import cz.bodnor.serviceslicer.application.module.benchmark.port.out.GetBenchmark
 import cz.bodnor.serviceslicer.application.module.benchmark.query.FileDto
 import cz.bodnor.serviceslicer.application.module.benchmark.query.GetBenchmarkQuery
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
-import cz.bodnor.serviceslicer.domain.benchmark.SystemUnderTest
+import cz.bodnor.serviceslicer.domain.sut.DatabaseSeedConfig
+import cz.bodnor.serviceslicer.domain.sut.DockerConfig
+import cz.bodnor.serviceslicer.domain.sut.ValidationResult
 import org.jooq.DSLContext
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -28,7 +31,6 @@ class GetBenchmarkJooq(
                 BENCHMARK.CREATED_AT,
                 BENCHMARK.UPDATED_AT,
                 BENCHMARK.CONFIG,
-                BENCHMARK.SYSTEMS_UNDER_TEST,
             )
             .from(BENCHMARK)
             .where(BENCHMARK.ID.eq(benchmarkId))
@@ -37,14 +39,31 @@ class GetBenchmarkJooq(
         val benchmarkConfig = objectMapper.readValue<BenchmarkConfig>(
             benchmarkRecord[BENCHMARK.CONFIG]!!.data(),
         )
-        val suts = objectMapper.readValue<List<SystemUnderTest>>(
-            benchmarkRecord[BENCHMARK.SYSTEMS_UNDER_TEST]!!.data(),
-        )
 
-        val fileIds =
-            suts.map { it.dockerConfig.composeFileId }.toSet() +
-                suts.mapNotNull { it.databaseSeedConfig?.sqlSeedFileId } +
-                benchmarkConfig.openApiFileId
+        val suts = dsl.select(
+            SYSTEM_UNDER_TEST.ID,
+            SYSTEM_UNDER_TEST.NAME,
+            SYSTEM_UNDER_TEST.DESCRIPTION,
+            SYSTEM_UNDER_TEST.IS_BASELINE,
+            SYSTEM_UNDER_TEST.DOCKER_CONFIG,
+            SYSTEM_UNDER_TEST.DATABASE_SEED_CONFIG,
+            SYSTEM_UNDER_TEST.VALIDATION_RESULT,
+        ).from(SYSTEM_UNDER_TEST)
+            .where(SYSTEM_UNDER_TEST.BENCHMARK_ID.eq(benchmarkId))
+            .fetch()
+
+        val fileIds = suts.flatMap { row ->
+            val dockerConfigFileId = objectMapper.readValue<DockerConfig>(
+                row[SYSTEM_UNDER_TEST.DOCKER_CONFIG]!!.data(),
+            ).composeFileId
+
+            val databaseSeedConfigFileId = row[SYSTEM_UNDER_TEST.DATABASE_SEED_CONFIG]?.let {
+                objectMapper.readValue<DatabaseSeedConfig>(it.data())
+            }?.sqlSeedFileId
+
+            listOfNotNull(dockerConfigFileId, databaseSeedConfigFileId)
+        }.toSet() +
+            benchmarkConfig.openApiFileId
 
         val files = dsl.select(
             FILE.ID,
@@ -63,6 +82,41 @@ class GetBenchmarkJooq(
                 )
             }
 
+        val sutDtos = suts.map {
+            GetBenchmarkQuery.SystemUnderTestDto(
+                systemUnderTestId = it.get(SYSTEM_UNDER_TEST.ID)!!,
+                name = it.get(SYSTEM_UNDER_TEST.NAME)!!,
+                description = it.get(SYSTEM_UNDER_TEST.DESCRIPTION),
+                isBaseline = it.get(SYSTEM_UNDER_TEST.IS_BASELINE)!!,
+                dockerConfig = objectMapper.readValue<DockerConfig>(
+                    it.get(SYSTEM_UNDER_TEST.DOCKER_CONFIG)!!.data(),
+                ).let { dockerConfig ->
+                    GetBenchmarkQuery.DockerConfigDto(
+                        composeFile = files.find { it.fileId == dockerConfig.composeFileId }!!,
+                        healthCheckPath = dockerConfig.healthCheckPath,
+                        appPort = dockerConfig.appPort,
+                        startupTimeoutSeconds = dockerConfig.startupTimeoutSeconds,
+                    )
+                },
+                databaseSeedConfig = it.get(SYSTEM_UNDER_TEST.DATABASE_SEED_CONFIG)?.let { databaseSeedConfig ->
+                    objectMapper.readValue<DatabaseSeedConfig>(
+                        databaseSeedConfig.data(),
+                    ).let { databaseSeedConfig ->
+                        GetBenchmarkQuery.DatabaseSeedConfigDto(
+                            sqlSeedFile = files.find { it.fileId == databaseSeedConfig.sqlSeedFileId }!!,
+                            dbContainerName = databaseSeedConfig.dbContainerName,
+                            dbPort = databaseSeedConfig.dbPort,
+                            dbName = databaseSeedConfig.dbName,
+                            dbUsername = databaseSeedConfig.dbUsername,
+                        )
+                    }
+                },
+                validationResult = it.get(SYSTEM_UNDER_TEST.VALIDATION_RESULT)?.let { validationResult ->
+                    objectMapper.readValue<ValidationResult>(validationResult.data())
+                },
+            )
+        }
+
         return GetBenchmarkQuery.Result(
             benchmarkId = benchmarkRecord.get(BENCHMARK.ID)!!,
             name = benchmarkRecord.get(BENCHMARK.NAME)!!,
@@ -73,30 +127,7 @@ class GetBenchmarkJooq(
                 behaviorModels = benchmarkConfig.behaviorModels,
                 operationalProfile = benchmarkConfig.operationalProfile,
             ),
-            systemsUnderTest = suts.map { sut ->
-                GetBenchmarkQuery.SystemUnderTestDto(
-                    systemUnderTestId = sut.id,
-                    name = sut.name,
-                    description = sut.description,
-                    isBaseline = sut.isBaseline,
-                    dockerConfig = GetBenchmarkQuery.DockerConfigDto(
-                        composeFile = files.find { it.fileId == sut.dockerConfig.composeFileId }!!,
-                        healthCheckPath = sut.dockerConfig.healthCheckPath,
-                        appPort = sut.dockerConfig.appPort,
-                        startupTimeoutSeconds = sut.dockerConfig.startupTimeoutSeconds,
-                    ),
-                    databaseSeedConfig = sut.databaseSeedConfig?.let {
-                        GetBenchmarkQuery.DatabaseSeedConfigDto(
-                            sqlSeedFile = files.find { file -> file.fileId == it.sqlSeedFileId }!!,
-                            dbContainerName = it.dbContainerName,
-                            dbPort = it.dbPort,
-                            dbName = it.dbName,
-                            dbUsername = it.dbUsername,
-                        )
-                    },
-                    validationResult = sut.validationResult,
-                )
-            },
+            systemsUnderTest = sutDtos,
             createdAt = benchmarkRecord.get(BENCHMARK.CREATED_AT)!!,
             updatedAt = benchmarkRecord.get(BENCHMARK.UPDATED_AT)!!,
         )

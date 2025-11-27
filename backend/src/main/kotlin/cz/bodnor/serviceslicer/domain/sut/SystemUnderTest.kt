@@ -1,5 +1,11 @@
-package cz.bodnor.serviceslicer.domain.benchmark
+package cz.bodnor.serviceslicer.domain.sut
 
+import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
+import jakarta.persistence.Entity
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
 import java.time.Instant
 import java.util.UUID
 
@@ -7,8 +13,9 @@ import java.util.UUID
  * Represents a system configuration under test.
  * Each SUT has a docker-compose file and a JAR file that define the system's deployment.
  */
-data class SystemUnderTest(
-    val id: UUID = UUID.randomUUID(),
+@Entity
+class SystemUnderTest(
+    val benchmarkId: UUID,
     // Custom name to identify this system configuration
     var name: String,
     // Description of this system configuration (e.g., "Baseline monolith", "3-service decomposition")
@@ -16,12 +23,15 @@ data class SystemUnderTest(
     // Baseline SUT
     val isBaseline: Boolean,
     // Docker configuration
+    @JdbcTypeCode(SqlTypes.JSON)
     var dockerConfig: DockerConfig,
     // Database seeding configuration
+    @JdbcTypeCode(SqlTypes.JSON)
     var databaseSeedConfig: DatabaseSeedConfig? = null,
     // Result of the last validation run
+    @JdbcTypeCode(SqlTypes.JSON)
     var validationResult: ValidationResult? = null,
-)
+) : UpdatableEntity()
 
 data class ValidationResult(
     val validationState: ValidationState = ValidationState.PENDING,
@@ -59,3 +69,9 @@ data class DockerConfig(
     // Startup timeout in seconds
     val startupTimeoutSeconds: Long,
 )
+
+@Repository
+interface SystemUnderTestRepository : JpaRepository<SystemUnderTest, UUID> {
+
+    fun findByBenchmarkId(benchmarkId: UUID): List<SystemUnderTest>
+}

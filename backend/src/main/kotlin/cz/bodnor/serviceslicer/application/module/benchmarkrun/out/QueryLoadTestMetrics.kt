@@ -1,6 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun.out
 
-import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationRunMetrics
+import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationMetrics
 import java.time.Instant
 import java.util.UUID
 
@@ -22,5 +22,5 @@ interface QueryLoadTestMetrics {
         targetVus: Int,
         start: Instant,
         end: Instant,
-    ): List<OperationRunMetrics>
+    ): List<OperationMetrics>
 }

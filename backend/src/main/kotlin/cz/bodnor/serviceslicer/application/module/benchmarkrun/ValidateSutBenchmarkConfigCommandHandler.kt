@@ -4,7 +4,7 @@ import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.ValidateS
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.event.ValidateSutBenchmarkEvent
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkWriteService
-import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
+import cz.bodnor.serviceslicer.domain.sut.ValidationResult
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import jakarta.transaction.Transactional
 import org.springframework.context.ApplicationEventPublisher

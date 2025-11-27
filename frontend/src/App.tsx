@@ -8,6 +8,8 @@ import { ProjectCreatePage } from '@/pages/projects/ProjectCreatePage'
 import { BenchmarkListPage } from '@/pages/benchmarks/BenchmarkListPage'
 import { BenchmarkDetailPage } from '@/pages/benchmarks/BenchmarkDetailPage'
 import { BenchmarkCreatePage } from '@/pages/benchmarks/BenchmarkCreatePage'
+import { BenchmarkRunListPage } from '@/pages/benchmarks/BenchmarkRunListPage'
+import { BenchmarkRunDetailPage } from '@/pages/benchmarks/BenchmarkRunDetailPage'
 import { FileListPage } from '@/pages/files/FileListPage'
 
 function App() {
@@ -26,6 +28,8 @@ function App() {
           <Route path="benchmarks" element={<BenchmarkListPage />} />
           <Route path="benchmarks/new" element={<BenchmarkCreatePage />} />
           <Route path="benchmarks/:benchmarkId" element={<BenchmarkDetailPage />} />
+          <Route path="benchmarks/:benchmarkId/runs" element={<BenchmarkRunListPage />} />
+          <Route path="benchmarks/:benchmarkId/runs/:runId" element={<BenchmarkRunDetailPage />} />
 
           {/* Files */}
           <Route path="files" element={<FileListPage />} />

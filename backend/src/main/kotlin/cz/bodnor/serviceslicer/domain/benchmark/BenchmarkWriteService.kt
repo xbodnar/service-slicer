@@ -11,13 +11,11 @@ class BenchmarkWriteService(
         benchmarkConfig: BenchmarkConfig,
         name: String,
         description: String? = null,
-        systemsUnderTest: List<SystemUnderTest>,
     ): Benchmark {
         val benchmark = Benchmark(
             config = benchmarkConfig,
             name = name,
             description = description,
-            systemsUnderTest = systemsUnderTest.toMutableList(),
         )
 
         return benchmarkRepository.save(benchmark)

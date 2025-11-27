@@ -2,7 +2,8 @@ package cz.bodnor.serviceslicer.adapter.out.prometheus
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
-import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationRunMetrics
+import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationId
+import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationMetrics
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 import java.math.BigDecimal
@@ -24,7 +25,7 @@ class QueryLoadTestMetricsPrometheus(
         targetVus: Int,
         start: Instant,
         end: Instant,
-    ): List<OperationRunMetrics> {
+    ): List<OperationMetrics> {
         logger.info { "Querying Prometheus for time range: start=$start, end=$end" }
 
         // Build label filter for k6 metrics
@@ -84,8 +85,8 @@ class QueryLoadTestMetricsPrometheus(
             p99ResponseTimeResponse.keys
 
         return allOperations.map { op ->
-            OperationRunMetrics(
-                operationId = op,
+            OperationMetrics(
+                operationId = OperationId(op),
                 totalRequests = totalRequests[op]?.toLong() ?: 0L,
                 failedRequests = failedRequests[op]?.toLong() ?: 0L,
                 meanResponseTimeMs = meanResponseTimeResponse[op]?.multiply(BigDecimal(1000))!!,

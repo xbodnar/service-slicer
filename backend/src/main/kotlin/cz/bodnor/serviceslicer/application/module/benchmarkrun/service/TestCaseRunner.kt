@@ -1,25 +1,24 @@
-package cz.bodnor.serviceslicer.application.module.benchmarkrun
+package cz.bodnor.serviceslicer.application.module.benchmarkrun.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.RunSutBenchmarkCommand
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
-import cz.bodnor.serviceslicer.application.module.benchmarkrun.service.K6Runner
-import cz.bodnor.serviceslicer.application.module.benchmarkrun.service.SystemUnderTestRunner
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
+import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationMetrics
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
-import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.core.io.ResourceLoader
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.time.Instant
+import java.util.UUID
 import kotlin.io.path.writeText
 
-@Component
-class RunSutBenchmarkCommandHandler(
+@Service
+class TestCaseRunner(
     private val benchmarkReadService: BenchmarkReadService,
     private val sutRunner: SystemUnderTestRunner,
     private val k6Runner: K6Runner,
@@ -28,19 +27,31 @@ class RunSutBenchmarkCommandHandler(
     private val resourceLoader: ResourceLoader,
     private val remoteExecutionProperties: RemoteExecutionProperties,
     private val queryLoadTestMetrics: QueryLoadTestMetrics,
-) : CommandHandler<RunSutBenchmarkCommand.LoadTestResult, RunSutBenchmarkCommand> {
-
-    override val command = RunSutBenchmarkCommand::class
+) {
 
     private val logger = KotlinLogging.logger {}
 
-    override fun handle(command: RunSutBenchmarkCommand): RunSutBenchmarkCommand.LoadTestResult {
-        logger.info { "Starting benchmark run for SUT ${command.systemUnderTestId}" }
+    data class Input(
+        val benchmarkId: UUID,
+        val benchmarkRunId: UUID,
+        val sutId: UUID,
+        val load: Int,
+    )
 
-        val benchmark = benchmarkReadService.getById(command.benchmarkId)
+    data class Result(
+        val startTimestamp: Instant,
+        val endTimestamp: Instant,
+        val operationMeasurements: List<OperationMetrics>,
+        val k6Output: String,
+    )
+
+    fun runTestCase(input: Input): Result {
+        logger.info { "Starting benchmark run for SUT ${input.sutId}" }
+
+        val benchmark = benchmarkReadService.getById(input.benchmarkId)
 
         // Start the SUT (blocking call - waits until SUT is healthy and ready)
-        sutRunner.startSUT(command.benchmarkId, command.systemUnderTestId)
+        sutRunner.startSUT(input.sutId)
 
         var k6WorkDir: Path? = null
         try {
@@ -50,8 +61,8 @@ class RunSutBenchmarkCommandHandler(
             val configJsonPath = prepareLoadTestConfigFile(benchmark.config, k6WorkDir)
 
             // Build environment variables for k6
-            val envVars = command.buildEnvVars(
-                benchmark.getSystemUnderTest(command.systemUnderTestId).dockerConfig.appPort,
+            val envVars = input.buildEnvVars(
+                benchmark.getSystemUnderTest(input.sutId).dockerConfig.appPort,
             )
 
             // Run WARMUP k6 tests (no metrics)
@@ -70,19 +81,18 @@ class RunSutBenchmarkCommandHandler(
             )
 
             val operationMetrics = queryLoadTestMetrics(
-                benchmarkId = command.benchmarkId,
-                sutId = command.systemUnderTestId,
-                targetVus = command.targetVus,
+                benchmarkId = input.benchmarkId,
+                sutId = input.sutId,
+                targetVus = input.load,
                 start = k6Result.startTime,
                 end = k6Result.endTime,
             )
 
-            return RunSutBenchmarkCommand.LoadTestResult(
+            return Result(
                 startTimestamp = k6Result.startTime,
                 endTimestamp = k6Result.endTime,
                 operationMeasurements = operationMetrics,
                 k6Output = k6Result.output,
-
             )
         } finally {
             logger.info { "Load test execution finished, cleaning up..." }
@@ -91,16 +101,17 @@ class RunSutBenchmarkCommandHandler(
         }
     }
 
-    private fun RunSutBenchmarkCommand.buildEnvVars(appPort: Int): Map<String, String> {
+    private fun Input.buildEnvVars(appPort: Int): Map<String, String> {
         val sutHost = getSutHost()
         val baseUrl = "http://$sutHost:$appPort"
 
         return mapOf(
             "BASE_URL" to baseUrl,
-            "TARGET_VUS" to targetVus.toString(),
+            "TARGET_VUS" to load.toString(),
             "DURATION" to k6Properties.testDuration,
             "BENCHMARK_ID" to benchmarkId.toString(),
-            "SUT_ID" to systemUnderTestId.toString(),
+            "BENCHMARK_RUN_ID" to benchmarkRunId.toString(),
+            "SUT_ID" to sutId.toString(),
         )
     }
 

@@ -21,8 +21,8 @@ class CreateBenchmarkCommandHandler(
             benchmarkConfig = command.benchmarkConfig,
             name = command.name,
             description = command.description,
-            systemsUnderTest = command.systemsUnderTest.map { it.toDomain() },
         )
+        command.systemsUnderTest.forEach { benchmark.addSystemUnderTest(it.toDomain(benchmark.id)) }
 
         return CreateBenchmarkCommand.Result(benchmarkId = benchmark.id)
     }

@@ -7,6 +7,7 @@ const TARGET_VUS = parseInt(__ENV.TARGET_VUS);
 const DURATION = __ENV.DURATION;
 const LOAD_TEST_CONFIG_FILE = __ENV.LOAD_TEST_CONFIG_FILE;
 const BENCHMARK_ID = __ENV.BENCHMARK_ID;
+const BENCHMARK_RUN_ID = __ENV.BENCHMARK_RUN_ID;
 const SUT_ID = __ENV.SUT_ID;
 
 // Validate required environment variables
@@ -16,6 +17,7 @@ const requiredEnvVars = {
     DURATION,
     LOAD_TEST_CONFIG_FILE,
     BENCHMARK_ID,
+    BENCHMARK_RUN_ID,
     SUT_ID,
 };
 
@@ -162,6 +164,7 @@ function executeStep(step, ctx) {
         params: params,
         tags: {
             benchmark_id: BENCHMARK_ID,
+            benchmark_run_id: BENCHMARK_RUN_ID,
             sut_id: SUT_ID,
             load: TARGET_VUS,
             behavior_id: ctx.behaviorId,

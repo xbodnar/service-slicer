@@ -7,6 +7,8 @@ import cz.bodnor.serviceslicer.application.module.benchmark.query.GetBenchmarkQu
 import cz.bodnor.serviceslicer.application.module.benchmark.query.ListBenchmarksQuery
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.CreateBenchmarkRunCommand
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.ValidateSutBenchmarkConfigCommand
+import cz.bodnor.serviceslicer.application.module.benchmarkrun.query.GetBenchmarkRunQuery
+import cz.bodnor.serviceslicer.application.module.benchmarkrun.query.ListBenchmarkRunsQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryBus
 import org.springframework.web.bind.annotation.GetMapping
@@ -58,4 +60,14 @@ class BenchmarksController(
             systemUnderTestId = systemUnderTestId,
         ),
     )
+
+    @GetMapping("/{benchmarkId}/runs")
+    fun listBenchmarkRuns(@PathVariable benchmarkId: UUID): ListBenchmarkRunsQuery.Result =
+        queryBus(ListBenchmarkRunsQuery(benchmarkId = benchmarkId))
+
+    @GetMapping("/{benchmarkId}/runs/{runId}")
+    fun getBenchmarkRun(
+        @PathVariable benchmarkId: UUID,
+        @PathVariable runId: UUID,
+    ): GetBenchmarkRunQuery.Result = queryBus(GetBenchmarkRunQuery(benchmarkId = benchmarkId, benchmarkRunId = runId))
 }

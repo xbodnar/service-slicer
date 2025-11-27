@@ -1,10 +1,10 @@
 package cz.bodnor.serviceslicer.application.module.benchmark.query
 
 import cz.bodnor.serviceslicer.domain.benchmark.BehaviorModel
-import cz.bodnor.serviceslicer.domain.benchmark.DatabaseSeedConfig
-import cz.bodnor.serviceslicer.domain.benchmark.DockerConfig
 import cz.bodnor.serviceslicer.domain.benchmark.OperationalLoad
-import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
+import cz.bodnor.serviceslicer.domain.sut.DatabaseSeedConfig
+import cz.bodnor.serviceslicer.domain.sut.DockerConfig
+import cz.bodnor.serviceslicer.domain.sut.ValidationResult
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.Query
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant

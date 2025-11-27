@@ -34,4 +34,15 @@
     <changeSet id="remove-unique-constraint" author="Norbert Bodnar">
         <dropUniqueConstraint tableName="benchmark_run" constraintName="benchmark_run_benchmark_id_key"/>
     </changeSet>
+    <changeSet id="add-baseline-load-test-run-column" author="Norbert Bodnar">
+        <addColumn tableName="benchmark_run">
+            <column name="baseline_load_test_run" type="jsonb"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="rename-load-test-runs-columns" author="Norbert Bodnar">
+        <renameColumn tableName="benchmark_run" oldColumnName="sut_load_test_runs"
+                      newColumnName="architecture_test_suites"/>
+        <renameColumn tableName="benchmark_run" oldColumnName="baseline_load_test_run"
+                      newColumnName="baseline_test_case"/>
+    </changeSet>
 </databaseChangeLog>
