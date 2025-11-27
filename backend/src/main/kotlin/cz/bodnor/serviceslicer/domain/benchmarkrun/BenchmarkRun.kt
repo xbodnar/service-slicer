@@ -1,6 +1,7 @@
 package cz.bodnor.serviceslicer.domain.benchmarkrun
 
 import cz.bodnor.serviceslicer.domain.benchmark.Benchmark
+import cz.bodnor.serviceslicer.domain.benchmark.OperationalLoad
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -30,10 +31,10 @@ class BenchmarkRun(
     fun addTestCase(
         isBaseline: Boolean,
         sutId: UUID,
-        load: Int,
+        load: OperationalLoad,
     ) {
         when (isBaseline) {
-            true -> this.baselineTestCase = BaselineTestCase(sutId, load)
+            true -> this.baselineTestCase = BaselineTestCase(sutId, load.load)
 
             false -> {
                 val testSuite = getOrCreateTestSuite(sutId)
@@ -54,7 +55,7 @@ class BenchmarkRun(
             baselineTestCase!!.markCompleted(endTimestamp, measurements, k6Output)
         } else {
             val (testSuite, testCase) = getTargetTestCase(sutId, load)
-            testCase.markCompleted(endTimestamp, measurements, k6Output)
+            testCase.markCompleted(baselineTestCase!!, endTimestamp, measurements, k6Output)
             testSuite.updateOverallStatus()
         }
     }
@@ -90,7 +91,7 @@ class BenchmarkRun(
             return TestCaseToRun(
                 sutId = benchmark.systemsUnderTest.find { it.isBaseline }?.id
                     ?: error("No baseline SUT found in benchmark $benchmarkId"),
-                load = benchmark.config.operationalProfile.minOf { it.load },
+                load = benchmark.config.operationalProfile.minBy { it.load },
                 isBaseline = true,
             )
         }
@@ -101,7 +102,7 @@ class BenchmarkRun(
                 benchmark.config.operationalProfile.map { profile ->
                     TestCaseToRun(
                         sutId = sut.id,
-                        load = profile.load,
+                        load = profile,
                         isBaseline = false,
                     )
                 }
@@ -110,7 +111,7 @@ class BenchmarkRun(
                 val testSuite = architectureTestSuites.find {
                     it.targetSutId == input.sutId
                 }
-                val testCase = testSuite?.targetTestCases?.find { it.load == input.load }
+                val testCase = testSuite?.targetTestCases?.find { it.load == input.load.load }
 
                 testCase == null
             }
@@ -130,7 +131,7 @@ class BenchmarkRun(
 
     data class TestCaseToRun(
         val sutId: UUID,
-        val load: Int,
+        val load: OperationalLoad,
         val isBaseline: Boolean,
     )
 }

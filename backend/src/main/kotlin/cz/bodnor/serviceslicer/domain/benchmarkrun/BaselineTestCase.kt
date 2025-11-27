@@ -23,6 +23,10 @@ data class BaselineTestCase(
     var operationMeasurements: Map<OperationId, OperationMetrics> = emptyMap()
         private set
 
+    // The scalability threshold for each operation is meanResponseTime + 3 * stdDevResponseTime
+    var scalabilityThresholds: Map<OperationId, BigDecimal> = emptyMap()
+        private set
+
     var k6Output: String? = null
         private set
 
@@ -34,16 +38,16 @@ data class BaselineTestCase(
         this.status = TestCaseStatus.COMPLETED
         this.endTimestamp = endTime
         this.operationMeasurements = measurements.associateBy { it.operationId }
+        this.scalabilityThresholds =
+            operationMeasurements.mapValues {
+                it.value.meanResponseTimeMs +
+                    it.value.stdDevResponseTimeMs.multiply(3.toBigDecimal())
+            }
         this.k6Output = k6Output
     }
 
     fun markFailed(endTime: Instant) {
         this.status = TestCaseStatus.FAILED
         this.endTimestamp = endTime
-    }
-
-    fun getOperationResponseTimeThreshold(operationId: OperationId): BigDecimal {
-        val operation = operationMeasurements[operationId] ?: error("Operation $operationId not found")
-        return operation.meanResponseTimeMs + operation.stdDevResponseTimeMs.multiply(3.toBigDecimal())
     }
 }

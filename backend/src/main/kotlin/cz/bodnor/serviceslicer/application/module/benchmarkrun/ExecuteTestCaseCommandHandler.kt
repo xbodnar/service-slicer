@@ -68,13 +68,13 @@ class ExecuteTestCaseCommandHandler(
                     benchmarkId = benchmarkRun.benchmarkId,
                     benchmarkRunId = benchmarkRun.id,
                     sutId = testCaseToRun.sutId,
-                    load = testCaseToRun.load,
+                    load = testCaseToRun.load.load,
                 ),
             )
 
             benchmarkRun.markTestCaseCompleted(
                 sutId = testCaseToRun.sutId,
-                load = testCaseToRun.load,
+                load = testCaseToRun.load.load,
                 endTimestamp = result.endTimestamp,
                 measurements = result.operationMeasurements,
                 k6Output = result.k6Output,
@@ -86,7 +86,7 @@ class ExecuteTestCaseCommandHandler(
             }
             benchmarkRun.markTestCaseFailed(
                 sutId = testCaseToRun.sutId,
-                load = testCaseToRun.load,
+                load = testCaseToRun.load.load,
                 endTimestamp = Instant.now(),
             )
             benchmarkRunWriteService.save(benchmarkRun)
