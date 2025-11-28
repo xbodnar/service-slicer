@@ -39,13 +39,11 @@ data class CreateBenchmarkCommand(
     }
 }
 
-// TODO: ADD COMMAND HANDLER!
 data class UpdateBenchmarkCommand(
     val benchmarkId: UUID,
     val name: String,
     val description: String? = null,
     val benchmarkConfig: BenchmarkConfig,
-    val systemsUnderTest: List<CreateBenchmarkCommand.UpdateSystemUnderTest>,
 ) : Command<UpdateBenchmarkCommand.Result> {
 
     @Schema(name = "UpdateBenchmarkResult", description = "Result of updating a benchmark")

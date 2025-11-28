@@ -21,9 +21,9 @@ class Benchmark(
     @JdbcTypeCode(SqlTypes.JSON)
     var config: BenchmarkConfig,
     // Custom name to identify this benchmark
-    val name: String,
+    var name: String,
     // Description of this benchmark
-    val description: String? = null,
+    var description: String? = null,
 ) : UpdatableEntity() {
 
     // Systems under test

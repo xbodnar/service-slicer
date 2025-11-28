@@ -40,14 +40,11 @@ data class UpdateBenchmarkRequest(
     val description: String? = null,
     @field:Schema(description = "Load test configuration")
     val benchmarkConfig: BenchmarkConfig,
-    @field:Schema(description = "List of systems under test to compare")
-    val systemsUnderTest: List<CreateBenchmarkCommand.UpdateSystemUnderTest>,
 ) {
     fun toCommand(benchmarkId: UUID) = UpdateBenchmarkCommand(
         benchmarkId = benchmarkId,
         name = name,
         description = description,
         benchmarkConfig = benchmarkConfig,
-        systemsUnderTest = systemsUnderTest,
     )
 }

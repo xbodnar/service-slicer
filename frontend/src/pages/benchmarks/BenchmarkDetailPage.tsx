@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { v4 as uuidv4 } from 'uuid'
 import { useBenchmark, useUpdateBenchmark } from '@/hooks/useBenchmarks'
 import { useGenerateBehaviorModels, useRunBenchmark, useValidateBenchmarkConfig } from '@/api/generated/benchmarks-controller/benchmarks-controller'
 import { type UploadedFile } from '@/hooks/useFileUpload'
@@ -42,15 +41,9 @@ const keyValuePairSchema = z.object({
   value: z.string(),
 })
 
-const databaseSeedConfigSchema = z.object({
-  id: z.string(),
-  dbContainerName: z.string().min(1, 'DB container name is required'),
-  dbPort: z.coerce.number().min(1, 'DB port is required'),
-  dbName: z.string().min(1, 'Database name is required'),
-  dbUsername: z.string().min(1, 'DB username is required'),
-})
 
-const benchmarkSchema = z.object({
+// Schema for editing (SUTs not editable but still need to validate)
+const editBenchmarkSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
   behaviorModels: z.array(
@@ -78,26 +71,9 @@ const benchmarkSchema = z.object({
       frequency: z.coerce.number().min(0).max(1, 'Frequency must be between 0 and 1'),
     })
   ).min(1, 'At least one operational load is required'),
-  systemsUnderTest: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string().min(1, 'Name is required'),
-      description: z.string().optional(),
-      isBaseline: z.boolean().default(false),
-      healthCheckPath: z.string().min(1, 'Health check path is required'),
-      appPort: z.coerce.number().min(1).max(65535),
-      startupTimeoutSeconds: z.coerce.number().min(1),
-      databaseSeedConfigs: z.array(databaseSeedConfigSchema).default([]),
-    })
-  ).min(1, 'At least one system under test is required'),
 })
 
-type BenchmarkFormData = z.infer<typeof benchmarkSchema>
-
-interface SystemFiles {
-  composeFile: UploadedFile | null
-  sqlSeedFiles: (UploadedFile | null)[]
-}
+type EditBenchmarkFormData = z.infer<typeof editBenchmarkSchema>
 
 interface KeyValuePairListProps {
   name: string
@@ -288,124 +264,6 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 
-interface DatabaseSeedConfigListEditProps {
-  systemIndex: number
-  control: any
-  register: any
-  onFileSelected: (systemIndex: number, dbConfigIndex: number, file: UploadedFile | null) => void
-  sqlSeedFiles: (UploadedFile | null)[]
-  existingSut: any
-}
-
-function DatabaseSeedConfigListEdit({ systemIndex, control, register, onFileSelected, sqlSeedFiles, existingSut }: DatabaseSeedConfigListEditProps) {
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: `systemsUnderTest.${systemIndex}.databaseSeedConfigs`,
-  })
-
-  const handleAddDbConfig = () => {
-    append({
-      id: uuidv4(),
-      dbContainerName: '',
-      dbPort: 5432,
-      dbName: '',
-      dbUsername: '',
-    })
-  }
-
-  return (
-    <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold">Database Seed Configurations (optional)</Label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleAddDbConfig}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Database
-        </Button>
-      </div>
-
-      {fields.length === 0 && (
-        <p className="text-xs text-muted-foreground italic">No database configurations. Add one if this system requires database seeding.</p>
-      )}
-
-      {fields.map((field, dbIndex) => {
-        const existingDbConfig = existingSut?.databaseSeedConfigs?.[dbIndex]
-        return (
-          <Card key={field.id} className="p-4 bg-background">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Database {dbIndex + 1}</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => remove(dbIndex)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <FileSelector
-                  id={`edit-sql-seed-file-${systemIndex}-${dbIndex}`}
-                  label={existingDbConfig?.sqlSeedFile ? "SQL Seed File (leave empty to keep current)" : "SQL Seed File *"}
-                  accept=".sql"
-                  required={!existingDbConfig?.sqlSeedFile}
-                  onFileSelected={(file) => onFileSelected(systemIndex, dbIndex, file)}
-                  selectedFile={sqlSeedFiles[dbIndex] || null}
-                  mimeTypeFilter="sql"
-                />
-                {existingDbConfig?.sqlSeedFile && !sqlSeedFiles[dbIndex] && (
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border text-xs">
-                    <FileCode className="h-3 w-3" />
-                    <span>Current: {existingDbConfig.sqlSeedFile.filename}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>DB Container Name *</Label>
-                  <Input
-                    {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbContainerName`)}
-                    placeholder="postgres"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>DB Port *</Label>
-                  <Input
-                    type="number"
-                    {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbPort`)}
-                    placeholder="5432"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Database Name *</Label>
-                  <Input
-                    {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbName`)}
-                    placeholder="mydb"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>DB Username *</Label>
-                  <Input
-                    {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbUsername`)}
-                    placeholder="postgres"
-                  />
-                </div>
-              </div>
-            </div>
-          </Card>
-        )
-      })}
-    </div>
-  )
-}
-
 export function BenchmarkDetailPage() {
   const { benchmarkId } = useParams<{ benchmarkId: string }>()
   const { data, isLoading, error, refetch } = useBenchmark(benchmarkId!)
@@ -417,7 +275,6 @@ export function BenchmarkDetailPage() {
 
   const [isEditing, setIsEditing] = useState(false)
   const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
-  const [systemFiles, setSystemFiles] = useState<SystemFiles[]>([])
   const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set())
   const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
 
@@ -438,14 +295,13 @@ export function BenchmarkDetailPage() {
     }
   }, [data, refetch])
 
-  const form = useForm<BenchmarkFormData>({
-    resolver: zodResolver(benchmarkSchema),
+  const form = useForm<EditBenchmarkFormData>({
+    resolver: zodResolver(editBenchmarkSchema),
     defaultValues: {
       name: '',
       description: '',
       behaviorModels: [],
       operationalProfile: [],
-      systemsUnderTest: [],
     },
   })
 
@@ -457,11 +313,6 @@ export function BenchmarkDetailPage() {
   const { fields: operationalProfileFields, append: appendOperationalProfile, remove: removeOperationalProfile } = useFieldArray({
     control: form.control,
     name: 'operationalProfile',
-  })
-
-  const { fields: systemFields, append: appendSystem, remove: removeSystem } = useFieldArray({
-    control: form.control,
-    name: 'systemsUnderTest',
   })
 
   // Helper to convert object to key-value pairs array
@@ -481,7 +332,6 @@ export function BenchmarkDetailPage() {
   }
 
   // Populate form when entering edit mode
-  // @ts-expect-error - Edit functionality disabled but kept for potential future use
   const handleStartEdit = () => {
     if (!data) return
 
@@ -501,36 +351,13 @@ export function BenchmarkDetailPage() {
       thinkTo: model.thinkTo,
     }))
 
-    const systemsUnderTest = data.systemsUnderTest.map((sut: any) => ({
-      id: sut.systemUnderTestId,
-      name: sut.name,
-      description: sut.description || '',
-      isBaseline: sut.isBaseline || false,
-      healthCheckPath: sut.dockerConfig?.healthCheckPath || '/actuator/health',
-      appPort: sut.dockerConfig?.appPort || 8080,
-      startupTimeoutSeconds: sut.dockerConfig?.startupTimeoutSeconds || 180,
-      databaseSeedConfigs: (sut.databaseSeedConfigs || []).map((dbConfig: any) => ({
-        id: uuidv4(),
-        dbContainerName: dbConfig.dbContainerName || '',
-        dbPort: dbConfig.dbPort || 5432,
-        dbName: dbConfig.dbName || '',
-        dbUsername: dbConfig.dbUsername || '',
-      })),
-    }))
-
     form.reset({
       name: data.name,
       description: data.description || '',
       behaviorModels,
       operationalProfile: data.loadTestConfig.operationalProfile || [],
-      systemsUnderTest,
     })
 
-    // Initialize system files array (null means keep existing)
-    setSystemFiles(data.systemsUnderTest.map((sut: any) => ({
-      composeFile: null,
-      sqlSeedFiles: (sut.databaseSeedConfigs || []).map(() => null)
-    })))
     setOpenApiFile(null)
     setIsEditing(true)
   }
@@ -538,45 +365,7 @@ export function BenchmarkDetailPage() {
   const handleCancelEdit = () => {
     setIsEditing(false)
     setOpenApiFile(null)
-    setSystemFiles([])
     form.reset()
-  }
-
-  const handleComposeFileSelected = (index: number, file: UploadedFile | null) => {
-    setSystemFiles((prev) => {
-      const updated = [...prev]
-      updated[index] = { ...updated[index], composeFile: file }
-      return updated
-    })
-  }
-
-  const handleSqlSeedFileSelected = (systemIndex: number, dbConfigIndex: number, file: UploadedFile | null) => {
-    setSystemFiles((prev) => {
-      const updated = [...prev]
-      const sqlSeedFiles = [...(updated[systemIndex]?.sqlSeedFiles || [])]
-      sqlSeedFiles[dbConfigIndex] = file
-      updated[systemIndex] = { ...updated[systemIndex], sqlSeedFiles }
-      return updated
-    })
-  }
-
-  const handleAddSystem = () => {
-    appendSystem({
-      id: uuidv4(),
-      name: '',
-      description: '',
-      isBaseline: false,
-      healthCheckPath: '/actuator/health',
-      appPort: 8080,
-      startupTimeoutSeconds: 180,
-      databaseSeedConfigs: [],
-    })
-    setSystemFiles((prev) => [...prev, { composeFile: null, sqlSeedFiles: [] }])
-  }
-
-  const handleRemoveSystem = (index: number) => {
-    removeSystem(index)
-    setSystemFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleAddBehaviorModel = () => {
@@ -594,7 +383,7 @@ export function BenchmarkDetailPage() {
     appendOperationalProfile({ load: 25, frequency: 0.2 })
   }
 
-  const onSubmit = async (formData: BenchmarkFormData) => {
+  const onSubmit = async (formData: EditBenchmarkFormData) => {
     if (!data) return
 
     try {
@@ -641,63 +430,6 @@ export function BenchmarkDetailPage() {
         return
       }
 
-      // Validate exactly one baseline
-      const baselineCount = formData.systemsUnderTest.filter(s => s.isBaseline).length
-      if (baselineCount === 0) {
-        toast({
-          variant: 'destructive',
-          title: 'No baseline selected',
-          description: 'Please mark exactly one system as the baseline for comparison',
-        })
-        return
-      }
-      if (baselineCount > 1) {
-        toast({
-          variant: 'destructive',
-          title: 'Multiple baselines selected',
-          description: 'Only one system can be marked as the baseline',
-        })
-        return
-      }
-
-      // Build systems under test
-      const systemsUnderTest = formData.systemsUnderTest.map((system, index) => {
-        const existingSut = data.systemsUnderTest[index]
-
-        const databaseSeedConfigs = system.databaseSeedConfigs
-          .map((dbConfig, dbIndex) => {
-            // Try to get the new uploaded file, or fall back to existing
-            const sqlSeedFile = systemFiles[index]?.sqlSeedFiles?.[dbIndex]
-            const existingDbConfig = existingSut?.databaseSeedConfigs?.[dbIndex]
-            const sqlFileId = sqlSeedFile?.fileId || existingDbConfig?.sqlSeedFile?.fileId
-
-            if (!sqlFileId) return null
-
-            return {
-              sqlSeedFileId: sqlFileId,
-              dbContainerName: dbConfig.dbContainerName,
-              dbPort: dbConfig.dbPort,
-              dbName: dbConfig.dbName,
-              dbUsername: dbConfig.dbUsername,
-            }
-          })
-          .filter((config): config is NonNullable<typeof config> => config !== null)
-
-        return {
-          id: system.id,
-          name: system.name,
-          description: system.description || undefined,
-          isBaseline: system.isBaseline,
-          dockerConfig: {
-            composeFileId: systemFiles[index]?.composeFile?.fileId || existingSut?.dockerConfig?.composeFile?.fileId,
-            healthCheckPath: system.healthCheckPath,
-            appPort: system.appPort,
-            startupTimeoutSeconds: system.startupTimeoutSeconds,
-          },
-          databaseSeedConfigs,
-        }
-      })
-
       await updateBenchmark.mutateAsync({
         benchmarkId: benchmarkId!,
         data: {
@@ -709,7 +441,6 @@ export function BenchmarkDetailPage() {
             behaviorModels,
             operationalProfile: formData.operationalProfile,
           },
-          systemsUnderTest,
         },
       })
 
@@ -720,7 +451,6 @@ export function BenchmarkDetailPage() {
 
       setIsEditing(false)
       setOpenApiFile(null)
-      setSystemFiles([])
       refetch()
     } catch (error) {
       toast({
@@ -973,104 +703,6 @@ export function BenchmarkDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Systems Under Test */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Systems Under Test</CardTitle>
-                <Button type="button" variant="outline" size="sm" onClick={handleAddSystem}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add System
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {systemFields.map((field, index) => {
-                const existingSut = data.systemsUnderTest[index]
-                return (
-                  <Card key={field.id} className="p-4">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold">System {index + 1}</h4>
-                        {systemFields.length > 1 && (
-                          <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveSystem(index)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Name *</Label>
-                          <Input {...form.register(`systemsUnderTest.${index}.name`)} placeholder="Monolithic deployment" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Description</Label>
-                          <Input {...form.register(`systemsUnderTest.${index}.description`)} placeholder="Original version" />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id={`edit-system-baseline-${index}`}
-                          {...form.register(`systemsUnderTest.${index}.isBaseline`)}
-                          className="h-4 w-4 rounded border-gray-300"
-                        />
-                        <Label htmlFor={`edit-system-baseline-${index}`} className="cursor-pointer">
-                          Use as baseline for comparison
-                        </Label>
-                      </div>
-
-                      <div className="space-y-2">
-                        <FileSelector
-                          id={`edit-compose-file-${index}`}
-                          label={existingSut ? "Docker Compose File (leave empty to keep current)" : "Docker Compose File *"}
-                          accept=".yaml,.yml"
-                          required={!existingSut}
-                          onFileSelected={(file) => handleComposeFileSelected(index, file)}
-                          selectedFile={systemFiles[index]?.composeFile}
-                          mimeTypeFilter="yaml"
-                        />
-                        {existingSut?.dockerConfig?.composeFile && !systemFiles[index]?.composeFile && (
-                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border text-xs">
-                            <FileArchive className="h-3 w-3" />
-                            <span>Current: {existingSut.dockerConfig.composeFile.filename}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Health Check Path</Label>
-                          <Input {...form.register(`systemsUnderTest.${index}.healthCheckPath`)} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>App Port</Label>
-                          <Input type="number" {...form.register(`systemsUnderTest.${index}.appPort`)} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Startup Timeout (s)</Label>
-                          <Input type="number" {...form.register(`systemsUnderTest.${index}.startupTimeoutSeconds`)} />
-                        </div>
-                      </div>
-
-                      {/* Database Configs */}
-                      <DatabaseSeedConfigListEdit
-                        systemIndex={index}
-                        control={form.control}
-                        register={form.register}
-                        onFileSelected={handleSqlSeedFileSelected}
-                        sqlSeedFiles={systemFiles[index]?.sqlSeedFiles || []}
-                        existingSut={existingSut}
-                      />
-                    </div>
-                  </Card>
-                )
-              })}
-            </CardContent>
-          </Card>
-
           {/* Action Buttons */}
           <div className="flex gap-4">
             <Button type="submit" disabled={updateBenchmark.isPending}>
@@ -1110,6 +742,9 @@ export function BenchmarkDetailPage() {
               View Runs
             </Button>
           </Link>
+          <Button variant="outline" onClick={handleStartEdit}>
+            Edit
+          </Button>
           <Button onClick={handleRunBenchmark} disabled={runBenchmark.isPending}>
             {runBenchmark.isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
