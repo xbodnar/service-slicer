@@ -45,6 +45,7 @@ const behaviorModelSchema = z.object({
     z.object({
       method: z.string().min(1, 'Method is required'),
       path: z.string().min(1, 'Path is required'),
+      operationId: z.string().min(1, 'Operation ID is required'),
       headers: z.array(keyValuePairSchema).default([]),
       params: z.array(keyValuePairSchema).default([]),
       body: z.string().default('{}'),
@@ -188,7 +189,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => appendStep({ method: 'GET', path: '/', headers: [], params: [], body: '{}', save: [] })}
+          onClick={() => appendStep({ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] })}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Step
@@ -246,6 +247,20 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
                   placeholder="/api/resource"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-operationId`}>Operation ID</Label>
+              <Input
+                id={`behavior-${behaviorIndex}-step-${stepIndex}-operationId`}
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.operationId`)}
+                placeholder="getUser"
+              />
+              {errors?.behaviorModels?.[behaviorIndex]?.steps?.[stepIndex]?.operationId && (
+                <p className="text-sm text-destructive">
+                  {errors.behaviorModels[behaviorIndex].steps[stepIndex].operationId.message}
+                </p>
+              )}
             </div>
 
             {/* Headers, Query Params, and Save Fields side by side */}
@@ -501,7 +516,7 @@ export function BenchmarkCreatePage() {
       id: '',
       actor: '',
       usageProfile: 0.5,
-      steps: [{ method: 'GET', path: '/', headers: [], params: [], body: '{}', save: [] }],
+      steps: [{ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] }],
       thinkFrom: 1000,
       thinkTo: 3000,
     })
@@ -622,11 +637,11 @@ export function BenchmarkCreatePage() {
             return {
               method: step.method,
               path: step.path,
+              operationId: step.operationId,
               headers,
               params,
               body,
               save,
-              operationId: `${step.method}-${step.path}`.replace(/[^a-zA-Z0-9-]/g, '-'),
             }
           })
           return {

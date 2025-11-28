@@ -1,6 +1,6 @@
 package cz.bodnor.serviceslicer.adapter.`in`.job
 
-import cz.bodnor.serviceslicer.adapter.`in`.job.batch.ExecuteSutLoadTestTasklet
+import cz.bodnor.serviceslicer.adapter.`in`.job.batch.ExecuteTestCaseTasklet
 import cz.bodnor.serviceslicer.domain.job.JobType
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.job.builder.JobBuilder
@@ -14,12 +14,12 @@ import org.springframework.transaction.PlatformTransactionManager
 class BenchmarkJobConfig(
     private val jobRepository: JobRepository,
     private val txManager: PlatformTransactionManager,
-    private val executeSutLoadTestTasklet: ExecuteSutLoadTestTasklet,
+    private val executeTestCaseTasklet: ExecuteTestCaseTasklet,
 ) {
 
     @Bean
     fun executeSutLoadTestsStep() = StepBuilder("EXECUTE_SUT_LOAD_TESTS_STEP", jobRepository)
-        .tasklet(executeSutLoadTestTasklet, txManager)
+        .tasklet(executeTestCaseTasklet, txManager)
         .build()
 
     @Bean

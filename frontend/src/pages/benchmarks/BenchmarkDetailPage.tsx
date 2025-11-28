@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useBenchmark, useUpdateBenchmark } from '@/hooks/useBenchmarks'
 import { useGenerateBehaviorModels, useRunBenchmark, useValidateBenchmarkConfig } from '@/api/generated/benchmarks-controller/benchmarks-controller'
+import { useAddSystemUnderTest, useDeleteSystemUnderTest } from '@/api/generated/system-under-test-controller/system-under-test-controller'
 import { type UploadedFile } from '@/hooks/useFileUpload'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
@@ -41,6 +42,26 @@ const keyValuePairSchema = z.object({
   value: z.string(),
 })
 
+// Schema for adding System Under Test
+const addSUTSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().optional(),
+  isBaseline: z.boolean(),
+  healthCheckPath: z.string().min(1, 'Health check path is required'),
+  appPort: z.coerce.number().min(1, 'App port must be at least 1'),
+  startupTimeoutSeconds: z.coerce.number().min(1, 'Startup timeout must be at least 1'),
+  databaseSeedConfigs: z.array(
+    z.object({
+      dbContainerName: z.string().min(1, 'Container name is required'),
+      dbPort: z.coerce.number().min(1, 'DB port must be at least 1'),
+      dbName: z.string().min(1, 'Database name is required'),
+      dbUsername: z.string().min(1, 'Username is required'),
+    })
+  ),
+})
+
+type AddSUTFormData = z.infer<typeof addSUTSchema>
+
 
 // Schema for editing (SUTs not editable but still need to validate)
 const editBenchmarkSchema = z.object({
@@ -55,6 +76,7 @@ const editBenchmarkSchema = z.object({
         z.object({
           method: z.string().min(1, 'Method is required'),
           path: z.string().min(1, 'Path is required'),
+          operationId: z.string().min(1, 'Operation ID is required'),
           headers: z.array(keyValuePairSchema).default([]),
           params: z.array(keyValuePairSchema).default([]),
           body: z.string().default('{}'),
@@ -156,7 +178,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => appendStep({ method: 'GET', path: '/', headers: [], params: [], body: '{}', save: [] })}
+          onClick={() => appendStep({ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] })}
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Step
@@ -208,6 +230,19 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
                   placeholder="/api/resource"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Operation ID</Label>
+              <Input
+                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.operationId`)}
+                placeholder="getUser"
+              />
+              {errors?.behaviorModels?.[behaviorIndex]?.steps?.[stepIndex]?.operationId && (
+                <p className="text-sm text-destructive">
+                  {errors.behaviorModels[behaviorIndex].steps[stepIndex].operationId.message}
+                </p>
+              )}
             </div>
 
             {/* Headers, Query Params, and Save Fields side by side */}
@@ -272,10 +307,16 @@ export function BenchmarkDetailPage() {
   const generateBehaviorModels = useGenerateBehaviorModels()
   const runBenchmark = useRunBenchmark()
   const validateConfig = useValidateBenchmarkConfig()
+  const addSystemUnderTest = useAddSystemUnderTest()
+  const deleteSystemUnderTest = useDeleteSystemUnderTest()
 
   const [isEditing, setIsEditing] = useState(false)
+  const [isAddingSUT, setIsAddingSUT] = useState(false)
+  const [composeFile, setComposeFile] = useState<UploadedFile | null>(null)
+  const [dbSeedFiles, setDbSeedFiles] = useState<(UploadedFile | null)[]>([null])
   const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
   const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set())
+  const [expandedEditModels, setExpandedEditModels] = useState<Set<number>>(new Set())
   const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
 
   // Poll for validation results when any validation is PENDING
@@ -315,6 +356,25 @@ export function BenchmarkDetailPage() {
     name: 'operationalProfile',
   })
 
+  // Add SUT form
+  const sutForm = useForm<AddSUTFormData>({
+    resolver: zodResolver(addSUTSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      isBaseline: false,
+      healthCheckPath: '/actuator/health',
+      appPort: 8080,
+      startupTimeoutSeconds: 120,
+      databaseSeedConfigs: [],
+    },
+  })
+
+  const { fields: dbConfigFields, append: appendDbConfig, remove: removeDbConfig } = useFieldArray({
+    control: sutForm.control,
+    name: 'databaseSeedConfigs',
+  })
+
   // Helper to convert object to key-value pairs array
   const objectToKeyValuePairs = (obj: Record<string, string> | undefined): { key: string; value: string }[] => {
     if (!obj) return []
@@ -342,6 +402,7 @@ export function BenchmarkDetailPage() {
       steps: model.steps.map((step: any) => ({
         method: step.method,
         path: step.path,
+        operationId: step.operationId,
         headers: objectToKeyValuePairs(step.headers),
         params: objectToKeyValuePairs(step.params),
         body: JSON.stringify(step.body || {}),
@@ -373,7 +434,7 @@ export function BenchmarkDetailPage() {
       id: '',
       actor: '',
       usageProfile: 0.5,
-      steps: [{ method: 'GET', path: '/', headers: [], params: [], body: '{}', save: [] }],
+      steps: [{ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] }],
       thinkFrom: 1000,
       thinkTo: 3000,
     })
@@ -402,11 +463,11 @@ export function BenchmarkDetailPage() {
           return {
             method: step.method,
             path: step.path,
+            operationId: step.operationId,
             headers,
             params,
             body,
             save,
-            operationId: `${step.method}-${step.path}`.replace(/[^a-zA-Z0-9-]/g, '-'),
           }
         })
         return {
@@ -524,6 +585,18 @@ export function BenchmarkDetailPage() {
     })
   }
 
+  const toggleEditModelExpansion = (modelIndex: number) => {
+    setExpandedEditModels((prev) => {
+      const next = new Set(prev)
+      if (next.has(modelIndex)) {
+        next.delete(modelIndex)
+      } else {
+        next.add(modelIndex)
+      }
+      return next
+    })
+  }
+
   const toggleK6Output = (systemId: string) => {
     setExpandedK6Outputs((prev) => {
       const next = new Set(prev)
@@ -534,6 +607,131 @@ export function BenchmarkDetailPage() {
       }
       return next
     })
+  }
+
+  const handleStartAddSUT = () => {
+    sutForm.reset()
+    setComposeFile(null)
+    setDbSeedFiles([null])
+    setIsAddingSUT(true)
+  }
+
+  const handleCancelAddSUT = () => {
+    setIsAddingSUT(false)
+    setComposeFile(null)
+    setDbSeedFiles([null])
+    sutForm.reset()
+  }
+
+  const handleAddDbConfig = () => {
+    appendDbConfig({
+      dbContainerName: '',
+      dbPort: 5432,
+      dbName: '',
+      dbUsername: '',
+    })
+    setDbSeedFiles([...dbSeedFiles, null])
+  }
+
+  const handleRemoveDbConfig = (index: number) => {
+    removeDbConfig(index)
+    setDbSeedFiles(dbSeedFiles.filter((_, i) => i !== index))
+  }
+
+  const onSubmitAddSUT = async (formData: AddSUTFormData) => {
+    if (!composeFile) {
+      toast({
+        variant: 'destructive',
+        title: 'Docker Compose file is required',
+      })
+      return
+    }
+
+    // Validate that all DB seed files are uploaded
+    for (let i = 0; i < formData.databaseSeedConfigs.length; i++) {
+      if (!dbSeedFiles[i]) {
+        toast({
+          variant: 'destructive',
+          title: `SQL seed file for database ${i + 1} is required`,
+        })
+        return
+      }
+    }
+
+    try {
+      await addSystemUnderTest.mutateAsync({
+        benchmarkId: benchmarkId!,
+        data: {
+          name: formData.name,
+          description: formData.description || undefined,
+          isBaseline: formData.isBaseline,
+          dockerConfig: {
+            composeFile: {
+              fileId: composeFile.fileId,
+              filename: composeFile.filename,
+              fileSize: composeFile.size,
+            },
+            healthCheckPath: formData.healthCheckPath,
+            appPort: formData.appPort,
+            startupTimeoutSeconds: formData.startupTimeoutSeconds,
+          },
+          databaseSeedConfigs: formData.databaseSeedConfigs.map((config, i) => ({
+            sqlSeedFile: {
+              fileId: dbSeedFiles[i]!.fileId,
+              filename: dbSeedFiles[i]!.filename,
+              fileSize: dbSeedFiles[i]!.size,
+            },
+            dbContainerName: config.dbContainerName,
+            dbPort: config.dbPort,
+            dbName: config.dbName,
+            dbUsername: config.dbUsername,
+          })),
+        },
+      })
+
+      toast({
+        title: 'System Under Test added',
+        description: 'The system has been added successfully',
+      })
+
+      setIsAddingSUT(false)
+      setComposeFile(null)
+      setDbSeedFiles([null])
+      sutForm.reset()
+      refetch()
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to add system',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      })
+    }
+  }
+
+  const handleDeleteSUT = async (systemId: string, systemName: string) => {
+    if (!confirm(`Are you sure you want to delete "${systemName}"?`)) {
+      return
+    }
+
+    try {
+      await deleteSystemUnderTest.mutateAsync({
+        benchmarkId: benchmarkId!,
+        sutId: systemId,
+      })
+
+      toast({
+        title: 'System deleted',
+        description: `"${systemName}" has been deleted successfully`,
+      })
+
+      refetch()
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete system',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      })
+    }
   }
 
   if (isLoading) {
@@ -591,10 +789,10 @@ export function BenchmarkDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Load Test Configuration */}
+          {/* Benchmark Configuration */}
           <Card>
             <CardHeader>
-              <CardTitle>Load Test Configuration</CardTitle>
+              <CardTitle>Benchmark Configuration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* OpenAPI File */}
@@ -757,13 +955,13 @@ export function BenchmarkDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Load Test Configuration */}
+        {/* Benchmark Configuration */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
-                <CardTitle>Load Test Configuration</CardTitle>
+                <CardTitle>Benchmark Configuration</CardTitle>
               </div>
               <Button
                 variant="default"
@@ -963,13 +1161,156 @@ export function BenchmarkDetailPage() {
         {/* Systems Under Test */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <Server className="h-5 w-5 text-primary" />
-              <CardTitle>Systems Under Test</CardTitle>
-              <Badge variant="outline">{data.systemsUnderTest.length}</Badge>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Server className="h-5 w-5 text-primary" />
+                <CardTitle>Systems Under Test</CardTitle>
+                <Badge variant="outline">{data.systemsUnderTest.length}</Badge>
+              </div>
+              {!isAddingSUT && (
+                <Button variant="outline" size="sm" onClick={handleStartAddSUT}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add System
+                </Button>
+              )}
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4">{isAddingSUT && (
+              <form onSubmit={sutForm.handleSubmit(onSubmitAddSUT)} className="p-4 rounded-lg bg-muted/30 border-2 border-dashed space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold">New System Under Test</h4>
+                  <Button type="button" variant="ghost" size="sm" onClick={handleCancelAddSUT}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="sut-name">Name *</Label>
+                    <Input id="sut-name" {...sutForm.register('name')} />
+                    {sutForm.formState.errors.name && (
+                      <p className="text-sm text-destructive">{sutForm.formState.errors.name.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="sut-description">Description</Label>
+                    <Input id="sut-description" {...sutForm.register('description')} />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="sut-baseline" {...sutForm.register('isBaseline')} className="h-4 w-4" />
+                  <Label htmlFor="sut-baseline" className="cursor-pointer">Set as baseline</Label>
+                </div>
+
+                {/* Docker Configuration */}
+                <div className="space-y-3 p-3 rounded-lg bg-background/50 border">
+                  <h5 className="text-sm font-semibold">Docker Configuration</h5>
+
+                  <FileSelector
+                    id="sut-compose-file"
+                    label="Docker Compose File *"
+                    accept=".yml,.yaml"
+                    onFileSelected={setComposeFile}
+                    selectedFile={composeFile}
+                    mimeTypeFilter="yaml"
+                  />
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="sut-health-check">Health Check Path *</Label>
+                      <Input id="sut-health-check" {...sutForm.register('healthCheckPath')} />
+                      {sutForm.formState.errors.healthCheckPath && (
+                        <p className="text-sm text-destructive">{sutForm.formState.errors.healthCheckPath.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sut-app-port">App Port *</Label>
+                      <Input type="number" id="sut-app-port" {...sutForm.register('appPort')} />
+                      {sutForm.formState.errors.appPort && (
+                        <p className="text-sm text-destructive">{sutForm.formState.errors.appPort.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sut-timeout">Startup Timeout (s) *</Label>
+                      <Input type="number" id="sut-timeout" {...sutForm.register('startupTimeoutSeconds')} />
+                      {sutForm.formState.errors.startupTimeoutSeconds && (
+                        <p className="text-sm text-destructive">{sutForm.formState.errors.startupTimeoutSeconds.message}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Database Configurations */}
+                <div className="space-y-3 p-3 rounded-lg bg-background/50 border">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-sm font-semibold">Database Configurations</h5>
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddDbConfig}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Database
+                    </Button>
+                  </div>
+
+                  {dbConfigFields.map((field, index) => (
+                    <div key={field.id} className="p-3 rounded-lg bg-muted/30 border space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline">Database {index + 1}</Badge>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveDbConfig(index)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <FileSelector
+                        id={`sut-db-seed-${index}`}
+                        label="SQL Seed File *"
+                        accept=".sql"
+                        onFileSelected={(file) => {
+                          const newFiles = [...dbSeedFiles]
+                          newFiles[index] = file
+                          setDbSeedFiles(newFiles)
+                        }}
+                        selectedFile={dbSeedFiles[index]}
+                        mimeTypeFilter="sql"
+                      />
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label>Container Name *</Label>
+                          <Input {...sutForm.register(`databaseSeedConfigs.${index}.dbContainerName`)} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Port *</Label>
+                          <Input type="number" {...sutForm.register(`databaseSeedConfigs.${index}.dbPort`)} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Database Name *</Label>
+                          <Input {...sutForm.register(`databaseSeedConfigs.${index}.dbName`)} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Username *</Label>
+                          <Input {...sutForm.register(`databaseSeedConfigs.${index}.dbUsername`)} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {dbConfigFields.length === 0 && (
+                    <p className="text-sm text-muted-foreground italic">No database configurations</p>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={addSystemUnderTest.isPending}>
+                    {addSystemUnderTest.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Add System
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleCancelAddSUT}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            )}
+
             {data.systemsUnderTest.map((system: any) => (
               <div key={system.systemUnderTestId} className="p-4 rounded-lg bg-muted/50 space-y-3">
                 <div className="flex items-start justify-between">
@@ -981,6 +1322,15 @@ export function BenchmarkDetailPage() {
                           Baseline
                         </Badge>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-2 h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteSUT(system.systemUnderTestId, system.name)}
+                        disabled={deleteSystemUnderTest.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                     {system.description && (
                       <p className="text-sm text-muted-foreground">{system.description}</p>

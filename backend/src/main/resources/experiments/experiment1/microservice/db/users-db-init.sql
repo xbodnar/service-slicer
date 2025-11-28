@@ -1,3 +1,10 @@
+INSERT INTO public.users (id, username, password, email, bio, image) VALUES
+                                                                         ('user-001', 'john_doe', '$2a$12$5MSCsIhU.KynyvMPCMdTZuiaH6fKx/dzU8BBBRNHoQVf1OncZ1rVK', 'john@example.com', 'Software developer and tech enthusiast', 'https://api.dicebear.com/7.x/avataaars/svg?seed=john'),
+                                                                         ('user-002', 'jane_smith', '$2a$12$5MSCsIhU.KynyvMPCMdTZuiaH6fKx/dzU8BBBRNHoQVf1OncZ1rVK', 'jane@example.com', 'Full-stack developer passionate about clean code', 'https://api.dicebear.com/7.x/avataaars/svg?seed=jane'),
+                                                                         ('user-003', 'bob_wilson', '$2a$12$5MSCsIhU.KynyvMPCMdTZuiaH6fKx/dzU8BBBRNHoQVf1OncZ1rVK', 'bob@example.com', 'DevOps engineer and cloud architect', 'https://api.dicebear.com/7.x/avataaars/svg?seed=bob'),
+                                                                         ('user-004', 'alice_brown', '$2a$12$5MSCsIhU.KynyvMPCMdTZuiaH6fKx/dzU8BBBRNHoQVf1OncZ1rVK', 'alice@example.com', 'Data scientist exploring ML and AI', 'https://api.dicebear.com/7.x/avataaars/svg?seed=alice'),
+                                                                         ('user-005', 'charlie_davis', '$2a$12$5MSCsIhU.KynyvMPCMdTZuiaH6fKx/dzU8BBBRNHoQVf1OncZ1rVK', 'charlie@example.com', 'Frontend developer and UX enthusiast', 'https://api.dicebear.com/7.x/avataaars/svg?seed=charlie');
+
 INSERT INTO "users" ("id", "username", "password", "email", "bio", "image") VALUES
                                                                                 ('6edefb71-1f92-484b-9dc7-d1b4bc571ebd', 'user1_chihmi', '$2a$12$iTG60l/Cm6RiSA7rxMUQn.6FVm6wuhIwxWMHsVi7tJngJFwwBqSha', 'user1_chihmi@yahoo.com', 'Bio of user1_chihmi', 'http://img.com/user1_chihmi.png'),
                                                                                 ('b378f38e-f64d-4ca9-a8d7-c229072453dd', 'user2_85edqk', '$2a$12$iTG60l/Cm6RiSA7rxMUQn.6FVm6wuhIwxWMHsVi7tJngJFwwBqSha', 'user2_85edqk@hotmail.com', 'Bio of user2_85edqk', 'http://img.com/user2_85edqk.png'),

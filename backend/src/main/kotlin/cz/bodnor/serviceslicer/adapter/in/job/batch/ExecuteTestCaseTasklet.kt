@@ -16,7 +16,7 @@ import java.util.UUID
 
 @Component
 @JobScope
-class ExecuteSutLoadTestTasklet(
+class ExecuteTestCaseTasklet(
     private val commandBus: CommandBus,
     @param:Value("#{jobParameters['${BENCHMARK_RUN_ID}']}") private val benchmarkRunId: UUID,
 ) : Tasklet {
