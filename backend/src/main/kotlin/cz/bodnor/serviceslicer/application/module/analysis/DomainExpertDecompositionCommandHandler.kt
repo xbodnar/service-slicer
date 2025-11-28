@@ -29,7 +29,7 @@ class DomainExpertDecompositionCommandHandler(
     override val command = DomainExpertDecompositionCommand::class
 
     override fun handle(command: DomainExpertDecompositionCommand) {
-        logger.info { "Starting domain-driven decomposition for project: ${command.projectId}" }
+        logger.info { "Starting ${command.decompositionType} decomposition for project: ${command.projectId}" }
 
         // Fetch all class nodes for the project
         val classNodes = classNodeReadService.findAllByProjectId(command.projectId)
@@ -41,7 +41,9 @@ class DomainExpertDecompositionCommandHandler(
             saveDecomposition(command.projectId, decomposition, classNodes)
         }
 
-        logger.info { "Successfully updated domain-driven cluster IDs for project: ${command.projectId}" }
+        logger.info {
+            "Successfully updated ${command.decompositionType} cluster IDs for project: ${command.projectId}"
+        }
     }
 
     private fun DomainDecompositionType.updateNodeClusterIds(
