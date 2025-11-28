@@ -26,7 +26,7 @@ data class CreateBenchmarkCommand(
         val description: String? = null,
         val isBaseline: Boolean,
         val dockerConfig: DockerConfig,
-        val databaseSeedConfig: DatabaseSeedConfig? = null,
+        val databaseSeedConfigs: List<DatabaseSeedConfig> = emptyList(),
     ) {
         fun toDomain(benchmarkId: UUID) = SystemUnderTest(
             benchmarkId = benchmarkId,
@@ -34,7 +34,7 @@ data class CreateBenchmarkCommand(
             description = description,
             isBaseline = isBaseline,
             dockerConfig = dockerConfig,
-            databaseSeedConfig = databaseSeedConfig,
+            databaseSeedConfigs = databaseSeedConfigs,
         )
     }
 }

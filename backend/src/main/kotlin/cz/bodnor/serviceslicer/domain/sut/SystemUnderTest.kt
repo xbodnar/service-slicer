@@ -25,9 +25,9 @@ class SystemUnderTest(
     // Docker configuration
     @JdbcTypeCode(SqlTypes.JSON)
     var dockerConfig: DockerConfig,
-    // Database seeding configuration
+    // Database seeding configurations (one per database for microservices)
     @JdbcTypeCode(SqlTypes.JSON)
-    var databaseSeedConfig: DatabaseSeedConfig? = null,
+    var databaseSeedConfigs: List<DatabaseSeedConfig> = emptyList(),
     // Result of the last validation run
     @JdbcTypeCode(SqlTypes.JSON)
     var validationResult: ValidationResult? = null,

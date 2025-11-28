@@ -21,8 +21,8 @@ class AddSystemUnderTestCommandHandler(
     @Transactional
     override fun handle(command: AddSystemUnderTestCommand): AddSystemUnderTestCommand.Result {
         validateFileExists(command.dockerConfig.composeFileId)
-        command.databaseSeedConfig?.let {
-            validateFileExists(it.sqlSeedFileId)
+        command.databaseSeedConfigs.forEach { config ->
+            validateFileExists(config.sqlSeedFileId)
         }
 
         val benchmark = benchmarkReadService.getById(command.benchmarkId)
@@ -32,7 +32,7 @@ class AddSystemUnderTestCommandHandler(
             description = command.description,
             isBaseline = command.isBaseline,
             dockerConfig = command.dockerConfig,
-            databaseSeedConfig = command.databaseSeedConfig,
+            databaseSeedConfigs = command.databaseSeedConfigs,
         )
 
         benchmark.addSystemUnderTest(newSystemUnderTest)

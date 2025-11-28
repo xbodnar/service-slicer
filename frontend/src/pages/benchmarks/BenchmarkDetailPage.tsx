@@ -42,6 +42,14 @@ const keyValuePairSchema = z.object({
   value: z.string(),
 })
 
+const databaseSeedConfigSchema = z.object({
+  id: z.string(),
+  dbContainerName: z.string().min(1, 'DB container name is required'),
+  dbPort: z.coerce.number().min(1, 'DB port is required'),
+  dbName: z.string().min(1, 'Database name is required'),
+  dbUsername: z.string().min(1, 'DB username is required'),
+})
+
 const benchmarkSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
@@ -79,10 +87,7 @@ const benchmarkSchema = z.object({
       healthCheckPath: z.string().min(1, 'Health check path is required'),
       appPort: z.coerce.number().min(1).max(65535),
       startupTimeoutSeconds: z.coerce.number().min(1),
-      dbContainerName: z.string().optional(),
-      dbPort: z.coerce.number().optional(),
-      dbName: z.string().optional(),
-      dbUsername: z.string().optional(),
+      databaseSeedConfigs: z.array(databaseSeedConfigSchema).default([]),
     })
   ).min(1, 'At least one system under test is required'),
 })
@@ -91,7 +96,7 @@ type BenchmarkFormData = z.infer<typeof benchmarkSchema>
 
 interface SystemFiles {
   composeFile: UploadedFile | null
-  sqlSeedFile: UploadedFile | null
+  sqlSeedFiles: (UploadedFile | null)[]
 }
 
 interface KeyValuePairListProps {
@@ -283,6 +288,124 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`
 }
 
+interface DatabaseSeedConfigListEditProps {
+  systemIndex: number
+  control: any
+  register: any
+  onFileSelected: (systemIndex: number, dbConfigIndex: number, file: UploadedFile | null) => void
+  sqlSeedFiles: (UploadedFile | null)[]
+  existingSut: any
+}
+
+function DatabaseSeedConfigListEdit({ systemIndex, control, register, onFileSelected, sqlSeedFiles, existingSut }: DatabaseSeedConfigListEditProps) {
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: `systemsUnderTest.${systemIndex}.databaseSeedConfigs`,
+  })
+
+  const handleAddDbConfig = () => {
+    append({
+      id: uuidv4(),
+      dbContainerName: '',
+      dbPort: 5432,
+      dbName: '',
+      dbUsername: '',
+    })
+  }
+
+  return (
+    <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-semibold">Database Seed Configurations (optional)</Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAddDbConfig}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Database
+        </Button>
+      </div>
+
+      {fields.length === 0 && (
+        <p className="text-xs text-muted-foreground italic">No database configurations. Add one if this system requires database seeding.</p>
+      )}
+
+      {fields.map((field, dbIndex) => {
+        const existingDbConfig = existingSut?.databaseSeedConfigs?.[dbIndex]
+        return (
+          <Card key={field.id} className="p-4 bg-background">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Database {dbIndex + 1}</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => remove(dbIndex)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <FileSelector
+                  id={`edit-sql-seed-file-${systemIndex}-${dbIndex}`}
+                  label={existingDbConfig?.sqlSeedFile ? "SQL Seed File (leave empty to keep current)" : "SQL Seed File *"}
+                  accept=".sql"
+                  required={!existingDbConfig?.sqlSeedFile}
+                  onFileSelected={(file) => onFileSelected(systemIndex, dbIndex, file)}
+                  selectedFile={sqlSeedFiles[dbIndex] || null}
+                  mimeTypeFilter="sql"
+                />
+                {existingDbConfig?.sqlSeedFile && !sqlSeedFiles[dbIndex] && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border text-xs">
+                    <FileCode className="h-3 w-3" />
+                    <span>Current: {existingDbConfig.sqlSeedFile.filename}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>DB Container Name *</Label>
+                  <Input
+                    {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbContainerName`)}
+                    placeholder="postgres"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>DB Port *</Label>
+                  <Input
+                    type="number"
+                    {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbPort`)}
+                    placeholder="5432"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Database Name *</Label>
+                  <Input
+                    {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbName`)}
+                    placeholder="mydb"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>DB Username *</Label>
+                  <Input
+                    {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbUsername`)}
+                    placeholder="postgres"
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
 export function BenchmarkDetailPage() {
   const { benchmarkId } = useParams<{ benchmarkId: string }>()
   const { data, isLoading, error, refetch } = useBenchmark(benchmarkId!)
@@ -386,10 +509,13 @@ export function BenchmarkDetailPage() {
       healthCheckPath: sut.dockerConfig?.healthCheckPath || '/actuator/health',
       appPort: sut.dockerConfig?.appPort || 8080,
       startupTimeoutSeconds: sut.dockerConfig?.startupTimeoutSeconds || 180,
-      dbContainerName: sut.databaseSeedConfig?.dbContainerName || '',
-      dbPort: sut.databaseSeedConfig?.dbPort || undefined,
-      dbName: sut.databaseSeedConfig?.dbName || '',
-      dbUsername: sut.databaseSeedConfig?.dbUsername || '',
+      databaseSeedConfigs: (sut.databaseSeedConfigs || []).map((dbConfig: any) => ({
+        id: uuidv4(),
+        dbContainerName: dbConfig.dbContainerName || '',
+        dbPort: dbConfig.dbPort || 5432,
+        dbName: dbConfig.dbName || '',
+        dbUsername: dbConfig.dbUsername || '',
+      })),
     }))
 
     form.reset({
@@ -401,7 +527,10 @@ export function BenchmarkDetailPage() {
     })
 
     // Initialize system files array (null means keep existing)
-    setSystemFiles(data.systemsUnderTest.map(() => ({ composeFile: null, sqlSeedFile: null })))
+    setSystemFiles(data.systemsUnderTest.map((sut: any) => ({
+      composeFile: null,
+      sqlSeedFiles: (sut.databaseSeedConfigs || []).map(() => null)
+    })))
     setOpenApiFile(null)
     setIsEditing(true)
   }
@@ -421,10 +550,12 @@ export function BenchmarkDetailPage() {
     })
   }
 
-  const handleSqlSeedFileSelected = (index: number, file: UploadedFile | null) => {
+  const handleSqlSeedFileSelected = (systemIndex: number, dbConfigIndex: number, file: UploadedFile | null) => {
     setSystemFiles((prev) => {
       const updated = [...prev]
-      updated[index] = { ...updated[index], sqlSeedFile: file }
+      const sqlSeedFiles = [...(updated[systemIndex]?.sqlSeedFiles || [])]
+      sqlSeedFiles[dbConfigIndex] = file
+      updated[systemIndex] = { ...updated[systemIndex], sqlSeedFiles }
       return updated
     })
   }
@@ -438,8 +569,9 @@ export function BenchmarkDetailPage() {
       healthCheckPath: '/actuator/health',
       appPort: 8080,
       startupTimeoutSeconds: 180,
+      databaseSeedConfigs: [],
     })
-    setSystemFiles((prev) => [...prev, { composeFile: null, sqlSeedFile: null }])
+    setSystemFiles((prev) => [...prev, { composeFile: null, sqlSeedFiles: [] }])
   }
 
   const handleRemoveSystem = (index: number) => {
@@ -531,8 +663,25 @@ export function BenchmarkDetailPage() {
       // Build systems under test
       const systemsUnderTest = formData.systemsUnderTest.map((system, index) => {
         const existingSut = data.systemsUnderTest[index]
-        const hasDatabaseConfig = system.dbContainerName && system.dbPort && system.dbName && system.dbUsername
-        const sqlFileId = systemFiles[index]?.sqlSeedFile?.fileId || existingSut?.databaseSeedConfig?.sqlSeedFile?.fileId
+
+        const databaseSeedConfigs = system.databaseSeedConfigs
+          .map((dbConfig, dbIndex) => {
+            // Try to get the new uploaded file, or fall back to existing
+            const sqlSeedFile = systemFiles[index]?.sqlSeedFiles?.[dbIndex]
+            const existingDbConfig = existingSut?.databaseSeedConfigs?.[dbIndex]
+            const sqlFileId = sqlSeedFile?.fileId || existingDbConfig?.sqlSeedFile?.fileId
+
+            if (!sqlFileId) return null
+
+            return {
+              sqlSeedFileId: sqlFileId,
+              dbContainerName: dbConfig.dbContainerName,
+              dbPort: dbConfig.dbPort,
+              dbName: dbConfig.dbName,
+              dbUsername: dbConfig.dbUsername,
+            }
+          })
+          .filter((config): config is NonNullable<typeof config> => config !== null)
 
         return {
           id: system.id,
@@ -545,13 +694,7 @@ export function BenchmarkDetailPage() {
             appPort: system.appPort,
             startupTimeoutSeconds: system.startupTimeoutSeconds,
           },
-          databaseSeedConfig: hasDatabaseConfig && sqlFileId ? {
-            sqlSeedFileId: sqlFileId,
-            dbContainerName: system.dbContainerName!,
-            dbPort: system.dbPort!,
-            dbName: system.dbName!,
-            dbUsername: system.dbUsername!,
-          } : undefined,
+          databaseSeedConfigs,
         }
       })
 
@@ -912,44 +1055,15 @@ export function BenchmarkDetailPage() {
                         </div>
                       </div>
 
-                      {/* Database Config */}
-                      <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
-                        <Label className="text-sm font-semibold">Database Seed Configuration (optional)</Label>
-
-                        <FileSelector
-                          id={`edit-sql-seed-file-${index}`}
-                          label="SQL Seed File"
-                          accept=".sql"
-                          onFileSelected={(file) => handleSqlSeedFileSelected(index, file)}
-                          selectedFile={systemFiles[index]?.sqlSeedFile}
-                          mimeTypeFilter="sql"
-                        />
-                        {existingSut?.databaseSeedConfig?.sqlSeedFile && !systemFiles[index]?.sqlSeedFile && (
-                          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border text-xs">
-                            <FileCode className="h-3 w-3" />
-                            <span>Current: {existingSut.databaseSeedConfig.sqlSeedFile.filename}</span>
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>DB Container Name</Label>
-                            <Input {...form.register(`systemsUnderTest.${index}.dbContainerName`)} placeholder="postgres" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>DB Port</Label>
-                            <Input type="number" {...form.register(`systemsUnderTest.${index}.dbPort`)} placeholder="5432" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Database Name</Label>
-                            <Input {...form.register(`systemsUnderTest.${index}.dbName`)} placeholder="mydb" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>DB Username</Label>
-                            <Input {...form.register(`systemsUnderTest.${index}.dbUsername`)} placeholder="postgres" />
-                          </div>
-                        </div>
-                      </div>
+                      {/* Database Configs */}
+                      <DatabaseSeedConfigListEdit
+                        systemIndex={index}
+                        control={form.control}
+                        register={form.register}
+                        onFileSelected={handleSqlSeedFileSelected}
+                        sqlSeedFiles={systemFiles[index]?.sqlSeedFiles || []}
+                        existingSut={existingSut}
+                      />
                     </div>
                   </Card>
                 )
@@ -1355,58 +1469,62 @@ export function BenchmarkDetailPage() {
                     </div>
                   </div>
 
-                  {/* Right Column: Database Configuration */}
+                  {/* Right Column: Database Configurations */}
                   <div className="space-y-3 p-3 rounded-lg bg-background/50 border">
-                    {system.databaseSeedConfig?.sqlSeedFile ? (
-                      <>
-                        <div className="space-y-2">
-                          <div className="flex items-start gap-2">
-                            <FileCode className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div>
-                              <p className="text-xs text-muted-foreground">SQL Seed File</p>
-                              <span className="font-mono text-sm">{system.databaseSeedConfig.sqlSeedFile.filename}</span>
-                              <Badge variant="secondary" className="ml-2 text-xs">
-                                {formatFileSize(system.databaseSeedConfig.sqlSeedFile.fileSize)}
-                              </Badge>
+                    {system.databaseSeedConfigs && system.databaseSeedConfigs.length > 0 ? (
+                      <div className="space-y-4">
+                        <p className="text-xs font-semibold text-muted-foreground">
+                          Database Configurations ({system.databaseSeedConfigs.length})
+                        </p>
+                        {system.databaseSeedConfigs.map((dbConfig: any, dbIndex: number) => (
+                          <div key={dbIndex} className="space-y-3 pb-3 border-b last:border-b-0 last:pb-0">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">DB {dbIndex + 1}</Badge>
                             </div>
-                          </div>
-                        </div>
-
-                        {system.databaseSeedConfig && (
-                          <div className="space-y-2 pt-2 border-t">
-                            <p className="text-xs font-semibold text-muted-foreground">Database Configuration</p>
                             <div className="space-y-2">
-                              {system.databaseSeedConfig.dbContainerName && (
+                              {dbConfig.sqlSeedFile && (
+                                <div className="flex items-start gap-2">
+                                  <FileCode className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">SQL Seed File</p>
+                                    <span className="font-mono text-sm">{dbConfig.sqlSeedFile.filename}</span>
+                                    <Badge variant="secondary" className="ml-2 text-xs">
+                                      {formatFileSize(dbConfig.sqlSeedFile.fileSize)}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              )}
+                              {dbConfig.dbContainerName && (
                                 <div>
                                   <p className="text-xs text-muted-foreground">Container Name</p>
-                                  <p className="font-mono text-sm">{system.databaseSeedConfig.dbContainerName}</p>
+                                  <p className="font-mono text-sm">{dbConfig.dbContainerName}</p>
                                 </div>
                               )}
-                              {system.databaseSeedConfig.dbPort && (
+                              {dbConfig.dbPort && (
                                 <div>
                                   <p className="text-xs text-muted-foreground">Port</p>
-                                  <p className="font-mono text-sm">{system.databaseSeedConfig.dbPort}</p>
+                                  <p className="font-mono text-sm">{dbConfig.dbPort}</p>
                                 </div>
                               )}
-                              {system.databaseSeedConfig.dbName && (
+                              {dbConfig.dbName && (
                                 <div>
                                   <p className="text-xs text-muted-foreground">Database Name</p>
-                                  <p className="font-mono text-sm">{system.databaseSeedConfig.dbName}</p>
+                                  <p className="font-mono text-sm">{dbConfig.dbName}</p>
                                 </div>
                               )}
-                              {system.databaseSeedConfig.dbUsername && (
+                              {dbConfig.dbUsername && (
                                 <div>
                                   <p className="text-xs text-muted-foreground">Username</p>
-                                  <p className="font-mono text-sm">{system.databaseSeedConfig.dbUsername}</p>
+                                  <p className="font-mono text-sm">{dbConfig.dbUsername}</p>
                                 </div>
                               )}
                             </div>
                           </div>
-                        )}
-                      </>
+                        ))}
+                      </div>
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <p className="text-xs text-muted-foreground italic">No database configuration</p>
+                        <p className="text-xs text-muted-foreground italic">No database configurations</p>
                       </div>
                     )}
                   </div>

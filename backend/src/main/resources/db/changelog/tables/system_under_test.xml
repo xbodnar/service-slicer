@@ -50,4 +50,8 @@
             <column name="benchmark_id"/>
         </createIndex>
     </changeSet>
+    <changeSet id="rename-database-seed-config-column" author="Norbert Bodnar">
+        <renameColumn tableName="system_under_test" oldColumnName="database_seed_config"
+                      newColumnName="database_seed_configs"/>
+    </changeSet>
 </databaseChangeLog>

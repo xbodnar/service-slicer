@@ -11,7 +11,7 @@ data class AddSystemUnderTestCommand(
     val description: String? = null,
     val isBaseline: Boolean,
     val dockerConfig: DockerConfig,
-    val databaseSeedConfig: DatabaseSeedConfig? = null,
+    val databaseSeedConfigs: List<DatabaseSeedConfig> = emptyList(),
 ) : Command<AddSystemUnderTestCommand.Result> {
 
     data class Result(
@@ -25,7 +25,7 @@ data class UpdateSystemUnderTestCommand(
     val name: String,
     val description: String? = null,
     val dockerConfig: DockerConfig,
-    val databaseSeedConfig: DatabaseSeedConfig? = null,
+    val databaseSeedConfigs: List<DatabaseSeedConfig> = emptyList(),
 ) : Command<UpdateSystemUnderTestCommand.Result> {
 
     data class Result(

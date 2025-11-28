@@ -85,8 +85,8 @@ data class GetBenchmarkQuery(val benchmarkId: UUID) : Query<GetBenchmarkQuery.Re
         val isBaseline: Boolean,
         @Schema(description = "Docker configuration")
         val dockerConfig: DockerConfigDto,
-        @Schema(description = "Database seed configuration (optional)")
-        val databaseSeedConfig: DatabaseSeedConfigDto?,
+        @Schema(description = "Database seed configurations (one per database)")
+        val databaseSeedConfigs: List<DatabaseSeedConfigDto>,
         @Schema(description = "Result of the last validation run (optional)")
         val validationResult: ValidationResult?,
     )

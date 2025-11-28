@@ -76,11 +76,11 @@ class SystemUnderTestRunner(
                 info.state = RunState.WAITING_HEALTHY
                 waitHealthy(sut.dockerConfig)
 
-                // 4) Execute SQL seed file if provided
-                sut.databaseSeedConfig?.let {
-                    it.waitForDatabaseSchema(project, workDir)
-                    it.executeSqlSeedFile(project, workDir)
-                    logger.debug { "SQL seed file executed successfully" }
+                // 4) Execute SQL seed files if provided (one per database)
+                sut.databaseSeedConfigs.forEach { config ->
+                    config.waitForDatabaseSchema(project, workDir)
+                    config.executeSqlSeedFile(project, workDir)
+                    logger.debug { "SQL seed file executed successfully for database: ${config.dbName}" }
                 }
 
                 logger.info { "SUT is ready to run tests" }

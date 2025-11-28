@@ -16,8 +16,8 @@ data class AddSystemUnderTestRequest(
     val isBaseline: Boolean,
     @field:Schema(description = "Docker configuration")
     val dockerConfig: GetBenchmarkQuery.DockerConfigDto,
-    @field:Schema(description = "Database seed configuration (optional)")
-    val databaseSeedConfig: GetBenchmarkQuery.DatabaseSeedConfigDto? = null,
+    @field:Schema(description = "Database seed configurations (one per database)")
+    val databaseSeedConfigs: List<GetBenchmarkQuery.DatabaseSeedConfigDto> = emptyList(),
 ) {
 
     fun toCommand(benchmarkId: UUID) = AddSystemUnderTestCommand(
@@ -26,7 +26,7 @@ data class AddSystemUnderTestRequest(
         description = description,
         isBaseline = isBaseline,
         dockerConfig = dockerConfig.toDomain(),
-        databaseSeedConfig = databaseSeedConfig?.toDomain(),
+        databaseSeedConfigs = databaseSeedConfigs.map { it.toDomain() },
     )
 }
 
@@ -38,8 +38,8 @@ data class UpdateSystemUnderTestRequest(
     val description: String? = null,
     @field:Schema(description = "Docker configuration")
     val dockerConfig: GetBenchmarkQuery.DockerConfigDto,
-    @field:Schema(description = "Database seed configuration (optional)")
-    val databaseSeedConfig: GetBenchmarkQuery.DatabaseSeedConfigDto? = null,
+    @field:Schema(description = "Database seed configurations (one per database)")
+    val databaseSeedConfigs: List<GetBenchmarkQuery.DatabaseSeedConfigDto> = emptyList(),
 ) {
     fun toCommand(
         benchmarkId: UUID,
@@ -50,6 +50,6 @@ data class UpdateSystemUnderTestRequest(
         name = name,
         description = description,
         dockerConfig = dockerConfig.toDomain(),
-        databaseSeedConfig = databaseSeedConfig?.toDomain(),
+        databaseSeedConfigs = databaseSeedConfigs.map { it.toDomain() },
     )
 }

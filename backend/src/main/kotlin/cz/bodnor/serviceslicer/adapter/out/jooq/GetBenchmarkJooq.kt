@@ -46,7 +46,7 @@ class GetBenchmarkJooq(
             SYSTEM_UNDER_TEST.DESCRIPTION,
             SYSTEM_UNDER_TEST.IS_BASELINE,
             SYSTEM_UNDER_TEST.DOCKER_CONFIG,
-            SYSTEM_UNDER_TEST.DATABASE_SEED_CONFIG,
+            SYSTEM_UNDER_TEST.DATABASE_SEED_CONFIGS,
             SYSTEM_UNDER_TEST.VALIDATION_RESULT,
         ).from(SYSTEM_UNDER_TEST)
             .where(SYSTEM_UNDER_TEST.BENCHMARK_ID.eq(benchmarkId))
@@ -57,11 +57,11 @@ class GetBenchmarkJooq(
                 row[SYSTEM_UNDER_TEST.DOCKER_CONFIG]!!.data(),
             ).composeFileId
 
-            val databaseSeedConfigFileId = row[SYSTEM_UNDER_TEST.DATABASE_SEED_CONFIG]?.let {
-                objectMapper.readValue<DatabaseSeedConfig>(it.data())
-            }?.sqlSeedFileId
+            val databaseSeedConfigFileIds = row[SYSTEM_UNDER_TEST.DATABASE_SEED_CONFIGS]?.let {
+                objectMapper.readValue<List<DatabaseSeedConfig>>(it.data())
+            }?.map { it.sqlSeedFileId } ?: emptyList()
 
-            listOfNotNull(dockerConfigFileId, databaseSeedConfigFileId)
+            listOf(dockerConfigFileId) + databaseSeedConfigFileIds
         }.toSet() +
             benchmarkConfig.openApiFileId
 
@@ -98,10 +98,10 @@ class GetBenchmarkJooq(
                         startupTimeoutSeconds = dockerConfig.startupTimeoutSeconds,
                     )
                 },
-                databaseSeedConfig = it.get(SYSTEM_UNDER_TEST.DATABASE_SEED_CONFIG)?.let { databaseSeedConfig ->
-                    objectMapper.readValue<DatabaseSeedConfig>(
-                        databaseSeedConfig.data(),
-                    ).let { databaseSeedConfig ->
+                databaseSeedConfigs = it.get(SYSTEM_UNDER_TEST.DATABASE_SEED_CONFIGS)?.let { databaseSeedConfigs ->
+                    objectMapper.readValue<List<DatabaseSeedConfig>>(
+                        databaseSeedConfigs.data(),
+                    ).map { databaseSeedConfig ->
                         GetBenchmarkQuery.DatabaseSeedConfigDto(
                             sqlSeedFile = files.find { it.fileId == databaseSeedConfig.sqlSeedFileId }!!,
                             dbContainerName = databaseSeedConfig.dbContainerName,
@@ -110,7 +110,7 @@ class GetBenchmarkJooq(
                             dbUsername = databaseSeedConfig.dbUsername,
                         )
                     }
-                },
+                } ?: emptyList(),
                 validationResult = it.get(SYSTEM_UNDER_TEST.VALIDATION_RESULT)?.let { validationResult ->
                     objectMapper.readValue<ValidationResult>(validationResult.data())
                 },
