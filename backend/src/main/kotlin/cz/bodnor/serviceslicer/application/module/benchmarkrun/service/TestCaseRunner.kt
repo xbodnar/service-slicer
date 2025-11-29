@@ -46,7 +46,7 @@ class TestCaseRunner(
     )
 
     fun runTestCase(input: Input): Result {
-        logger.info { "Starting benchmark run for SUT ${input.sutId}" }
+        logger.info { "Starting benchmark run for SUT ${input.sutId} with load ${input.load}" }
 
         val benchmark = benchmarkReadService.getById(input.benchmarkId)
 
@@ -69,7 +69,7 @@ class TestCaseRunner(
             k6Runner.runTest(
                 scriptPath = k6ScriptPath,
                 configPath = configJsonPath,
-                environmentVariables = envVars,
+                environmentVariables = envVars + mapOf("DURATION" to "30s"),
                 ignoreMetrics = true,
             )
 

@@ -17,5 +17,5 @@ data class K6Properties(
     /**
      * Default test duration for k6 tests.
      */
-    val testDuration: String = "30s",
+    val testDuration: String = "5m",
 )

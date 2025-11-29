@@ -45,4 +45,15 @@
         <renameColumn tableName="benchmark_run" oldColumnName="baseline_load_test_run"
                       newColumnName="baseline_test_case"/>
     </changeSet>
+
+    <changeSet id="refactor-test-cases-to-entities" author="Norbert Bodnar">
+        <dropColumn tableName="benchmark_run" columnName="architecture_test_suites"/>
+        <dropColumn tableName="benchmark_run" columnName="baseline_test_case"/>
+
+        <addColumn tableName="benchmark_run">
+            <column name="baseline_test_case_id" type="uuid">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

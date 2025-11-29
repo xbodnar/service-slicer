@@ -52,7 +52,7 @@ class SystemUnderTestRunner(
         }
 
         diskOperations.withFile(sut.dockerConfig.composeFileId) { composeFilePath ->
-            logger.info { "Starting SUT from docker-compose file: ${composeFilePath.toFile().absolutePath}" }
+            logger.debug { "Starting SUT from docker-compose file: ${composeFilePath.toFile().absolutePath}" }
 
             try {
                 // 1) Transfer compose file to execution environment (if remote)
@@ -355,7 +355,7 @@ class SystemUnderTestRunner(
                 logger.debug { "Found $tableCount user tables in database" }
 
                 if (tableCount > 0) {
-                    logger.info { "Database schema is ready with $tableCount tables" }
+                    logger.debug { "Database schema is ready with $tableCount tables" }
                     return
                 }
             }

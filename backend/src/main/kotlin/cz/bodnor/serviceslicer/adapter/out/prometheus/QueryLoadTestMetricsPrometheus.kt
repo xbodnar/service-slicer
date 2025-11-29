@@ -26,11 +26,11 @@ class QueryLoadTestMetricsPrometheus(
         start: Instant,
         end: Instant,
     ): List<OperationMetrics> {
-        logger.info { "Querying Prometheus for time range: start=$start, end=$end" }
+        logger.debug { "Querying Prometheus for time range: start=$start, end=$end" }
 
         // Build label filter for k6 metrics
         val labelFilter = """benchmark_id="$benchmarkId",sut_id="$sutId",load="$targetVus""""
-        logger.info { "Using label filter: $labelFilter" }
+        logger.debug { "Using label filter: $labelFilter" }
 
         val duration = end.epochSecond - start.epochSecond
 

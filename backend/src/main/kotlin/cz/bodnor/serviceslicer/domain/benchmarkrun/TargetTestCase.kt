@@ -1,13 +1,27 @@
 package cz.bodnor.serviceslicer.domain.benchmarkrun
 
+import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
+import jakarta.persistence.ManyToOne
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
 
-data class TargetTestCase(
+@Entity
+class TargetTestCase(
     val load: Int,
     val loadFrequency: Double,
-) {
+    @ManyToOne(fetch = FetchType.LAZY)
+    val architectureTestSuite: ArchitectureTestSuite,
+) : UpdatableEntity() {
+
+    @Enumerated(EnumType.STRING)
     var status: TestCaseStatus = TestCaseStatus.RUNNING
         private set
 
@@ -17,19 +31,23 @@ data class TargetTestCase(
     var endTimestamp: Instant? = null
         private set
 
+    @JdbcTypeCode(SqlTypes.JSON)
     var operationMeasurements: Map<OperationId, OperationMetrics> = emptyMap()
         private set
 
+    @JdbcTypeCode(SqlTypes.JSON)
     var passScalabilityThreshold: Map<OperationId, Boolean> = emptyMap()
         private set
 
     // estimates the conditional probability that operation succeeds given deployment architecture α and load λ.
+    @JdbcTypeCode(SqlTypes.JSON)
     var scalabilityShares: Map<OperationId, BigDecimal> = emptyMap()
         private set
 
     var relativeDomainMetric: BigDecimal? = null
         private set
 
+    @Column(name = "k6_output")
     var k6Output: String? = null
         private set
 
@@ -43,7 +61,10 @@ data class TargetTestCase(
         this.endTimestamp = endTime
         this.operationMeasurements = measurements.associateBy { it.operationId }
         this.passScalabilityThreshold = operationMeasurements.mapValues {
-            it.value.meanResponseTimeMs <= baselineTestCase.scalabilityThresholds[it.key]
+            val baselineScalabilityThreshold =
+                baselineTestCase.scalabilityThresholds[it.key]
+                    ?: error("No baseline scalability threshold found for operation ${it.key}")
+            it.value.meanResponseTimeMs <= baselineScalabilityThreshold
         }
         this.scalabilityShares = operationMeasurements.mapValues { (operationId, operationMetrics) ->
             // frequency of invocation of operation o over all invocations to all operations * 1 if operation passes, 0 if it fails

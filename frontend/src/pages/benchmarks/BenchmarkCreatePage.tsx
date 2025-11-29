@@ -903,7 +903,7 @@ export function BenchmarkCreatePage() {
                         <Input
                           id={`op-freq-${index}`}
                           type="number"
-                          step="0.01"
+                          step="0.001"
                           min="0"
                           max="1"
                           {...form.register(`operationalProfile.${index}.frequency`)}

@@ -1,7 +1,10 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun
 
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.query.GetBenchmarkRunQuery
+import cz.bodnor.serviceslicer.domain.benchmarkrun.ArchitectureTestSuite
+import cz.bodnor.serviceslicer.domain.benchmarkrun.BaselineTestCase
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRunReadService
+import cz.bodnor.serviceslicer.domain.benchmarkrun.TargetTestCase
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryHandler
 import cz.bodnor.serviceslicer.infrastructure.exception.verify
 import org.springframework.stereotype.Component
@@ -22,10 +25,44 @@ class GetBenchmarkRunQueryHandler(
             benchmarkRunId = benchmarkRun.id,
             benchmarkId = benchmarkRun.benchmarkId,
             state = benchmarkRun.state,
-            baselineTestCase = benchmarkRun.baselineTestCase,
-            architectureTestSuites = benchmarkRun.architectureTestSuites,
+            baselineTestCase = benchmarkRun.baselineTestCase?.toDto(),
+            architectureTestSuites = benchmarkRun.architectureTestSuites.map { it.toDto() },
             createdAt = benchmarkRun.createdAt,
             updatedAt = benchmarkRun.updatedAt,
         )
     }
+
+    private fun BaselineTestCase.toDto() = GetBenchmarkRunQuery.BaselineTestCaseDto(
+        id = this.id,
+        baselineSutId = this.baselineSutId,
+        load = this.load,
+        status = this.status,
+        startTimestamp = this.startTimestamp,
+        endTimestamp = this.endTimestamp,
+        operationMeasurements = this.operationMeasurements,
+        scalabilityThresholds = this.scalabilityThresholds,
+        k6Output = this.k6Output,
+    )
+
+    private fun ArchitectureTestSuite.toDto() = GetBenchmarkRunQuery.ArchitectureTestSuiteDto(
+        id = this.id,
+        targetSutId = this.targetSutId,
+        status = this.status,
+        targetTestCases = this.targetTestCases.map { it.toDto() },
+        scalabilityFootprint = this.scalabilityFootprint,
+    )
+
+    private fun TargetTestCase.toDto() = GetBenchmarkRunQuery.TargetTestCaseDto(
+        id = this.id,
+        load = this.load,
+        loadFrequency = this.loadFrequency,
+        status = this.status,
+        startTimestamp = this.startTimestamp,
+        endTimestamp = this.endTimestamp,
+        operationMeasurements = this.operationMeasurements,
+        passScalabilityThreshold = this.passScalabilityThreshold,
+        scalabilityShares = this.scalabilityShares,
+        relativeDomainMetric = this.relativeDomainMetric,
+        k6Output = this.k6Output,
+    )
 }

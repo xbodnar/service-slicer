@@ -33,9 +33,10 @@ class K6Runner(
         environmentVariables: Map<String, String> = emptyMap(),
         ignoreMetrics: Boolean = false,
     ): K6Result {
+        logger.info { "Executing k6 ${if (ignoreMetrics) "warmup run..." else "test run..."}" }
         val command = buildK6Command(scriptPath, configPath, environmentVariables, ignoreMetrics)
 
-        logger.info { "Executing k6 command: ${command.joinToString(" ")}" }
+        logger.debug { "Executing k6 command: ${command.joinToString(" ")}" }
 
         val startTime = Instant.now()
         val result = localCommandExecutor.execute(command, null)
@@ -48,7 +49,7 @@ class K6Runner(
 
         // Log the full output so we can see what k6 did
         if (result.output.isNotEmpty()) {
-            logger.info { "k6 output:\n${result.output}" }
+            logger.debug { "k6 output:\n${result.output}" }
         }
 
         // Read the summary JSON file that k6 wrote

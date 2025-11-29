@@ -887,7 +887,7 @@ export function BenchmarkDetailPage() {
                       </div>
                       <div className="space-y-2">
                         <Label>Frequency (0-1)</Label>
-                        <Input type="number" step="0.01" min="0" max="1" {...form.register(`operationalProfile.${index}.frequency`)} />
+                        <Input type="number" step="0.001" min="0" max="1" {...form.register(`operationalProfile.${index}.frequency`)} />
                       </div>
                     </div>
                     {operationalProfileFields.length > 1 && (
@@ -1436,8 +1436,8 @@ export function BenchmarkDetailPage() {
                     </div>
 
                     <div className="space-y-2 pt-2 border-t">
-                      <p className="text-xs font-semibold text-muted-foreground">Docker Configuration</p>
-                      <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">Docker Configuration</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                         <div>
                           <p className="text-xs text-muted-foreground">Health Check Path</p>
                           <p className="font-mono text-sm">{system.dockerConfig?.healthCheckPath}</p>
@@ -1446,7 +1446,7 @@ export function BenchmarkDetailPage() {
                           <p className="text-xs text-muted-foreground">App Port</p>
                           <p className="text-sm">{system.dockerConfig?.appPort}</p>
                         </div>
-                        <div>
+                        <div className="col-span-2">
                           <p className="text-xs text-muted-foreground">Startup Timeout</p>
                           <p className="text-sm">{system.dockerConfig?.startupTimeoutSeconds}s</p>
                         </div>
@@ -1479,30 +1479,32 @@ export function BenchmarkDetailPage() {
                                   </div>
                                 </div>
                               )}
-                              {dbConfig.dbContainerName && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Container Name</p>
-                                  <p className="font-mono text-sm">{dbConfig.dbContainerName}</p>
-                                </div>
-                              )}
-                              {dbConfig.dbPort && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Port</p>
-                                  <p className="font-mono text-sm">{dbConfig.dbPort}</p>
-                                </div>
-                              )}
-                              {dbConfig.dbName && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Database Name</p>
-                                  <p className="font-mono text-sm">{dbConfig.dbName}</p>
-                                </div>
-                              )}
-                              {dbConfig.dbUsername && (
-                                <div>
-                                  <p className="text-xs text-muted-foreground">Username</p>
-                                  <p className="font-mono text-sm">{dbConfig.dbUsername}</p>
-                                </div>
-                              )}
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                {dbConfig.dbContainerName && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Container Name</p>
+                                    <p className="font-mono text-sm">{dbConfig.dbContainerName}</p>
+                                  </div>
+                                )}
+                                {dbConfig.dbPort && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Port</p>
+                                    <p className="font-mono text-sm">{dbConfig.dbPort}</p>
+                                  </div>
+                                )}
+                                {dbConfig.dbName && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Database Name</p>
+                                    <p className="font-mono text-sm">{dbConfig.dbName}</p>
+                                  </div>
+                                )}
+                                {dbConfig.dbUsername && (
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Username</p>
+                                    <p className="font-mono text-sm">{dbConfig.dbUsername}</p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}

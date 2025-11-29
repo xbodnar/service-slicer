@@ -149,7 +149,12 @@ function getFromJsonPath(json, path) {
 }
 
 function executeStep(step, ctx) {
-    const url = BASE_URL + applyTemplate(step.path, ctx);
+    // Normalize URL to avoid double slashes
+    const path = applyTemplate(step.path, ctx);
+    const normalizedPath = path.startsWith('/') ? path : '/' + path;
+    const baseUrl = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
+    const url = baseUrl + normalizedPath;
+
     const headers = applyTemplate(step.headers || {}, ctx);
     const params = applyTemplate(step.params || {}, ctx);
     const body = applyTemplate(step.body || null, ctx);

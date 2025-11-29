@@ -3,11 +3,14 @@ package cz.bodnor.serviceslicer.domain.benchmarkrun
 import cz.bodnor.serviceslicer.domain.benchmark.Benchmark
 import cz.bodnor.serviceslicer.domain.benchmark.OperationalLoad
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
-import org.hibernate.annotations.JdbcTypeCode
-import org.hibernate.type.SqlTypes
+import jakarta.persistence.FetchType
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.time.Instant
@@ -16,15 +19,18 @@ import java.util.UUID
 @Entity
 class BenchmarkRun(
     val benchmarkId: UUID,
-    @JdbcTypeCode(SqlTypes.JSON)
-    val architectureTestSuites: MutableList<ArchitectureTestSuite> = mutableListOf(),
 ) : UpdatableEntity() {
+
+    @OneToMany(cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.EAGER)
+    @JoinColumn(name = "benchmark_run_id")
+    val architectureTestSuites: MutableList<ArchitectureTestSuite> = mutableListOf()
 
     @Enumerated(EnumType.STRING)
     var state: BenchmarkRunState = BenchmarkRunState.PENDING
         private set
 
-    @JdbcTypeCode(SqlTypes.JSON)
+    @OneToOne(cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.EAGER)
+    @JoinColumn(name = "baseline_test_case_id")
     var baselineTestCase: BaselineTestCase? = null
         private set
 
@@ -38,7 +44,7 @@ class BenchmarkRun(
 
             false -> {
                 val testSuite = getOrCreateTestSuite(sutId)
-                val testCase = testSuite.addTestCase(load)
+                testSuite.addTestCase(load)
                 testSuite.updateOverallStatus()
             }
         }
@@ -84,7 +90,9 @@ class BenchmarkRun(
 
     fun getOrCreateTestSuite(sutId: UUID): ArchitectureTestSuite = architectureTestSuites
         .find { it.targetSutId == sutId }
-        ?: ArchitectureTestSuite(targetSutId = sutId).also { architectureTestSuites.add(it) }
+        ?: ArchitectureTestSuite(targetSutId = sutId, this).also {
+            architectureTestSuites.add(it)
+        }
 
     fun getNextTestCaseToRun(benchmark: Benchmark): TestCaseToRun? {
         if (baselineTestCase == null) {

@@ -40,6 +40,9 @@ class ExecuteTestCaseCommandHandler(
             "Failed to find next test case to run"
         }
 
+        logger.info {
+            "Executing TestCase with sutId=${nextTestCaseToRun.sutId}, load=${nextTestCaseToRun.load} and isBaseline=${nextTestCaseToRun.isBaseline}"
+        }
         executeTest(benchmarkRun, nextTestCaseToRun)
 
         if (benchmarkRun.getNextTestCaseToRun(benchmark) == null) {
