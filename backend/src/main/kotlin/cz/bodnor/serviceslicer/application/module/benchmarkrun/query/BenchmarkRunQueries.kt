@@ -1,8 +1,10 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun.query
 
+import com.fasterxml.jackson.databind.JsonNode
+import cz.bodnor.serviceslicer.domain.benchmarkrun.BaselineTestCaseOperationMetrics
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRunState
 import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationId
-import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationMetrics
+import cz.bodnor.serviceslicer.domain.benchmarkrun.TargetTestCaseOperationMetrics
 import cz.bodnor.serviceslicer.domain.benchmarkrun.TestCaseStatus
 import cz.bodnor.serviceslicer.domain.benchmarkrun.TestSuiteStatus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.Query
@@ -71,9 +73,7 @@ data class GetBenchmarkRunQuery(val benchmarkId: UUID, val benchmarkRunId: UUID)
         @Schema(description = "End timestamp")
         val endTimestamp: Instant?,
         @Schema(description = "Operation metrics by operation ID")
-        val operationMeasurements: Map<OperationId, OperationMetrics>,
-        @Schema(description = "Scalability thresholds by operation ID")
-        val scalabilityThresholds: Map<OperationId, BigDecimal>,
+        val operationMetrics: Map<OperationId, BaselineTestCaseOperationMetrics>,
         @Schema(description = "K6 output")
         val k6Output: String?,
     )
@@ -88,6 +88,8 @@ data class GetBenchmarkRunQuery(val benchmarkId: UUID, val benchmarkRunId: UUID)
         val status: TestSuiteStatus,
         @Schema(description = "List of target test cases")
         val targetTestCases: List<TargetTestCaseDto>,
+        @Schema(description = "Total domain metric")
+        val totalDomainMetric: BigDecimal?,
         @Schema(description = "Scalability footprint by operation ID")
         val scalabilityFootprint: Map<OperationId, Int>,
     )
@@ -107,14 +109,12 @@ data class GetBenchmarkRunQuery(val benchmarkId: UUID, val benchmarkRunId: UUID)
         @Schema(description = "End timestamp")
         val endTimestamp: Instant?,
         @Schema(description = "Operation metrics by operation ID")
-        val operationMeasurements: Map<OperationId, OperationMetrics>,
-        @Schema(description = "Pass scalability threshold by operation ID")
-        val passScalabilityThreshold: Map<OperationId, Boolean>,
-        @Schema(description = "Scalability shares by operation ID")
-        val scalabilityShares: Map<OperationId, BigDecimal>,
+        val operationMetrics: Map<OperationId, TargetTestCaseOperationMetrics>,
         @Schema(description = "Relative domain metric")
         val relativeDomainMetric: BigDecimal?,
         @Schema(description = "K6 output")
         val k6Output: String?,
+        @Schema(description = "JSON summary of the K6 run")
+        val jsonSummary: JsonNode?,
     )
 }

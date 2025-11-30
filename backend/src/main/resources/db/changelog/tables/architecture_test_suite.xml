@@ -37,4 +37,12 @@
             <column name="benchmark_run_id"/>
         </createIndex>
     </changeSet>
+
+    <changeSet id="add-total-domain-metric-column" author="Norbert Bodnar">
+        <addColumn tableName="architecture_test_suite">
+            <column name="total_domain_metric" type="decimal">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

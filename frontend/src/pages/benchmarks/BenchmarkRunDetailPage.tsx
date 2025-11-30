@@ -45,9 +45,22 @@ export function BenchmarkRunDetailPage() {
   const { benchmarkId, runId } = useParams<{ benchmarkId: string; runId: string }>()
   const { data, isLoading, error } = useGetBenchmarkRun(benchmarkId!, runId!)
   const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
+  const [expandedOperationMetrics, setExpandedOperationMetrics] = useState<Set<string>>(new Set())
 
   const toggleK6Output = (id: string) => {
     setExpandedK6Outputs((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const toggleOperationMetrics = (id: string) => {
+    setExpandedOperationMetrics((prev) => {
       const next = new Set(prev)
       if (next.has(id)) {
         next.delete(id)
@@ -155,58 +168,70 @@ export function BenchmarkRunDetailPage() {
               )}
 
               {/* Operation Metrics */}
-              {data.baselineTestCase.operationMeasurements && Object.keys(data.baselineTestCase.operationMeasurements).length > 0 ? (
+              {data.baselineTestCase.operationMetrics && Object.keys(data.baselineTestCase.operationMetrics).length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold">Operation Metrics:</p>
-                  {Object.entries(data.baselineTestCase.operationMeasurements).map(([operationId, metric]: [string, any]) => (
-                    <div key={operationId} className="p-2 rounded bg-muted/30 space-y-1">
-                      <p className="text-xs font-mono font-medium">{operationId}</p>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Total Requests</span>
-                          <span className="font-mono">{metric.totalRequests}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleOperationMetrics('baseline')}
+                    className="text-xs"
+                  >
+                    {expandedOperationMetrics.has('baseline') ? (
+                      <>
+                        <ChevronUp className="h-3 w-3 mr-1" />
+                        Hide Operation Metrics
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-3 w-3 mr-1" />
+                        Show Operation Metrics ({Object.keys(data.baselineTestCase.operationMetrics).length})
+                      </>
+                    )}
+                  </Button>
+                  {expandedOperationMetrics.has('baseline') && (
+                    <div className="space-y-2">
+                      {Object.entries(data.baselineTestCase.operationMetrics).map(([operationId, metric]: [string, any]) => (
+                        <div key={operationId} className="p-2 rounded bg-muted/30 space-y-2">
+                          <p className="text-xs font-mono font-medium">{metric.operationId}</p>
+                          <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Total Requests</span>
+                              <span className="font-mono">{metric.totalRequests}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Failed</span>
+                              <span className="font-mono">{metric.failedRequests}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Mean Response</span>
+                              <span className="font-mono">{Number(metric.meanResponseTimeMs).toFixed(2)}ms</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Std Dev</span>
+                              <span className="font-mono">{Number(metric.stdDevResponseTimeMs).toFixed(2)}ms</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">P95</span>
+                              <span className="font-mono">{Number(metric.p95DurationMs).toFixed(2)}ms</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">P99</span>
+                              <span className="font-mono">{Number(metric.p99DurationMs).toFixed(2)}ms</span>
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-muted">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground font-medium">Scalability Threshold</span>
+                              <span className="font-mono font-medium text-blue-600 dark:text-blue-400">{Number(metric.scalabilityThreshold).toFixed(2)}ms</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Failed</span>
-                          <span className="font-mono">{metric.failedRequests}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Mean Response</span>
-                          <span className="font-mono">{Number(metric.meanResponseTimeMs).toFixed(2)}ms</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Std Dev</span>
-                          <span className="font-mono">{Number(metric.stdDevResponseTimeMs).toFixed(2)}ms</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">P95</span>
-                          <span className="font-mono">{Number(metric.p95DurationMs).toFixed(2)}ms</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">P99</span>
-                          <span className="font-mono">{Number(metric.p99DurationMs).toFixed(2)}ms</span>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">No operation metrics available</p>
-              )}
-
-              {/* Scalability Thresholds */}
-              {data.baselineTestCase.scalabilityThresholds && Object.keys(data.baselineTestCase.scalabilityThresholds).length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold">Scalability Thresholds:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(data.baselineTestCase.scalabilityThresholds).map(([operationId, threshold]: [string, any]) => (
-                      <div key={operationId} className="p-2 rounded bg-muted/30 flex justify-between text-xs">
-                        <span className="font-mono text-muted-foreground">{operationId}</span>
-                        <span className="font-mono font-medium">{Number(threshold).toFixed(2)}ms</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               )}
 
               {/* K6 Output */}
@@ -266,6 +291,26 @@ export function BenchmarkRunDetailPage() {
                   <p className="text-xs font-mono text-muted-foreground">{testSuite.targetSutId}</p>
                 </div>
 
+                {/* Total Domain Metric - Overall SUT Scalability */}
+                {testSuite.totalDomainMetric !== undefined && (
+                  <div className="mb-4 p-4 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-2 border-green-200 dark:border-green-800">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-green-900 dark:text-green-100 mb-1">Total Domain Metric (TDM)</p>
+                        <p className="text-xs text-muted-foreground">Total scalability of this System Under Test</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-3xl font-bold text-green-700 dark:text-green-400">
+                          {testSuite.totalDomainMetric.toFixed(4)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {testSuite.totalDomainMetric >= 0.95 ? 'Excellent scalability' : testSuite.totalDomainMetric >= 0.8 ? 'Good scalability' : testSuite.totalDomainMetric >= 0.6 ? 'Moderate scalability' : 'Poor scalability'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Scalability Footprint */}
                 {testSuite.scalabilityFootprint && Object.keys(testSuite.scalabilityFootprint).length > 0 && (
                   <div className="mb-4 p-3 rounded-lg bg-background/50 border space-y-2">
@@ -274,7 +319,7 @@ export function BenchmarkRunDetailPage() {
                       {Object.entries(testSuite.scalabilityFootprint).map(([operationId, footprint]: [string, any]) => (
                         <div key={operationId} className="p-2 rounded bg-muted/30 flex justify-between text-xs">
                           <span className="font-mono text-muted-foreground">{operationId}</span>
-                          <span className="font-mono font-medium">{Number(footprint).toFixed(4)}</span>
+                          <span className="font-mono font-medium">{Math.round(Number(footprint))}</span>
                         </div>
                       ))}
                     </div>
@@ -284,9 +329,9 @@ export function BenchmarkRunDetailPage() {
                 {/* Target Test Cases */}
                 {testSuite.targetTestCases.length > 0 ? (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Load Test Results</p>
+                    <p className="text-sm font-medium text-muted-foreground">Test Cases</p>
                     <div className="space-y-3">
-                      {testSuite.targetTestCases.map((testCase, testCaseIndex) => (
+                      {[...testSuite.targetTestCases].sort((a, b) => a.load - b.load).map((testCase, testCaseIndex) => (
                         <div key={testCaseIndex} className="p-3 rounded-md bg-background border">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
@@ -320,7 +365,7 @@ export function BenchmarkRunDetailPage() {
                                     {testCase.relativeDomainMetric.toFixed(4)}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {testCase.relativeDomainMetric >= 0.95 ? 'Very high reliability' : testCase.relativeDomainMetric >= 0.8 ? 'High reliability' : testCase.relativeDomainMetric >= 0.5 ? 'Moderate reliability' : 'High failure risk'}
+                                    {testCase.relativeDomainMetric >= 0.95 * testCase.loadFrequency ? 'Very high reliability' : testCase.relativeDomainMetric >= 0.8 * testCase.loadFrequency ? 'High reliability' : testCase.relativeDomainMetric >= 0.5 * testCase.loadFrequency ? 'Moderate reliability' : 'High failure risk'}
                                   </p>
                                 </div>
                               </div>
@@ -328,54 +373,75 @@ export function BenchmarkRunDetailPage() {
                           )}
 
                           {/* Operation Metrics */}
-                          {testCase.operationMeasurements && Object.keys(testCase.operationMeasurements).length > 0 ? (
+                          {testCase.operationMetrics && Object.keys(testCase.operationMetrics).length > 0 ? (
                             <div className="space-y-2">
-                              <p className="text-xs font-semibold">Operation Metrics:</p>
-                              {Object.entries(testCase.operationMeasurements).map(([operationId, metric]: [string, any]) => (
-                                <div key={operationId} className="p-2 rounded bg-muted/30 space-y-1">
-                                  <div className="flex items-center justify-between">
-                                    <p className="text-xs font-mono font-medium">{operationId}</p>
-                                    <div className="flex items-center gap-2">
-                                      {testCase.passScalabilityThreshold?.[operationId] !== undefined && (
-                                        <Badge variant={testCase.passScalabilityThreshold[operationId] ? "default" : "destructive"} className={`text-xs ${testCase.passScalabilityThreshold[operationId] ? 'bg-green-600' : ''}`}>
-                                          {testCase.passScalabilityThreshold[operationId] ? 'Pass' : 'Fail'}
-                                        </Badge>
-                                      )}
-                                      {testCase.scalabilityShares?.[operationId] !== undefined && (
-                                        <Badge variant="outline" className="text-xs">
-                                          Share: {testCase.scalabilityShares[operationId].toFixed(4)}
-                                        </Badge>
-                                      )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleOperationMetrics(`${testSuite.targetSutId}-${testCaseIndex}`)}
+                                className="text-xs"
+                              >
+                                {expandedOperationMetrics.has(`${testSuite.targetSutId}-${testCaseIndex}`) ? (
+                                  <>
+                                    <ChevronUp className="h-3 w-3 mr-1" />
+                                    Hide Operation Metrics
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-3 w-3 mr-1" />
+                                    Show Operation Metrics ({Object.keys(testCase.operationMetrics).length})
+                                  </>
+                                )}
+                              </Button>
+                              {expandedOperationMetrics.has(`${testSuite.targetSutId}-${testCaseIndex}`) && (
+                                <div className="space-y-2">
+                                  {Object.entries(testCase.operationMetrics).map(([operationId, metric]: [string, any]) => (
+                                    <div key={operationId} className="p-2 rounded bg-muted/30 space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <p className="text-xs font-mono font-medium">{metric.operationId}</p>
+                                        <div className="flex items-center gap-2">
+                                          {metric.passScalabilityThreshold !== undefined && (
+                                            <Badge variant={metric.passScalabilityThreshold ? "default" : "destructive"} className={`text-xs ${metric.passScalabilityThreshold ? 'bg-green-600' : ''}`}>
+                                              {metric.passScalabilityThreshold ? 'Pass' : 'Fail'}
+                                            </Badge>
+                                          )}
+                                          {metric.scalabilityShare !== undefined && (
+                                            <Badge variant="outline" className="text-xs">
+                                              Share: {metric.scalabilityShare.toFixed(4)}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="grid grid-cols-3 gap-2 text-xs">
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Total Requests</span>
+                                          <span className="font-mono">{metric.totalRequests}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Failed</span>
+                                          <span className="font-mono">{metric.failedRequests}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Mean Response</span>
+                                          <span className="font-mono">{Number(metric.meanResponseTimeMs).toFixed(2)}ms</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">Std Dev</span>
+                                          <span className="font-mono">{Number(metric.stdDevResponseTimeMs).toFixed(2)}ms</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">P95</span>
+                                          <span className="font-mono">{Number(metric.p95DurationMs).toFixed(2)}ms</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-muted-foreground">P99</span>
+                                          <span className="font-mono">{Number(metric.p99DurationMs).toFixed(2)}ms</span>
+                                        </div>
+                                      </div>
                                     </div>
-                                  </div>
-                                  <div className="grid grid-cols-3 gap-2 text-xs">
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Total Requests</span>
-                                      <span className="font-mono">{metric.totalRequests}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Failed</span>
-                                      <span className="font-mono">{metric.failedRequests}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Mean Response</span>
-                                      <span className="font-mono">{Number(metric.meanResponseTimeMs).toFixed(2)}ms</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Std Dev</span>
-                                      <span className="font-mono">{Number(metric.stdDevResponseTimeMs).toFixed(2)}ms</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">P95</span>
-                                      <span className="font-mono">{Number(metric.p95DurationMs).toFixed(2)}ms</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-muted-foreground">P99</span>
-                                      <span className="font-mono">{Number(metric.p99DurationMs).toFixed(2)}ms</span>
-                                    </div>
-                                  </div>
+                                  ))}
                                 </div>
-                              ))}
+                              )}
                             </div>
                           ) : (
                             <p className="text-xs text-muted-foreground">No operation metrics available</p>

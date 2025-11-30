@@ -1,12 +1,10 @@
-package cz.bodnor.serviceslicer.domain.benchmarkrun
+package cz.bodnor.serviceslicer.adapter.out.prometheus
 
-import com.fasterxml.jackson.annotation.JsonValue
+import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationId
 import java.math.BigDecimal
 
-@JvmInline value class OperationId(@get:JsonValue val value: String)
-
-data class OperationMetrics(
-    val operationId: OperationId,
+data class PrometheusMetrics(
+    val operationId: String,
 
     // counts
     val totalRequests: Long,

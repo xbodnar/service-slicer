@@ -1,0 +1,200 @@
+version: '3.8'
+
+services:
+  users-db:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=users
+      - POSTGRES_USER=realworld
+      - POSTGRES_PASSWORD=realworld
+    ports:
+      - "33001:5432"
+    volumes:
+      - users-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U realworld -d users"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+  articles-db:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=articles
+      - POSTGRES_USER=realworld
+      - POSTGRES_PASSWORD=realworld
+    ports:
+      - "33002:5432"
+    volumes:
+      - articles-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U realworld -d articles" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+  comments-db:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 333M
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=comments
+      - POSTGRES_USER=realworld
+      - POSTGRES_PASSWORD=realworld
+    ports:
+      - "33003:5432"
+    volumes:
+      - comments-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U realworld -d comments" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+  user-service:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+    image: ghcr.io/xbodnar/realworld-app-microservice-user-service:latest
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://users-db:5432/users
+      - SPRING_DATASOURCE_USERNAME=realworld
+      - SPRING_DATASOURCE_PASSWORD=realworld
+    depends_on:
+      users-db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - microservices-network
+
+  article-service:
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+    image: ghcr.io/xbodnar/realworld-app-microservice-article-service:latest
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://articles-db:5432/articles
+      - SPRING_DATASOURCE_USERNAME=realworld
+      - SPRING_DATASOURCE_PASSWORD=realworld
+      - SERVICES_USER-SERVICE_URL=http://user-service:8082
+    depends_on:
+      articles-db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - microservices-network
+
+  comment-service:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    image: ghcr.io/xbodnar/realworld-app-microservice-comment-service:latest
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://comments-db:5432/comments
+      - SPRING_DATASOURCE_USERNAME=realworld
+      - SPRING_DATASOURCE_PASSWORD=realworld
+      - SERVICES_USER-SERVICE_URL=http://user-service:8082
+      - SERVICES_ARTICLE-SERVICE_URL=http://article-service:8083
+    depends_on:
+      comments-db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      article-service:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - microservices-network
+
+  api-gateway:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    image: ghcr.io/xbodnar/realworld-app-microservice-api-gateway:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVICES_USER-SERVICE_URL=http://user-service:8082
+      - SERVICES_ARTICLE-SERVICE_URL=http://article-service:8083
+      - SERVICES_COMMENT-SERVICE_URL=http://comment-service:8084
+    depends_on:
+      user-service:
+        condition: service_healthy
+      article-service:
+        condition: service_healthy
+      comment-service:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  users-db-data:
+  articles-db-data:
+  comments-db-data:

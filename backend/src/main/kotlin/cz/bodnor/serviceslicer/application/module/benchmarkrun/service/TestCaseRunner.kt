@@ -1,10 +1,10 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun.service
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
-import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationMetrics
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -36,13 +36,15 @@ class TestCaseRunner(
         val benchmarkRunId: UUID,
         val sutId: UUID,
         val load: Int,
+        val testCaseId: UUID,
     )
 
     data class Result(
         val startTimestamp: Instant,
         val endTimestamp: Instant,
-        val operationMeasurements: List<OperationMetrics>,
+        val performanceMetrics: List<QueryLoadTestMetrics.PerformanceMetrics>,
         val k6Output: String,
+        val jsonSummary: JsonNode?,
     )
 
     fun runTestCase(input: Input): Result {
@@ -80,10 +82,8 @@ class TestCaseRunner(
                 environmentVariables = envVars,
             )
 
-            val operationMetrics = queryLoadTestMetrics(
-                benchmarkId = input.benchmarkId,
-                sutId = input.sutId,
-                targetVus = input.load,
+            val performanceMetrics = queryLoadTestMetrics(
+                testCaseId = input.testCaseId,
                 start = k6Result.startTime,
                 end = k6Result.endTime,
             )
@@ -91,8 +91,9 @@ class TestCaseRunner(
             return Result(
                 startTimestamp = k6Result.startTime,
                 endTimestamp = k6Result.endTime,
-                operationMeasurements = operationMetrics,
+                performanceMetrics = performanceMetrics,
                 k6Output = k6Result.output,
+                jsonSummary = k6Result.summaryJson,
             )
         } finally {
             logger.info { "Load test execution finished, cleaning up..." }
@@ -109,9 +110,7 @@ class TestCaseRunner(
             "BASE_URL" to baseUrl,
             "TARGET_VUS" to load.toString(),
             "DURATION" to k6Properties.testDuration,
-            "BENCHMARK_ID" to benchmarkId.toString(),
-            "BENCHMARK_RUN_ID" to benchmarkRunId.toString(),
-            "SUT_ID" to sutId.toString(),
+            "TEST_CASE_ID" to testCaseId.toString(),
         )
     }
 

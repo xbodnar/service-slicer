@@ -128,7 +128,7 @@ class SystemUnderTestRunner(
             // Transfer SQL file to execution environment
             val remoteSqlPath = commandExecutor.transferFile(
                 sqlFilePath,
-                "$project/seed.sql",
+                "$project/${sqlFilePath.fileName}",
             )
 
             // Copy SQL file into database container
@@ -141,7 +141,7 @@ class SystemUnderTestRunner(
                     project,
                     "cp",
                     remoteSqlPath.toFile().name,
-                    "$dbContainerName:/tmp/seed.sql",
+                    "$dbContainerName:/tmp/${sqlFilePath.fileName}",
                 ),
                 workDir,
             )
@@ -176,7 +176,7 @@ class SystemUnderTestRunner(
                 "ON_ERROR_STOP=1", // Stop on first error
                 "-a", // Echo all input from script
                 "-f",
-                "/tmp/seed.sql",
+                "/tmp/${sqlFilePath.fileName}",
             )
             logger.debug { "Executing command: ${psqlCommand.joinToString(" ")}" }
 
@@ -315,7 +315,7 @@ class SystemUnderTestRunner(
         project: String,
         workDir: File,
     ) {
-        val deadline = System.currentTimeMillis() + Duration.ofSeconds(30).toMillis()
+        val deadline = System.currentTimeMillis() + Duration.ofSeconds(90).toMillis()
         var attemptCount = 0
 
         while (System.currentTimeMillis() < deadline) {
@@ -361,6 +361,13 @@ class SystemUnderTestRunner(
             }
 
             logger.debug { "No tables found yet, waiting..." }
+
+            // Log full diagnostics every 10 attempts (20 seconds)
+            if (attemptCount % 10 == 0) {
+                logger.warn { "Still waiting for schema after ${attemptCount * 2} seconds. Running diagnostics..." }
+                debugDatabaseConnection(project, workDir)
+            }
+
             Thread.sleep(2000)
         }
 

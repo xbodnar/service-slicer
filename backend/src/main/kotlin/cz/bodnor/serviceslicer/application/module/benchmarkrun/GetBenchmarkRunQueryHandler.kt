@@ -39,8 +39,7 @@ class GetBenchmarkRunQueryHandler(
         status = this.status,
         startTimestamp = this.startTimestamp,
         endTimestamp = this.endTimestamp,
-        operationMeasurements = this.operationMeasurements,
-        scalabilityThresholds = this.scalabilityThresholds,
+        operationMetrics = this.operationMetrics,
         k6Output = this.k6Output,
     )
 
@@ -50,6 +49,7 @@ class GetBenchmarkRunQueryHandler(
         status = this.status,
         targetTestCases = this.targetTestCases.map { it.toDto() },
         scalabilityFootprint = this.scalabilityFootprint,
+        totalDomainMetric = this.totalDomainMetric,
     )
 
     private fun TargetTestCase.toDto() = GetBenchmarkRunQuery.TargetTestCaseDto(
@@ -59,10 +59,9 @@ class GetBenchmarkRunQueryHandler(
         status = this.status,
         startTimestamp = this.startTimestamp,
         endTimestamp = this.endTimestamp,
-        operationMeasurements = this.operationMeasurements,
-        passScalabilityThreshold = this.passScalabilityThreshold,
-        scalabilityShares = this.scalabilityShares,
+        operationMetrics = this.operationMetrics,
         relativeDomainMetric = this.relativeDomainMetric,
         k6Output = this.k6Output,
+        jsonSummary = this.jsonSummary,
     )
 }

@@ -681,7 +681,6 @@ export function BenchmarkCreatePage() {
               .filter((config): config is NonNullable<typeof config> => config !== null)
 
             return {
-              id: system.id,
               name: system.name,
               description: system.description || undefined,
               isBaseline: system.isBaseline,

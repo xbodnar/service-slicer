@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
+import java.math.BigDecimal
 import java.util.UUID
 
 @Entity
@@ -30,6 +31,9 @@ class ArchitectureTestSuite(
     @JoinColumn(name = "architecture_test_suite_id")
     val targetTestCases: MutableList<TargetTestCase> = mutableListOf()
 
+    var totalDomainMetric: BigDecimal? = null
+        private set
+
     /**
      * The scalability footprint measures the scalability level of each operation
      * exposed by the SUT. To obtain it, we first define the Greatest Successful Load (GSL) ˆλj for an operation
@@ -40,8 +44,11 @@ class ArchitectureTestSuite(
     @JdbcTypeCode(SqlTypes.JSON)
     val scalabilityFootprint: MutableMap<OperationId, Int> = mutableMapOf()
 
-    fun addTestCase(operationalLoad: OperationalLoad) {
-        targetTestCases.add(TargetTestCase(operationalLoad.load, operationalLoad.frequency, this))
+    fun addTestCase(operationalLoad: OperationalLoad): TargetTestCase {
+        val targetTestCase = TargetTestCase(operationalLoad.load, operationalLoad.frequency, this)
+        targetTestCases.add(targetTestCase)
+
+        return targetTestCase
     }
 
     fun updateOverallStatus() {
@@ -54,15 +61,16 @@ class ArchitectureTestSuite(
 
         if (status == TestSuiteStatus.COMPLETED) {
             computeScalabilityFootprint()
+            this.totalDomainMetric = targetTestCases.sumOf { it.relativeDomainMetric!! }
         }
     }
 
     private fun computeScalabilityFootprint() {
-        val operations = targetTestCases.flatMap { it.operationMeasurements.keys }
+        val operations = targetTestCases.flatMap { it.operationMetrics.keys }
         operations.forEach { operation ->
             var gsl = 0
             targetTestCases.forEach { testCase ->
-                if (testCase.passScalabilityThreshold[operation]!! && testCase.load > gsl) {
+                if (testCase.operationMetrics[operation]?.passScalabilityThreshold == true && testCase.load > gsl) {
                     gsl = testCase.load
                 }
             }

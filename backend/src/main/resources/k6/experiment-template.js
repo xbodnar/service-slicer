@@ -6,9 +6,7 @@ const BASE_URL = __ENV.BASE_URL;
 const TARGET_VUS = parseInt(__ENV.TARGET_VUS);
 const DURATION = __ENV.DURATION;
 const LOAD_TEST_CONFIG_FILE = __ENV.LOAD_TEST_CONFIG_FILE;
-const BENCHMARK_ID = __ENV.BENCHMARK_ID;
-const BENCHMARK_RUN_ID = __ENV.BENCHMARK_RUN_ID;
-const SUT_ID = __ENV.SUT_ID;
+const TEST_CASE_ID = __ENV.TEST_CASE_ID;
 
 // Validate required environment variables
 const requiredEnvVars = {
@@ -16,9 +14,7 @@ const requiredEnvVars = {
     TARGET_VUS, // load
     DURATION,
     LOAD_TEST_CONFIG_FILE,
-    BENCHMARK_ID,
-    BENCHMARK_RUN_ID,
-    SUT_ID,
+    TEST_CASE_ID,
 };
 
 const missingVars = Object.entries(requiredEnvVars)
@@ -168,10 +164,7 @@ function executeStep(step, ctx) {
         headers: headers,
         params: params,
         tags: {
-            benchmark_id: BENCHMARK_ID,
-            benchmark_run_id: BENCHMARK_RUN_ID,
-            sut_id: SUT_ID,
-            load: TARGET_VUS,
+            test_case_id: TEST_CASE_ID,
             behavior_id: ctx.behaviorId,
             actor: ctx.actor,
             component: step.component || 'unknown',

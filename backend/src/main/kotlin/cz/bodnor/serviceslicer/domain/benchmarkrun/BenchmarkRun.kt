@@ -1,5 +1,7 @@
 package cz.bodnor.serviceslicer.domain.benchmarkrun
 
+import com.fasterxml.jackson.databind.JsonNode
+import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.benchmark.Benchmark
 import cz.bodnor.serviceslicer.domain.benchmark.OperationalLoad
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
@@ -38,14 +40,19 @@ class BenchmarkRun(
         isBaseline: Boolean,
         sutId: UUID,
         load: OperationalLoad,
-    ) {
+    ): UUID {
         when (isBaseline) {
-            true -> this.baselineTestCase = BaselineTestCase(sutId, load.load)
+            true -> {
+                this.baselineTestCase = BaselineTestCase(sutId, load.load)
+                return this.baselineTestCase!!.id
+            }
 
             false -> {
                 val testSuite = getOrCreateTestSuite(sutId)
-                testSuite.addTestCase(load)
+                val testCase = testSuite.addTestCase(load)
                 testSuite.updateOverallStatus()
+
+                return testCase.id
             }
         }
     }
@@ -54,14 +61,15 @@ class BenchmarkRun(
         sutId: UUID,
         load: Int,
         endTimestamp: Instant,
-        measurements: List<OperationMetrics>,
+        performanceMetrics: List<QueryLoadTestMetrics.PerformanceMetrics>,
         k6Output: String,
+        jsonSummary: JsonNode?,
     ) {
         if (baselineTestCase?.baselineSutId == sutId) {
-            baselineTestCase!!.markCompleted(endTimestamp, measurements, k6Output)
+            baselineTestCase!!.markCompleted(endTimestamp, performanceMetrics, k6Output, jsonSummary)
         } else {
             val (testSuite, testCase) = getTargetTestCase(sutId, load)
-            testCase.markCompleted(baselineTestCase!!, endTimestamp, measurements, k6Output)
+            testCase.markCompleted(baselineTestCase!!, endTimestamp, performanceMetrics, k6Output, jsonSummary)
             testSuite.updateOverallStatus()
         }
     }

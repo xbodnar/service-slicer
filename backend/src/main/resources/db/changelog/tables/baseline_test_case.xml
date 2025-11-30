@@ -44,4 +44,16 @@
             </column>
         </createTable>
     </changeSet>
+    <changeSet id="rename-operation-measurements" author="Norbert Bodnar">
+        <renameColumn tableName="baseline_test_case" oldColumnName="operation_measurements"
+                      newColumnName="operation_metrics"/>
+        <dropColumn tableName="baseline_test_case" columnName="scalability_thresholds"/>
+    </changeSet>
+    <changeSet id="add-json-summary-column" author="Norbert Bodnar">
+        <addColumn tableName="baseline_test_case">
+            <column name="json_summary" type="jsonb">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

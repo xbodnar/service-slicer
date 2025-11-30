@@ -58,7 +58,7 @@ class ExecuteTestCaseCommandHandler(
         benchmarkRun: BenchmarkRun,
         testCaseToRun: BenchmarkRun.TestCaseToRun,
     ) {
-        benchmarkRun.addTestCase(
+        val testCaseId = benchmarkRun.addTestCase(
             isBaseline = testCaseToRun.isBaseline,
             sutId = testCaseToRun.sutId,
             load = testCaseToRun.load,
@@ -72,6 +72,7 @@ class ExecuteTestCaseCommandHandler(
                     benchmarkRunId = benchmarkRun.id,
                     sutId = testCaseToRun.sutId,
                     load = testCaseToRun.load.load,
+                    testCaseId = testCaseId,
                 ),
             )
 
@@ -79,8 +80,9 @@ class ExecuteTestCaseCommandHandler(
                 sutId = testCaseToRun.sutId,
                 load = testCaseToRun.load.load,
                 endTimestamp = result.endTimestamp,
-                measurements = result.operationMeasurements,
+                performanceMetrics = result.performanceMetrics,
                 k6Output = result.k6Output,
+                jsonSummary = result.jsonSummary,
             )
             benchmarkRunWriteService.save(benchmarkRun)
         }.onFailure {

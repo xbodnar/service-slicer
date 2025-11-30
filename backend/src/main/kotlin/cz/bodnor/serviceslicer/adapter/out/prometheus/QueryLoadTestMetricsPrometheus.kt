@@ -2,8 +2,6 @@ package cz.bodnor.serviceslicer.adapter.out.prometheus
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
-import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationId
-import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationMetrics
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 import java.math.BigDecimal
@@ -20,25 +18,20 @@ class QueryLoadTestMetricsPrometheus(
 
     @Suppress("ktlint:standard:max-line-length")
     override fun invoke(
-        benchmarkId: UUID,
-        sutId: UUID,
-        targetVus: Int,
+        testCaseId: UUID,
         start: Instant,
         end: Instant,
-    ): List<OperationMetrics> {
-        logger.debug { "Querying Prometheus for time range: start=$start, end=$end" }
-
+    ): List<QueryLoadTestMetrics.PerformanceMetrics> {
         // Build label filter for k6 metrics
-        val labelFilter = """benchmark_id="$benchmarkId",sut_id="$sutId",load="$targetVus""""
-        logger.debug { "Using label filter: $labelFilter" }
+        val labelFilter = """test_case_id="$testCaseId""""
 
         val duration = end.epochSecond - start.epochSecond
 
         // Query 1: Get total requests count per operation using increase over the full duration
-        val totalRequestsQuery = "sum by (operation, sut_id, load) (increase(k6_http_reqs_total{$labelFilter}[${duration}s]))"
+        val totalRequestsQuery = "sum by (operation, sut_id, load) (k6_http_reqs_total{$labelFilter})"
 
         // Query 2: Get failed requests count per operation using increase over the full duration
-        val failedRequestsQuery = "sum by (operation, sut_id, load) (increase(k6_http_reqs_total{$labelFilter,status!~\"2..\"}[${duration}s]))"
+        val failedRequestsQuery = "sum by (operation, sut_id, load) (k6_http_reqs_total{$labelFilter,status!~\"2..\"})"
 
         // Query 3: Get mean response time histogram per operation
         val meanResponseTimeQuery = "histogram_avg(sum by (operation, sut_id, load) (rate(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
@@ -55,27 +48,27 @@ class QueryLoadTestMetricsPrometheus(
         // Execute instant queries at the end time with a lookback window to the start
         val totalRequests = prometheusConnector.query(totalRequestsQuery, end)
             .also { logger.debug { "Total requests response: $it" } }
-            .parseVectorResult(sutId, targetVus)
+            .parseVectorResult()
 
         val failedRequests = prometheusConnector.query(failedRequestsQuery, end)
             .also { logger.debug { "Failed requests response: $it" } }
-            .parseVectorResult(sutId, targetVus)
+            .parseVectorResult()
 
         val meanResponseTimeResponse = prometheusConnector.query(meanResponseTimeQuery, end)
             .also { logger.debug { "Mean response time response: $it" } }
-            .parseVectorResult(sutId, targetVus)
+            .parseVectorResult()
 
         val stdDevResponseTimeResponse = prometheusConnector.query(stdDevResponseTimeQuery, end)
             .also { logger.debug { "StdDev response time response: $it" } }
-            .parseVectorResult(sutId, targetVus)
+            .parseVectorResult()
 
         val p95ResponseTimeResponse = prometheusConnector.query(p95ResponseTimeQuery, end)
             .also { logger.debug { "P95 response time response: $it" } }
-            .parseVectorResult(sutId, targetVus)
+            .parseVectorResult()
 
         val p99ResponseTimeResponse = prometheusConnector.query(p99ResponseTimeQuery, end)
             .also { logger.debug { "P99 response time response: $it" } }
-            .parseVectorResult(sutId, targetVus)
+            .parseVectorResult()
 
         val allOperations = totalRequests.keys +
             failedRequests.keys +
@@ -85,22 +78,19 @@ class QueryLoadTestMetricsPrometheus(
             p99ResponseTimeResponse.keys
 
         return allOperations.map { op ->
-            OperationMetrics(
-                operationId = OperationId(op),
+            QueryLoadTestMetrics.PerformanceMetrics(
+                operationId = op,
                 totalRequests = totalRequests[op]?.toLong() ?: 0L,
                 failedRequests = failedRequests[op]?.toLong() ?: 0L,
-                meanResponseTimeMs = meanResponseTimeResponse[op]?.multiply(BigDecimal(1000))!!,
-                stdDevResponseTimeMs = stdDevResponseTimeResponse[op]?.multiply(BigDecimal(1000))!!,
-                p95DurationMs = p95ResponseTimeResponse[op]?.multiply(BigDecimal(1000))!!,
-                p99DurationMs = p99ResponseTimeResponse[op]?.multiply(BigDecimal(1000))!!,
+                meanResponseTimeMs = (meanResponseTimeResponse[op] ?: BigDecimal.ZERO).multiply(BigDecimal(1000)),
+                stdDevResponseTimeMs = (stdDevResponseTimeResponse[op] ?: BigDecimal.ZERO).multiply(BigDecimal(1000)),
+                p95DurationMs = (p95ResponseTimeResponse[op] ?: BigDecimal.ZERO).multiply(BigDecimal(1000)),
+                p99DurationMs = (p99ResponseTimeResponse[op] ?: BigDecimal.ZERO).multiply(BigDecimal(1000)),
             )
         }
     }
 
-    private fun PrometheusResponse.parseVectorResult(
-        sutId: UUID,
-        targetVus: Int,
-    ): Map<String, BigDecimal> {
+    private fun PrometheusResponse.parseVectorResult(): Map<String, BigDecimal> {
         require(status == "success") {
             "Prometheus query returned non-success status: $status"
         }
@@ -112,15 +102,6 @@ class QueryLoadTestMetricsPrometheus(
         }
 
         return data.result.associate {
-            require(it.metric.size == 3) {
-                "Expected 3 labels, but got ${it.metric.size}"
-            }
-            require(it.metric["load"] == targetVus.toString()) {
-                "Expected load=$targetVus, but got ${it.metric["load"]}"
-            }
-            require(it.metric["sut_id"] == sutId.toString()) {
-                "Expected sut_id=$sutId, but got ${it.metric["sut_id"]}"
-            }
             require(it.value?.size == 2) {
                 "Expected 2 values, but got ${it.value?.size}"
             }

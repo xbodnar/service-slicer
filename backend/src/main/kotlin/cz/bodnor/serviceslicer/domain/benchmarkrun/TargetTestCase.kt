@@ -1,5 +1,7 @@
 package cz.bodnor.serviceslicer.domain.benchmarkrun
 
+import com.fasterxml.jackson.databind.JsonNode
+import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -32,16 +34,7 @@ class TargetTestCase(
         private set
 
     @JdbcTypeCode(SqlTypes.JSON)
-    var operationMeasurements: Map<OperationId, OperationMetrics> = emptyMap()
-        private set
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    var passScalabilityThreshold: Map<OperationId, Boolean> = emptyMap()
-        private set
-
-    // estimates the conditional probability that operation succeeds given deployment architecture α and load λ.
-    @JdbcTypeCode(SqlTypes.JSON)
-    var scalabilityShares: Map<OperationId, BigDecimal> = emptyMap()
+    var operationMetrics: Map<OperationId, TargetTestCaseOperationMetrics> = emptyMap()
         private set
 
     var relativeDomainMetric: BigDecimal? = null
@@ -51,32 +44,63 @@ class TargetTestCase(
     var k6Output: String? = null
         private set
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    var jsonSummary: JsonNode? = null
+        private set
+
     fun markCompleted(
         baselineTestCase: BaselineTestCase,
         endTime: Instant,
-        measurements: List<OperationMetrics>,
+        performanceMetrics: List<QueryLoadTestMetrics.PerformanceMetrics>,
         k6Output: String,
+        jsonSummary: JsonNode?,
     ) {
         this.status = TestCaseStatus.COMPLETED
         this.endTimestamp = endTime
-        this.operationMeasurements = measurements.associateBy { it.operationId }
-        this.passScalabilityThreshold = operationMeasurements.mapValues {
-            val baselineScalabilityThreshold =
-                baselineTestCase.scalabilityThresholds[it.key]
-                    ?: error("No baseline scalability threshold found for operation ${it.key}")
-            it.value.meanResponseTimeMs <= baselineScalabilityThreshold
-        }
-        this.scalabilityShares = operationMeasurements.mapValues { (operationId, operationMetrics) ->
-            // frequency of invocation of operation o over all invocations to all operations * 1 if operation passes, 0 if it fails
-            val numerator = operationMetrics.totalRequests.toBigDecimal()
-            val denominator = operationMeasurements.values.sumOf { it.totalRequests }.toBigDecimal()
-            val freqOfInvocation = numerator.divide(denominator, 8, RoundingMode.HALF_UP)
-            val passed = if (passScalabilityThreshold[operationId]!!) BigDecimal.ONE else BigDecimal.ZERO
 
-            freqOfInvocation * passed
-        }
-        this.relativeDomainMetric = loadFrequency.toBigDecimal() * scalabilityShares.values.sumOf { it }
+        val totalRequests = performanceMetrics.sumOf { it.totalRequests }
+
+        this.operationMetrics = performanceMetrics.map { metrics ->
+            val operationId = OperationId(metrics.operationId)
+            val baselineMetrics = baselineTestCase.operationMetrics[operationId]
+                ?: error("No baseline metrics found for operation $operationId")
+            val passScalabilityThreshold = metrics.meanResponseTimeMs <= baselineMetrics.scalabilityThreshold
+
+            TargetTestCaseOperationMetrics(
+                operationId = operationId,
+                totalRequests = metrics.totalRequests,
+                failedRequests = metrics.failedRequests,
+                meanResponseTimeMs = metrics.meanResponseTimeMs,
+                stdDevResponseTimeMs = metrics.stdDevResponseTimeMs,
+                p95DurationMs = metrics.p95DurationMs,
+                p99DurationMs = metrics.p99DurationMs,
+                passScalabilityThreshold = passScalabilityThreshold,
+                scalabilityShare = calculateScalabilityShare(
+                    operationMetrics = metrics,
+                    totalTargetTestCaseRequests = totalRequests,
+                    passScalabilityThreshold = passScalabilityThreshold,
+                ),
+            )
+        }.associateBy { it.operationId }
+        this.relativeDomainMetric =
+            loadFrequency.toBigDecimal() * this.operationMetrics.values.sumOf { it.scalabilityShare }
         this.k6Output = k6Output
+        this.jsonSummary = jsonSummary
+    }
+
+    private fun calculateScalabilityShare(
+        operationMetrics: QueryLoadTestMetrics.PerformanceMetrics,
+        totalTargetTestCaseRequests: Long,
+        passScalabilityThreshold: Boolean,
+    ): BigDecimal {
+        if (!passScalabilityThreshold) {
+            return BigDecimal.ZERO
+        }
+
+        val numerator = operationMetrics.totalRequests.toBigDecimal()
+        val denominator = totalTargetTestCaseRequests.toBigDecimal()
+
+        return numerator.divide(denominator, 8, RoundingMode.HALF_UP)
     }
 
     fun markFailed(endTime: Instant) {
