@@ -30,12 +30,18 @@
             <column name="description" type="text">
                 <constraints nullable="true"/>
             </column>
-            <column name="systems_under_test" type="jsonb">
+            <column name="baseline_sut_id" type="uuid">
                 <constraints nullable="false"/>
             </column>
+            <column name="target_sut_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="baseline_sut_validation_result" type="jsonb">
+                <constraints nullable="true"/>
+            </column>
+            <column name="target_sut_validation_result" type="jsonb">
+                <constraints nullable="true"/>
+            </column>
         </createTable>
-    </changeSet>
-    <changeSet id="remove-system-under-test-column" author="Norbert Bodnar">
-        <dropColumn tableName="benchmark" columnName="systems_under_test"/>
     </changeSet>
 </databaseChangeLog>

@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useBenchmark, useUpdateBenchmark } from '@/hooks/useBenchmarks'
 import { useGenerateBehaviorModels, useRunBenchmark, useValidateBenchmarkConfig } from '@/api/generated/benchmarks-controller/benchmarks-controller'
-import { useAddSystemUnderTest, useDeleteSystemUnderTest } from '@/api/generated/system-under-test-controller/system-under-test-controller'
 import { type UploadedFile } from '@/hooks/useFileUpload'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
@@ -22,7 +21,6 @@ import {
   FileCode,
   Server,
   Activity,
-  FileArchive,
   Users,
   X,
   Plus,
@@ -34,6 +32,8 @@ import {
   ChevronDown,
   ChevronUp,
   History,
+  Database,
+  Container,
 } from 'lucide-react'
 
 // Form schema matching API structure
@@ -42,28 +42,7 @@ const keyValuePairSchema = z.object({
   value: z.string(),
 })
 
-// Schema for adding System Under Test
-const addSUTSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  description: z.string().optional(),
-  isBaseline: z.boolean(),
-  healthCheckPath: z.string().min(1, 'Health check path is required'),
-  appPort: z.coerce.number().min(1, 'App port must be at least 1'),
-  startupTimeoutSeconds: z.coerce.number().min(1, 'Startup timeout must be at least 1'),
-  databaseSeedConfigs: z.array(
-    z.object({
-      dbContainerName: z.string().min(1, 'Container name is required'),
-      dbPort: z.coerce.number().min(1, 'DB port must be at least 1'),
-      dbName: z.string().min(1, 'Database name is required'),
-      dbUsername: z.string().min(1, 'Username is required'),
-    })
-  ),
-})
-
-type AddSUTFormData = z.infer<typeof addSUTSchema>
-
-
-// Schema for editing (SUTs not editable but still need to validate)
+// Schema for editing
 const editBenchmarkSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
@@ -307,25 +286,19 @@ export function BenchmarkDetailPage() {
   const generateBehaviorModels = useGenerateBehaviorModels()
   const runBenchmark = useRunBenchmark()
   const validateConfig = useValidateBenchmarkConfig()
-  const addSystemUnderTest = useAddSystemUnderTest()
-  const deleteSystemUnderTest = useDeleteSystemUnderTest()
 
   const [isEditing, setIsEditing] = useState(false)
-  const [isAddingSUT, setIsAddingSUT] = useState(false)
-  const [composeFile, setComposeFile] = useState<UploadedFile | null>(null)
-  const [dbSeedFiles, setDbSeedFiles] = useState<(UploadedFile | null)[]>([null])
   const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
   const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set())
-  const [expandedEditModels, setExpandedEditModels] = useState<Set<number>>(new Set())
   const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
 
   // Poll for validation results when any validation is PENDING
   useEffect(() => {
     if (!data) return
 
-    const hasPendingValidation = data.systemsUnderTest.some(
-      (sut: any) => sut.validationResult?.validationState === 'PENDING'
-    )
+    const hasPendingValidation =
+      data.baselineSutValidationResult?.validationState === 'PENDING' ||
+      data.targetSutValidationResult?.validationState === 'PENDING'
 
     if (hasPendingValidation) {
       const pollInterval = setInterval(() => {
@@ -356,25 +329,6 @@ export function BenchmarkDetailPage() {
     name: 'operationalProfile',
   })
 
-  // Add SUT form
-  const sutForm = useForm<AddSUTFormData>({
-    resolver: zodResolver(addSUTSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      isBaseline: false,
-      healthCheckPath: '/actuator/health',
-      appPort: 8080,
-      startupTimeoutSeconds: 120,
-      databaseSeedConfigs: [],
-    },
-  })
-
-  const { fields: dbConfigFields, append: appendDbConfig, remove: removeDbConfig } = useFieldArray({
-    control: sutForm.control,
-    name: 'databaseSeedConfigs',
-  })
-
   // Helper to convert object to key-value pairs array
   const objectToKeyValuePairs = (obj: Record<string, string> | undefined): { key: string; value: string }[] => {
     if (!obj) return []
@@ -395,7 +349,7 @@ export function BenchmarkDetailPage() {
   const handleStartEdit = () => {
     if (!data) return
 
-    const behaviorModels = data.loadTestConfig.behaviorModels.map((model: any) => ({
+    const behaviorModels = data.config.behaviorModels.map((model: any) => ({
       id: model.id,
       actor: model.actor,
       usageProfile: model.usageProfile,
@@ -416,7 +370,7 @@ export function BenchmarkDetailPage() {
       name: data.name,
       description: data.description || '',
       behaviorModels,
-      operationalProfile: data.loadTestConfig.operationalProfile || [],
+      operationalProfile: data.config.operationalProfile || [],
     })
 
     setOpenApiFile(null)
@@ -497,8 +451,8 @@ export function BenchmarkDetailPage() {
           name: formData.name,
           description: formData.description || undefined,
           benchmarkConfig: {
-            id: data.loadTestConfig.loadTestConfigId,
-            openApiFileId: openApiFile?.fileId || data.loadTestConfig.openApiFile.fileId,
+            id: data.config.loadTestConfigId,
+            openApiFileId: openApiFile?.fileId || data.config.openApiFile.fileId,
             behaviorModels,
             operationalProfile: formData.operationalProfile,
           },
@@ -585,18 +539,6 @@ export function BenchmarkDetailPage() {
     })
   }
 
-  const toggleEditModelExpansion = (modelIndex: number) => {
-    setExpandedEditModels((prev) => {
-      const next = new Set(prev)
-      if (next.has(modelIndex)) {
-        next.delete(modelIndex)
-      } else {
-        next.add(modelIndex)
-      }
-      return next
-    })
-  }
-
   const toggleK6Output = (systemId: string) => {
     setExpandedK6Outputs((prev) => {
       const next = new Set(prev)
@@ -607,131 +549,6 @@ export function BenchmarkDetailPage() {
       }
       return next
     })
-  }
-
-  const handleStartAddSUT = () => {
-    sutForm.reset()
-    setComposeFile(null)
-    setDbSeedFiles([null])
-    setIsAddingSUT(true)
-  }
-
-  const handleCancelAddSUT = () => {
-    setIsAddingSUT(false)
-    setComposeFile(null)
-    setDbSeedFiles([null])
-    sutForm.reset()
-  }
-
-  const handleAddDbConfig = () => {
-    appendDbConfig({
-      dbContainerName: '',
-      dbPort: 5432,
-      dbName: '',
-      dbUsername: '',
-    })
-    setDbSeedFiles([...dbSeedFiles, null])
-  }
-
-  const handleRemoveDbConfig = (index: number) => {
-    removeDbConfig(index)
-    setDbSeedFiles(dbSeedFiles.filter((_, i) => i !== index))
-  }
-
-  const onSubmitAddSUT = async (formData: AddSUTFormData) => {
-    if (!composeFile) {
-      toast({
-        variant: 'destructive',
-        title: 'Docker Compose file is required',
-      })
-      return
-    }
-
-    // Validate that all DB seed files are uploaded
-    for (let i = 0; i < formData.databaseSeedConfigs.length; i++) {
-      if (!dbSeedFiles[i]) {
-        toast({
-          variant: 'destructive',
-          title: `SQL seed file for database ${i + 1} is required`,
-        })
-        return
-      }
-    }
-
-    try {
-      await addSystemUnderTest.mutateAsync({
-        benchmarkId: benchmarkId!,
-        data: {
-          name: formData.name,
-          description: formData.description || undefined,
-          isBaseline: formData.isBaseline,
-          dockerConfig: {
-            composeFile: {
-              fileId: composeFile.fileId,
-              filename: composeFile.filename,
-              fileSize: composeFile.size,
-            },
-            healthCheckPath: formData.healthCheckPath,
-            appPort: formData.appPort,
-            startupTimeoutSeconds: formData.startupTimeoutSeconds,
-          },
-          databaseSeedConfigs: formData.databaseSeedConfigs.map((config, i) => ({
-            sqlSeedFile: {
-              fileId: dbSeedFiles[i]!.fileId,
-              filename: dbSeedFiles[i]!.filename,
-              fileSize: dbSeedFiles[i]!.size,
-            },
-            dbContainerName: config.dbContainerName,
-            dbPort: config.dbPort,
-            dbName: config.dbName,
-            dbUsername: config.dbUsername,
-          })),
-        },
-      })
-
-      toast({
-        title: 'System Under Test added',
-        description: 'The system has been added successfully',
-      })
-
-      setIsAddingSUT(false)
-      setComposeFile(null)
-      setDbSeedFiles([null])
-      sutForm.reset()
-      refetch()
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to add system',
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-      })
-    }
-  }
-
-  const handleDeleteSUT = async (systemId: string, systemName: string) => {
-    if (!confirm(`Are you sure you want to delete "${systemName}"?`)) {
-      return
-    }
-
-    try {
-      await deleteSystemUnderTest.mutateAsync({
-        benchmarkId: benchmarkId!,
-        sutId: systemId,
-      })
-
-      toast({
-        title: 'System deleted',
-        description: `"${systemName}" has been deleted successfully`,
-      })
-
-      refetch()
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to delete system',
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-      })
-    }
   }
 
   if (isLoading) {
@@ -808,7 +625,7 @@ export function BenchmarkDetailPage() {
                 {!openApiFile && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
                     <FileCode className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Current: {data.loadTestConfig.openApiFile.filename}</span>
+                    <span className="text-sm">Current: {data.config.openApiFile.filename}</span>
                   </div>
                 )}
               </div>
@@ -977,7 +794,7 @@ export function BenchmarkDetailPage() {
                 ) : (
                   <>
                     <Activity className="h-4 w-4 mr-2" />
-                    {data.loadTestConfig.behaviorModels.length > 0 ? 'Regenerate Behavior Models' : 'Generate Behavior Models'}
+                    {data.config.behaviorModels.length > 0 ? 'Regenerate Behavior Models' : 'Generate Behavior Models'}
                   </>
                 )}
               </Button>
@@ -991,23 +808,23 @@ export function BenchmarkDetailPage() {
                 <span>OpenAPI Specification</span>
               </div>
               <div className="flex items-center gap-2 pl-6">
-                <span className="font-medium">{data.loadTestConfig.openApiFile.filename}</span>
+                <span className="font-medium">{data.config.openApiFile.filename}</span>
                 <Badge variant="secondary" className="text-xs">
-                  {formatFileSize(data.loadTestConfig.openApiFile.fileSize)}
+                  {formatFileSize(data.config.openApiFile.fileSize)}
                 </Badge>
               </div>
             </div>
 
             {/* Behavior Models */}
-            {data.loadTestConfig.behaviorModels.length > 0 && (
+            {data.config.behaviorModels.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-muted-foreground">Behavior Models</span>
-                  <Badge variant="outline">{data.loadTestConfig.behaviorModels.length}</Badge>
+                  <Badge variant="outline">{data.config.behaviorModels.length}</Badge>
                 </div>
                 <div className="space-y-2 pl-6">
-                  {data.loadTestConfig.behaviorModels.map((model: any) => {
+                  {data.config.behaviorModels.map((model: any) => {
                     const isExpanded = expandedModels.has(model.id)
                     return (
                       <div key={model.id} className="p-3 rounded-lg bg-muted/50 space-y-2">
@@ -1139,17 +956,17 @@ export function BenchmarkDetailPage() {
             )}
 
             {/* Operational Profile */}
-            {data.loadTestConfig.operationalProfile?.length > 0 && (
+            {data.config.operationalProfile?.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Activity className="h-4 w-4" />
                   <span>Operational Profile</span>
                 </div>
                 <div className="pl-6 text-sm">
-                  {data.loadTestConfig.operationalProfile.map((p: any, i: number) => (
+                  {data.config.operationalProfile.map((p: any, i: number) => (
                     <span key={i}>
                       {p.load} users ({(p.frequency * 100).toFixed(0)}%)
-                      {i < data.loadTestConfig.operationalProfile.length - 1 && ', '}
+                      {i < data.config.operationalProfile.length - 1 && ', '}
                     </span>
                   ))}
                 </div>
@@ -1161,363 +978,329 @@ export function BenchmarkDetailPage() {
         {/* Systems Under Test */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Server className="h-5 w-5 text-primary" />
-                <CardTitle>Systems Under Test</CardTitle>
-                <Badge variant="outline">{data.systemsUnderTest.length}</Badge>
-              </div>
-              {!isAddingSUT && (
-                <Button variant="outline" size="sm" onClick={handleStartAddSUT}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add System
-                </Button>
-              )}
+            <div className="flex items-center gap-2">
+              <Server className="h-5 w-5 text-primary" />
+              <CardTitle>Systems Under Test</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">{isAddingSUT && (
-              <form onSubmit={sutForm.handleSubmit(onSubmitAddSUT)} className="p-4 rounded-lg bg-muted/30 border-2 border-dashed space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold">New System Under Test</h4>
-                  <Button type="button" variant="ghost" size="sm" onClick={handleCancelAddSUT}>
-                    <X className="h-4 w-4" />
-                  </Button>
+          <CardContent className="space-y-6">
+            {/* Baseline SUT */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Badge variant="default" className="bg-blue-600">Baseline</Badge>
+                <Link to={`/systems-under-test/${data.baselineSut.id}`} className="text-lg font-semibold hover:underline">
+                  {data.baselineSut.name}
+                </Link>
+              </div>
+
+              {data.baselineSut.description && (
+                <p className="text-sm text-muted-foreground mb-3">{data.baselineSut.description}</p>
+              )}
+
+              {/* Docker Configuration */}
+              <div className="mb-3 p-3 rounded-lg bg-muted/30 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Container className="h-4 w-4 text-muted-foreground" />
+                  <span>Docker Configuration</span>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="sut-name">Name *</Label>
-                    <Input id="sut-name" {...sutForm.register('name')} />
-                    {sutForm.formState.errors.name && (
-                      <p className="text-sm text-destructive">{sutForm.formState.errors.name.message}</p>
-                    )}
+                <div className="pl-6 space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <FileCode className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">Compose File:</span>
+                    <span className="font-medium">{data.baselineSut.dockerConfig.composeFile.filename}</span>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sut-description">Description</Label>
-                    <Input id="sut-description" {...sutForm.register('description')} />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="sut-baseline" {...sutForm.register('isBaseline')} className="h-4 w-4" />
-                  <Label htmlFor="sut-baseline" className="cursor-pointer">Set as baseline</Label>
-                </div>
-
-                {/* Docker Configuration */}
-                <div className="space-y-3 p-3 rounded-lg bg-background/50 border">
-                  <h5 className="text-sm font-semibold">Docker Configuration</h5>
-
-                  <FileSelector
-                    id="sut-compose-file"
-                    label="Docker Compose File *"
-                    accept=".yml,.yaml"
-                    onFileSelected={setComposeFile}
-                    selectedFile={composeFile}
-                    mimeTypeFilter="yaml"
-                  />
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="sut-health-check">Health Check Path *</Label>
-                      <Input id="sut-health-check" {...sutForm.register('healthCheckPath')} />
-                      {sutForm.formState.errors.healthCheckPath && (
-                        <p className="text-sm text-destructive">{sutForm.formState.errors.healthCheckPath.message}</p>
-                      )}
+                  <div className="grid grid-cols-2 gap-2 pl-5">
+                    <div>
+                      <span className="text-muted-foreground">App Port:</span>
+                      <span className="ml-2 font-mono">{data.baselineSut.dockerConfig.appPort}</span>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sut-app-port">App Port *</Label>
-                      <Input type="number" id="sut-app-port" {...sutForm.register('appPort')} />
-                      {sutForm.formState.errors.appPort && (
-                        <p className="text-sm text-destructive">{sutForm.formState.errors.appPort.message}</p>
-                      )}
+                    <div>
+                      <span className="text-muted-foreground">Health Check:</span>
+                      <span className="ml-2 font-mono">{data.baselineSut.dockerConfig.healthCheckPath}</span>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="sut-timeout">Startup Timeout (s) *</Label>
-                      <Input type="number" id="sut-timeout" {...sutForm.register('startupTimeoutSeconds')} />
-                      {sutForm.formState.errors.startupTimeoutSeconds && (
-                        <p className="text-sm text-destructive">{sutForm.formState.errors.startupTimeoutSeconds.message}</p>
-                      )}
+                    <div>
+                      <span className="text-muted-foreground">Startup Timeout:</span>
+                      <span className="ml-2 font-mono">{data.baselineSut.dockerConfig.startupTimeoutSeconds}s</span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Database Configurations */}
-                <div className="space-y-3 p-3 rounded-lg bg-background/50 border">
-                  <div className="flex items-center justify-between">
-                    <h5 className="text-sm font-semibold">Database Configurations</h5>
-                    <Button type="button" variant="outline" size="sm" onClick={handleAddDbConfig}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Database
-                    </Button>
-                  </div>
-
-                  {dbConfigFields.map((field, index) => (
-                    <div key={field.id} className="p-3 rounded-lg bg-muted/30 border space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline">Database {index + 1}</Badge>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveDbConfig(index)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <FileSelector
-                        id={`sut-db-seed-${index}`}
-                        label="SQL Seed File *"
-                        accept=".sql"
-                        onFileSelected={(file) => {
-                          const newFiles = [...dbSeedFiles]
-                          newFiles[index] = file
-                          setDbSeedFiles(newFiles)
-                        }}
-                        selectedFile={dbSeedFiles[index]}
-                        mimeTypeFilter="sql"
-                      />
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label>Container Name *</Label>
-                          <Input {...sutForm.register(`databaseSeedConfigs.${index}.dbContainerName`)} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Port *</Label>
-                          <Input type="number" {...sutForm.register(`databaseSeedConfigs.${index}.dbPort`)} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Database Name *</Label>
-                          <Input {...sutForm.register(`databaseSeedConfigs.${index}.dbName`)} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Username *</Label>
-                          <Input {...sutForm.register(`databaseSeedConfigs.${index}.dbUsername`)} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {dbConfigFields.length === 0 && (
-                    <p className="text-sm text-muted-foreground italic">No database configurations</p>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={addSystemUnderTest.isPending}>
-                    {addSystemUnderTest.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Add System
-                  </Button>
-                  <Button type="button" variant="outline" onClick={handleCancelAddSUT}>
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {data.systemsUnderTest.map((system: any) => (
-              <div key={system.systemUnderTestId} className="p-4 rounded-lg bg-muted/50 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold">{system.name}</h4>
-                      {system.isBaseline && (
-                        <Badge variant="default" className="bg-blue-600 text-white">
-                          Baseline
-                        </Badge>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="ml-2 h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteSUT(system.systemUnderTestId, system.name)}
-                        disabled={deleteSystemUnderTest.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    {system.description && (
-                      <p className="text-sm text-muted-foreground">{system.description}</p>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    {(() => {
-                      const validationState = system.validationResult?.validationState
-                      const isPending = validationState === 'PENDING'
-                      const isValid = validationState === 'VALID'
-                      const isInvalid = validationState === 'INVALID'
-
-                      let buttonText = 'Validate'
-                      let buttonIcon = <ShieldCheck className="h-4 w-4 mr-2" />
-                      let buttonVariant: 'outline' | 'default' | 'destructive' = 'outline'
-                      let isDisabled = false
-
-                      if (isPending) {
-                        buttonText = 'Validating...'
-                        buttonIcon = <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        isDisabled = true
-                      } else if (isValid) {
-                        buttonText = 'Re-validate'
-                        buttonIcon = <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
-                        buttonVariant = 'outline'
-                        isDisabled = false
-                      } else if (isInvalid) {
-                        buttonText = 'Re-validate'
-                        buttonIcon = <XCircle className="h-4 w-4 mr-2" />
-                        buttonVariant = 'destructive'
-                        isDisabled = false
-                      }
-
-                      return (
-                        <>
-                          <Button
-                            variant={buttonVariant}
-                            size="sm"
-                            onClick={() => handleValidateConfig(system.systemUnderTestId)}
-                            disabled={isDisabled}
-                            className={isValid ? 'border-green-600 text-green-600 hover:bg-green-50' : ''}
-                          >
-                            {buttonIcon}
-                            {buttonText}
-                          </Button>
-                          {isInvalid && system.validationResult?.errorMessage && (
-                            <div className="max-w-xs p-2 rounded-md bg-destructive/10 border border-destructive/20">
-                              <p className="text-xs text-destructive">{system.validationResult.errorMessage}</p>
-                            </div>
-                          )}
-                          {(isValid || isInvalid) && system.validationResult?.k6Output && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleK6Output(system.systemUnderTestId)}
-                              className="text-xs"
-                            >
-                              {expandedK6Outputs.has(system.systemUnderTestId) ? (
-                                <>
-                                  <ChevronUp className="h-3 w-3 mr-1" />
-                                  Hide Output
-                                </>
-                              ) : (
-                                <>
-                                  <ChevronDown className="h-3 w-3 mr-1" />
-                                  Show Output
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </>
-                      )
-                    })()}
-                  </div>
-                </div>
-
-                {/* K6 Output Section */}
-                {expandedK6Outputs.has(system.systemUnderTestId) && system.validationResult?.k6Output && (
-                  <div className="p-3 rounded-lg bg-background border">
-                    <p className="text-xs font-semibold text-muted-foreground mb-2">Validation Output:</p>
-                    <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto p-2 rounded bg-muted/30">
-                      {system.validationResult.k6Output}
-                    </pre>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {/* Left Column: Docker Configuration */}
-                  <div className="space-y-3 p-3 rounded-lg bg-background/50 border">
-                    <div className="space-y-2">
-                      {system.dockerConfig?.composeFile && (
-                        <div className="flex items-start gap-2">
-                          <FileArchive className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="text-xs text-muted-foreground">Docker Compose</p>
-                            <span className="font-mono text-sm">{system.dockerConfig.composeFile.filename}</span>
-                            <Badge variant="secondary" className="ml-2 text-xs">
-                              {formatFileSize(system.dockerConfig.composeFile.fileSize)}
-                            </Badge>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t">
-                      <p className="text-xs font-semibold text-muted-foreground mb-2">Docker Configuration</p>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Health Check Path</p>
-                          <p className="font-mono text-sm">{system.dockerConfig?.healthCheckPath}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">App Port</p>
-                          <p className="text-sm">{system.dockerConfig?.appPort}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-xs text-muted-foreground">Startup Timeout</p>
-                          <p className="text-sm">{system.dockerConfig?.startupTimeoutSeconds}s</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Database Configurations */}
-                  <div className="space-y-3 p-3 rounded-lg bg-background/50 border">
-                    {system.databaseSeedConfigs && system.databaseSeedConfigs.length > 0 ? (
-                      <div className="space-y-4">
-                        <p className="text-xs font-semibold text-muted-foreground">
-                          Database Configurations ({system.databaseSeedConfigs.length})
-                        </p>
-                        {system.databaseSeedConfigs.map((dbConfig: any, dbIndex: number) => (
-                          <div key={dbIndex} className="space-y-3 pb-3 border-b last:border-b-0 last:pb-0">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">DB {dbIndex + 1}</Badge>
-                            </div>
-                            <div className="space-y-2">
-                              {dbConfig.sqlSeedFile && (
-                                <div className="flex items-start gap-2">
-                                  <FileCode className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">SQL Seed File</p>
-                                    <span className="font-mono text-sm">{dbConfig.sqlSeedFile.filename}</span>
-                                    <Badge variant="secondary" className="ml-2 text-xs">
-                                      {formatFileSize(dbConfig.sqlSeedFile.fileSize)}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              )}
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                                {dbConfig.dbContainerName && (
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Container Name</p>
-                                    <p className="font-mono text-sm">{dbConfig.dbContainerName}</p>
-                                  </div>
-                                )}
-                                {dbConfig.dbPort && (
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Port</p>
-                                    <p className="font-mono text-sm">{dbConfig.dbPort}</p>
-                                  </div>
-                                )}
-                                {dbConfig.dbName && (
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Database Name</p>
-                                    <p className="font-mono text-sm">{dbConfig.dbName}</p>
-                                  </div>
-                                )}
-                                {dbConfig.dbUsername && (
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">Username</p>
-                                    <p className="font-mono text-sm">{dbConfig.dbUsername}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-xs text-muted-foreground italic">No database configurations</p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
-            ))}
+
+              {/* Database Seed Configurations */}
+              {data.baselineSut.databaseSeedConfigs.length > 0 && (
+                <div className="mb-3 p-3 rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Database className="h-4 w-4 text-muted-foreground" />
+                    <span>Database Configurations ({data.baselineSut.databaseSeedConfigs.length})</span>
+                  </div>
+                  <div className="pl-6 space-y-3">
+                    {data.baselineSut.databaseSeedConfigs.map((dbConfig: any, idx: number) => (
+                      <div key={idx} className="p-2 rounded-md bg-background/50 border text-xs space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{dbConfig.dbName}</span>
+                          <Badge variant="outline" className="text-xs">{dbConfig.dbContainerName}</Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Port:</span>
+                            <span className="ml-2 font-mono">{dbConfig.dbPort}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Username:</span>
+                            <span className="ml-2 font-mono">{dbConfig.dbUsername}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FileCode className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Seed File:</span>
+                          <span className="font-mono">{dbConfig.sqlSeedFile.filename}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Baseline Validation */}
+              <div className="mb-3">
+                {(() => {
+                  const validationResult = data.baselineSutValidationResult
+                  const validationState = validationResult?.validationState
+                  const isPending = validationState === 'PENDING'
+                  const isValid = validationState === 'VALID'
+                  const isInvalid = validationState === 'INVALID'
+
+                  return (
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        variant={isValid ? 'outline' : isInvalid ? 'destructive' : 'outline'}
+                        size="sm"
+                        onClick={() => handleValidateConfig(data.baselineSut.id)}
+                        disabled={isPending}
+                        className={isValid ? 'border-green-600 text-green-600 hover:bg-green-50 w-fit' : 'w-fit'}
+                      >
+                        {isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Validating...
+                          </>
+                        ) : isValid ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                            Re-validate
+                          </>
+                        ) : isInvalid ? (
+                          <>
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Re-validate
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="h-4 w-4 mr-2" />
+                            Validate
+                          </>
+                        )}
+                      </Button>
+                      {isInvalid && validationResult?.errorMessage && (
+                        <div className="p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                          <p className="text-xs text-destructive">{validationResult.errorMessage}</p>
+                        </div>
+                      )}
+                      {(isValid || isInvalid) && validationResult?.k6Output && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleK6Output('baseline')}
+                            className="text-xs w-fit"
+                          >
+                            {expandedK6Outputs.has('baseline') ? (
+                              <>
+                                <ChevronUp className="h-3 w-3 mr-1" />
+                                Hide Output
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="h-3 w-3 mr-1" />
+                                Show Output
+                              </>
+                            )}
+                          </Button>
+                          {expandedK6Outputs.has('baseline') && (
+                            <div className="p-3 rounded-lg bg-background border">
+                              <p className="text-xs font-semibold text-muted-foreground mb-2">Validation Output:</p>
+                              <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto p-2 rounded bg-muted/30">
+                                {validationResult.k6Output}
+                              </pre>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+
+            <div className="border-t" />
+
+            {/* Target SUT */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Badge variant="default" className="bg-purple-600">Target</Badge>
+                <Link to={`/systems-under-test/${data.targetSut.id}`} className="text-lg font-semibold hover:underline">
+                  {data.targetSut.name}
+                </Link>
+              </div>
+
+              {data.targetSut.description && (
+                <p className="text-sm text-muted-foreground mb-3">{data.targetSut.description}</p>
+              )}
+
+              {/* Docker Configuration */}
+              <div className="mb-3 p-3 rounded-lg bg-muted/30 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Container className="h-4 w-4 text-muted-foreground" />
+                  <span>Docker Configuration</span>
+                </div>
+                <div className="pl-6 space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <FileCode className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">Compose File:</span>
+                    <span className="font-medium">{data.targetSut.dockerConfig.composeFile.filename}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pl-5">
+                    <div>
+                      <span className="text-muted-foreground">App Port:</span>
+                      <span className="ml-2 font-mono">{data.targetSut.dockerConfig.appPort}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Health Check:</span>
+                      <span className="ml-2 font-mono">{data.targetSut.dockerConfig.healthCheckPath}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Startup Timeout:</span>
+                      <span className="ml-2 font-mono">{data.targetSut.dockerConfig.startupTimeoutSeconds}s</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Database Seed Configurations */}
+              {data.targetSut.databaseSeedConfigs.length > 0 && (
+                <div className="mb-3 p-3 rounded-lg bg-muted/30 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Database className="h-4 w-4 text-muted-foreground" />
+                    <span>Database Configurations ({data.targetSut.databaseSeedConfigs.length})</span>
+                  </div>
+                  <div className="pl-6 space-y-3">
+                    {data.targetSut.databaseSeedConfigs.map((dbConfig: any, idx: number) => (
+                      <div key={idx} className="p-2 rounded-md bg-background/50 border text-xs space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{dbConfig.dbName}</span>
+                          <Badge variant="outline" className="text-xs">{dbConfig.dbContainerName}</Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Port:</span>
+                            <span className="ml-2 font-mono">{dbConfig.dbPort}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Username:</span>
+                            <span className="ml-2 font-mono">{dbConfig.dbUsername}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FileCode className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Seed File:</span>
+                          <span className="font-mono">{dbConfig.sqlSeedFile.filename}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Target Validation */}
+              <div className="mb-3">
+                {(() => {
+                  const validationResult = data.targetSutValidationResult
+                  const validationState = validationResult?.validationState
+                  const isPending = validationState === 'PENDING'
+                  const isValid = validationState === 'VALID'
+                  const isInvalid = validationState === 'INVALID'
+
+                  return (
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        variant={isValid ? 'outline' : isInvalid ? 'destructive' : 'outline'}
+                        size="sm"
+                        onClick={() => handleValidateConfig(data.targetSut.id)}
+                        disabled={isPending}
+                        className={isValid ? 'border-green-600 text-green-600 hover:bg-green-50 w-fit' : 'w-fit'}
+                      >
+                        {isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Validating...
+                          </>
+                        ) : isValid ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                            Re-validate
+                          </>
+                        ) : isInvalid ? (
+                          <>
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Re-validate
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="h-4 w-4 mr-2" />
+                            Validate
+                          </>
+                        )}
+                      </Button>
+                      {isInvalid && validationResult?.errorMessage && (
+                        <div className="p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                          <p className="text-xs text-destructive">{validationResult.errorMessage}</p>
+                        </div>
+                      )}
+                      {(isValid || isInvalid) && validationResult?.k6Output && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleK6Output('target')}
+                            className="text-xs w-fit"
+                          >
+                            {expandedK6Outputs.has('target') ? (
+                              <>
+                                <ChevronUp className="h-3 w-3 mr-1" />
+                                Hide Output
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="h-3 w-3 mr-1" />
+                                Show Output
+                              </>
+                            )}
+                          </Button>
+                          {expandedK6Outputs.has('target') && (
+                            <div className="p-3 rounded-lg bg-background border">
+                              <p className="text-xs font-semibold text-muted-foreground mb-2">Validation Output:</p>
+                              <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto p-2 rounded bg-muted/30">
+                                {validationResult.k6Output}
+                              </pre>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

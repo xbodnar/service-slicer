@@ -6,7 +6,6 @@ import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
-import java.time.Instant
 import java.util.UUID
 
 /**
@@ -15,36 +14,16 @@ import java.util.UUID
  */
 @Entity
 class SystemUnderTest(
-    val benchmarkId: UUID,
-    // Custom name to identify this system configuration
     var name: String,
     // Description of this system configuration (e.g., "Baseline monolith", "3-service decomposition")
     var description: String? = null,
-    // Baseline SUT
-    val isBaseline: Boolean,
     // Docker configuration
     @JdbcTypeCode(SqlTypes.JSON)
     var dockerConfig: DockerConfig,
     // Database seeding configurations (one per database for microservices)
     @JdbcTypeCode(SqlTypes.JSON)
     var databaseSeedConfigs: List<DatabaseSeedConfig> = emptyList(),
-    // Result of the last validation run
-    @JdbcTypeCode(SqlTypes.JSON)
-    var validationResult: ValidationResult? = null,
 ) : UpdatableEntity()
-
-data class ValidationResult(
-    val validationState: ValidationState = ValidationState.PENDING,
-    val timestamp: Instant = Instant.now(),
-    val errorMessage: String? = null,
-    val k6Output: String? = null,
-)
-
-enum class ValidationState {
-    PENDING,
-    VALID,
-    INVALID,
-}
 
 data class DatabaseSeedConfig(
     // Reference to the SQL seed file
@@ -71,7 +50,4 @@ data class DockerConfig(
 )
 
 @Repository
-interface SystemUnderTestRepository : JpaRepository<SystemUnderTest, UUID> {
-
-    fun findByBenchmarkId(benchmarkId: UUID): List<SystemUnderTest>
-}
+interface SystemUnderTestRepository : JpaRepository<SystemUnderTest, UUID>

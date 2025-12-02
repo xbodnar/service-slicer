@@ -6,6 +6,7 @@
 
     <changeSet id="create-tables" author="Norbert Bodnar">
         <createTable tableName="baseline_test_case">
+            <!-- Updatable entity -->
             <column name="id" type="uuid">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
@@ -18,41 +19,40 @@
             <column name="updated_at" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
-            <column name="baseline_sut_id" type="uuid">
-                <constraints nullable="false"/>
-            </column>
+
+            <!-- TestCase -->
             <column name="load" type="int">
                 <constraints nullable="false"/>
             </column>
-            <column name="status" type="varchar(50)">
-                <constraints nullable="false"/>
-            </column>
             <column name="start_timestamp" type="timestamptz">
-                <constraints nullable="false"/>
+                <constraints nullable="true"/>
             </column>
             <column name="end_timestamp" type="timestamptz">
                 <constraints nullable="true"/>
             </column>
-            <column name="operation_measurements" type="jsonb">
-                <constraints nullable="false"/>
-            </column>
-            <column name="scalability_thresholds" type="jsonb">
+            <column name="status" type="varchar(50)">
                 <constraints nullable="false"/>
             </column>
             <column name="k6_output" type="text">
                 <constraints nullable="true"/>
             </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="rename-operation-measurements" author="Norbert Bodnar">
-        <renameColumn tableName="baseline_test_case" oldColumnName="operation_measurements"
-                      newColumnName="operation_metrics"/>
-        <dropColumn tableName="baseline_test_case" columnName="scalability_thresholds"/>
-    </changeSet>
-    <changeSet id="add-json-summary-column" author="Norbert Bodnar">
-        <addColumn tableName="baseline_test_case">
             <column name="json_summary" type="jsonb">
                 <constraints nullable="true"/>
+            </column>
+
+            <!-- BaselineTestCase -->
+            <column name="baseline_sut_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operation_metrics" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="add-relative-dms" author="Norbert Bodnar">
+        <addColumn tableName="baseline_test_case">
+            <column name="relative_domain_metrics" type="jsonb" defaultValueComputed="'{}'::jsonb">
+                <constraints nullable="false"/>
             </column>
         </addColumn>
     </changeSet>

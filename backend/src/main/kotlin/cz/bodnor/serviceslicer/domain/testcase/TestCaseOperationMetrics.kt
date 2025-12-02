@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.domain.benchmarkrun
+package cz.bodnor.serviceslicer.domain.testcase
 
 import com.fasterxml.jackson.annotation.JsonValue
 import java.math.BigDecimal
@@ -11,6 +11,9 @@ data class TargetTestCaseOperationMetrics(
     // counts
     val totalRequests: Long,
     val failedRequests: Long,
+
+    // invocation frequency
+    val invocationFrequency: BigDecimal,
 
     // latency
     val meanResponseTimeMs: BigDecimal,

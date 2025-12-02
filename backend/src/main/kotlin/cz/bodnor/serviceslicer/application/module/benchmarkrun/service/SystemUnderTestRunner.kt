@@ -3,6 +3,7 @@ package cz.bodnor.serviceslicer.application.module.benchmarkrun.service
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
 import cz.bodnor.serviceslicer.domain.sut.DatabaseSeedConfig
 import cz.bodnor.serviceslicer.domain.sut.DockerConfig
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -37,21 +38,19 @@ class SystemUnderTestRunner(
     private val logger = KotlinLogging.logger {}
     private val currentRun = AtomicReference<RunInfo?>(null)
 
-    fun startSUT(systemUnderTestId: UUID) {
-        val sut = sutReadService.getById(systemUnderTestId)
-
-        val project = "ss_run_$systemUnderTestId" // compose project name
-        val info = RunInfo(systemUnderTestId, project, sut.name, RunState.STARTING)
+    fun startSUT(systemUnderTest: SystemUnderTest) {
+        val project = "ss_run_${systemUnderTest.id}" // compose project name
+        val info = RunInfo(systemUnderTest.id, project, systemUnderTest.name, RunState.STARTING)
 
         // Check if there's already an active run
         if (!currentRun.compareAndSet(null, info)) {
             val activeRun = currentRun.get()
             throw IllegalStateException(
-                "Cannot start SUT $systemUnderTestId: Another SUT is already running (${activeRun?.id}, state=${activeRun?.state})",
+                "Cannot start SUT ${systemUnderTest.id}: Another SUT is already running (${activeRun?.id}, state=${activeRun?.state})",
             )
         }
 
-        diskOperations.withFile(sut.dockerConfig.composeFileId) { composeFilePath ->
+        diskOperations.withFile(systemUnderTest.dockerConfig.composeFileId) { composeFilePath ->
             logger.debug { "Starting SUT from docker-compose file: ${composeFilePath.toFile().absolutePath}" }
 
             try {
@@ -74,10 +73,10 @@ class SystemUnderTestRunner(
 
                 // 3) Wait for SUT healthy
                 info.state = RunState.WAITING_HEALTHY
-                waitHealthy(sut.dockerConfig)
+                waitHealthy(systemUnderTest.dockerConfig)
 
                 // 4) Execute SQL seed files if provided (one per database)
-                sut.databaseSeedConfigs.forEach { config ->
+                systemUnderTest.databaseSeedConfigs.forEach { config ->
                     config.waitForDatabaseSchema(project, workDir)
                     config.executeSqlSeedFile(project, workDir)
                     logger.debug { "SQL seed file executed successfully for database: ${config.dbName}" }

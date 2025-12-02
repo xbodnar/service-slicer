@@ -6,10 +6,14 @@ import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRun
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRunReadService
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRunWriteService
+import cz.bodnor.serviceslicer.domain.testcase.TestCase
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
-import java.time.Instant
+import org.springframework.transaction.annotation.Propagation
+import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 data class PendingTest(
@@ -28,74 +32,58 @@ class ExecuteTestCaseCommandHandler(
 
     override val command = ExecuteTestCaseCommand::class
 
+    @Lazy
+    @Autowired
+    private lateinit var self: ExecuteTestCaseCommandHandler
+
     private val logger = logger()
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     override fun handle(command: ExecuteTestCaseCommand): ExecuteTestCaseCommand.Result {
-        val benchmarkRun = benchmarkRunReadService.getById(command.benchmarkRunId)
-        val benchmark = benchmarkReadService.getById(benchmarkRun.benchmarkId)
+        val (benchmarkRun, testCaseToRun) = self.beforeTestCaseRun(command.benchmarkRunId)
+            ?: return ExecuteTestCaseCommand.Result(false)
 
-        // Find first test that needs to be run
-        val nextTestCaseToRun = benchmarkRun.getNextTestCaseToRun(benchmark)
-        require(nextTestCaseToRun != null) {
-            "Failed to find next test case to run"
+        val result = runCatching {
+            testCaseRunner.runTestCase(benchmarkRun, testCaseToRun)
         }
 
-        logger.info {
-            "Executing TestCase with sutId=${nextTestCaseToRun.sutId}, load=${nextTestCaseToRun.load} and isBaseline=${nextTestCaseToRun.isBaseline}"
-        }
-        executeTest(benchmarkRun, nextTestCaseToRun)
+        self.afterTestCaseRun(benchmarkRun.id, testCaseToRun.id, result)
 
-        if (benchmarkRun.getNextTestCaseToRun(benchmark) == null) {
-            // All tests completed
-            benchmarkRun.markCompleted()
-            benchmarkRunWriteService.save(benchmarkRun)
-            return ExecuteTestCaseCommand.Result(hasMoreTests = false)
-        }
         return ExecuteTestCaseCommand.Result(true)
     }
 
-    private fun executeTest(
-        benchmarkRun: BenchmarkRun,
-        testCaseToRun: BenchmarkRun.TestCaseToRun,
-    ) {
-        val testCaseId = benchmarkRun.addTestCase(
-            isBaseline = testCaseToRun.isBaseline,
-            sutId = testCaseToRun.sutId,
-            load = testCaseToRun.load,
-        )
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun beforeTestCaseRun(benchmarkRunId: UUID): Pair<BenchmarkRun, TestCase>? {
+        val benchmarkRun = benchmarkRunReadService.getById(benchmarkRunId)
+        val testCaseToRun = benchmarkRun.getNextTestCaseToRun()
+            ?: return null
+
+        testCaseToRun.started()
         benchmarkRunWriteService.save(benchmarkRun)
 
-        runCatching {
-            val result = testCaseRunner.runTestCase(
-                TestCaseRunner.Input(
-                    benchmarkId = benchmarkRun.benchmarkId,
-                    benchmarkRunId = benchmarkRun.id,
-                    sutId = testCaseToRun.sutId,
-                    load = testCaseToRun.load.load,
-                    testCaseId = testCaseId,
-                ),
-            )
+        return benchmarkRun to testCaseToRun
+    }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun afterTestCaseRun(
+        benchmarkRunId: UUID,
+        testCaseId: UUID,
+        result: Result<TestCaseRunner.Result>,
+    ) {
+        val benchmarkRun = benchmarkRunReadService.getById(benchmarkRunId)
+        if (result.isSuccess) {
+            val result = result.getOrThrow()
             benchmarkRun.markTestCaseCompleted(
-                sutId = testCaseToRun.sutId,
-                load = testCaseToRun.load.load,
-                endTimestamp = result.endTimestamp,
-                performanceMetrics = result.performanceMetrics,
-                k6Output = result.k6Output,
-                jsonSummary = result.jsonSummary,
+                testCaseId,
+                result.performanceMetrics,
+                result.k6Output,
+                result.jsonSummary,
             )
             benchmarkRunWriteService.save(benchmarkRun)
-        }.onFailure {
-            logger.error(it) {
-                "Failed to execute test case for SUT $testCaseToRun"
-            }
-            benchmarkRun.markTestCaseFailed(
-                sutId = testCaseToRun.sutId,
-                load = testCaseToRun.load.load,
-                endTimestamp = Instant.now(),
-            )
+        } else {
+            logger.error(result.exceptionOrNull()) { "Failed to execute TestCase $testCaseId" }
+            benchmarkRun.markTestCaseFailed(testCaseId)
             benchmarkRunWriteService.save(benchmarkRun)
-            throw it
         }
     }
 }

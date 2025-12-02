@@ -6,6 +6,7 @@
 
     <changeSet id="create-tables" author="Norbert Bodnar">
         <createTable tableName="target_test_case">
+            <!-- Updatable entity -->
             <column name="id" type="uuid">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
@@ -18,16 +19,9 @@
             <column name="updated_at" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
-            <column name="architecture_test_suite_id" type="uuid">
-                <constraints nullable="false"/>
-            </column>
+
+            <!-- TestCase -->
             <column name="load" type="int">
-                <constraints nullable="false"/>
-            </column>
-            <column name="load_frequency" type="double">
-                <constraints nullable="false"/>
-            </column>
-            <column name="status" type="varchar(50)">
                 <constraints nullable="false"/>
             </column>
             <column name="start_timestamp" type="timestamptz">
@@ -36,37 +30,32 @@
             <column name="end_timestamp" type="timestamptz">
                 <constraints nullable="true"/>
             </column>
-            <column name="operation_measurements" type="jsonb">
+            <column name="status" type="varchar(50)">
                 <constraints nullable="false"/>
-            </column>
-            <column name="pass_scalability_threshold" type="jsonb">
-                <constraints nullable="false"/>
-            </column>
-            <column name="scalability_shares" type="jsonb">
-                <constraints nullable="false"/>
-            </column>
-            <column name="relative_domain_metric" type="decimal">
-                <constraints nullable="true"/>
             </column>
             <column name="k6_output" type="text">
                 <constraints nullable="true"/>
             </column>
-        </createTable>
-        <createIndex tableName="target_test_case" indexName="idx_target_test_case_architecture_test_suite_id">
-            <column name="architecture_test_suite_id"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="rename-operation-measurements" author="Norbert Bodnar">
-        <renameColumn tableName="target_test_case" oldColumnName="operation_measurements"
-                      newColumnName="operation_metrics"/>
-        <dropColumn tableName="target_test_case" columnName="pass_scalability_threshold"/>
-        <dropColumn tableName="target_test_case" columnName="scalability_shares"/>
-    </changeSet>
-    <changeSet id="add-json-summary-column" author="Norbert Bodnar">
-        <addColumn tableName="target_test_case">
             <column name="json_summary" type="jsonb">
-                    <constraints nullable="true"/>
+                <constraints nullable="true"/>
             </column>
-        </addColumn>
+
+            <!-- TargetTestCase -->
+            <column name="benchmark_run_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="target_sut_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="load_frequency" type="double">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operation_metrics" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+            <column name="relative_domain_metric" type="numeric">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
     </changeSet>
 </databaseChangeLog>

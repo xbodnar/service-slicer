@@ -11,6 +11,9 @@ import { BenchmarkCreatePage } from '@/pages/benchmarks/BenchmarkCreatePage'
 import { BenchmarkRunListPage } from '@/pages/benchmarks/BenchmarkRunListPage'
 import { BenchmarkRunDetailPage } from '@/pages/benchmarks/BenchmarkRunDetailPage'
 import { FileListPage } from '@/pages/files/FileListPage'
+import { SystemUnderTestListPage } from '@/pages/sut/SystemUnderTestListPage'
+import { SystemUnderTestDetailPage } from '@/pages/sut/SystemUnderTestDetailPage'
+import { SystemUnderTestCreatePage } from '@/pages/sut/SystemUnderTestCreatePage'
 
 function App() {
   return (
@@ -30,6 +33,11 @@ function App() {
           <Route path="benchmarks/:benchmarkId" element={<BenchmarkDetailPage />} />
           <Route path="benchmarks/:benchmarkId/runs" element={<BenchmarkRunListPage />} />
           <Route path="benchmarks/:benchmarkId/runs/:runId" element={<BenchmarkRunDetailPage />} />
+
+          {/* Systems Under Test */}
+          <Route path="systems-under-test" element={<SystemUnderTestListPage />} />
+          <Route path="systems-under-test/new" element={<SystemUnderTestCreatePage />} />
+          <Route path="systems-under-test/:sutId" element={<SystemUnderTestDetailPage />} />
 
           {/* Files */}
           <Route path="files" element={<FileListPage />} />

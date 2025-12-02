@@ -18,40 +18,18 @@
             <column name="updated_at" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
-            <column name="benchmark_id" type="uuid">
-                <constraints nullable="false"/>
-            </column>
             <column name="name" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
             <column name="description" type="text">
                 <constraints nullable="true"/>
             </column>
-            <column name="is_baseline" type="boolean">
-                <constraints nullable="false"/>
-            </column>
             <column name="docker_config" type="jsonb">
                 <constraints nullable="false"/>
             </column>
-            <column name="database_seed_config" type="jsonb">
-                <constraints nullable="true"/>
-            </column>
-            <column name="validation_result" type="jsonb">
+            <column name="database_seed_configs" type="jsonb">
                 <constraints nullable="true"/>
             </column>
         </createTable>
-        <addForeignKeyConstraint
-                baseTableName="system_under_test"
-                baseColumnNames="benchmark_id"
-                constraintName="fk_system_under_test_benchmark"
-                referencedTableName="benchmark"
-                referencedColumnNames="id"/>
-        <createIndex tableName="system_under_test" indexName="idx_system_under_test_benchmark_id">
-            <column name="benchmark_id"/>
-        </createIndex>
-    </changeSet>
-    <changeSet id="rename-database-seed-config-column" author="Norbert Bodnar">
-        <renameColumn tableName="system_under_test" oldColumnName="database_seed_config"
-                      newColumnName="database_seed_configs"/>
     </changeSet>
 </databaseChangeLog>

@@ -4,7 +4,8 @@ import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.ValidateS
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.event.ValidateSutBenchmarkEvent
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkWriteService
-import cz.bodnor.serviceslicer.domain.sut.ValidationResult
+import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import jakarta.transaction.Transactional
 import org.springframework.context.ApplicationEventPublisher
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component
 class ValidateSutBenchmarkConfigCommandHandler(
     private val benchmarkReadService: BenchmarkReadService,
     private val benchmarkWriteService: BenchmarkWriteService,
+    private val sutReadService: SystemUnderTestReadService,
     private val applicationEventPublisher: ApplicationEventPublisher,
 ) : CommandHandler<ValidationResult, ValidateSutBenchmarkConfigCommand> {
 
@@ -21,17 +23,12 @@ class ValidateSutBenchmarkConfigCommandHandler(
 
     @Transactional
     override fun handle(command: ValidateSutBenchmarkConfigCommand): ValidationResult {
-        val benchmark = benchmarkReadService.getById(command.benchmarkId)
-        val sut = benchmark.getSystemUnderTest(command.systemUnderTestId)
-        val pendingValidationResult = ValidationResult()
-
-        sut.validationResult = pendingValidationResult
-        benchmarkWriteService.save(benchmark)
+        val sut = sutReadService.getById(command.systemUnderTestId)
 
         applicationEventPublisher.publishEvent(
             ValidateSutBenchmarkEvent(benchmarkId = command.benchmarkId, systemUnderTestId = command.systemUnderTestId),
         )
 
-        return pendingValidationResult
+        return ValidationResult()
     }
 }

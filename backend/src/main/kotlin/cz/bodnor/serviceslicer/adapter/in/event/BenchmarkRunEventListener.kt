@@ -5,6 +5,8 @@ import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.RunSutVal
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.event.ValidateSutBenchmarkEvent
 import cz.bodnor.serviceslicer.application.module.job.JobContainer
 import cz.bodnor.serviceslicer.application.module.job.JobLauncherService
+import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
+import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkWriteService
 import cz.bodnor.serviceslicer.domain.job.JobParameterLabel
 import cz.bodnor.serviceslicer.domain.job.JobType
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
@@ -22,6 +24,8 @@ import java.util.UUID
 class BenchmarkRunEventListener(
     private val sutReadService: SystemUnderTestReadService,
     private val sutWriteService: SystemUnderTestWriteService,
+    private val benchmarkReadService: BenchmarkReadService,
+    private val benchmarkWriteService: BenchmarkWriteService,
     private val jobContainer: JobContainer,
     private val jobLauncherService: JobLauncherService,
     private val commandBus: CommandBus,
@@ -38,7 +42,7 @@ class BenchmarkRunEventListener(
             .addJobParameter(JobParameterLabel.BENCHMARK_RUN_ID, event.benchmarkRunId, UUID::class.java)
             .toJobParameters()
 
-        logger.info { "Starting Job ${batchJob.name} for benchmark ${event.benchmarkId}" }
+        logger.info { "Starting Job ${batchJob.name} for benchmarkId ${event.benchmarkRunId}" }
 
         jobLauncherService.launchAsync(batchJob, jobParameters)
     }
@@ -55,9 +59,13 @@ class BenchmarkRunEventListener(
             ),
         )
 
-        val sut = sutReadService.getById(event.systemUnderTestId)
-        sut.validationResult = validationResult
-        sutWriteService.save(sut)
+        val benchmarkReadService = benchmarkReadService.getById(event.benchmarkId)
+        when (event.systemUnderTestId) {
+            benchmarkReadService.baselineSut.id -> benchmarkReadService.baselineSutValidationResult = validationResult
+            benchmarkReadService.targetSut.id -> benchmarkReadService.targetSutValidationResult = validationResult
+            else -> error("SUT ${event.systemUnderTestId} not found in benchmark ${event.benchmarkId}")
+        }
+        benchmarkWriteService.save(benchmarkReadService)
 
         logger.info {
             "Validation completed for SUT ${event.systemUnderTestId} with state: ${validationResult.validationState}"

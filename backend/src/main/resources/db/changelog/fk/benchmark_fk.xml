@@ -6,15 +6,15 @@
 
     <changeSet id="create-fks" author="Norbert Bodnar">
         <addForeignKeyConstraint
-                baseTableName="target_test_case"
-                baseColumnNames="benchmark_run_id"
-                constraintName="fk_target_test_case_benchmark_run"
-                referencedTableName="benchmark_run"
+                baseTableName="benchmark"
+                baseColumnNames="baseline_sut_id"
+                constraintName="fk_benchmark_baseline_sut"
+                referencedTableName="system_under_test"
                 referencedColumnNames="id"/>
         <addForeignKeyConstraint
-                baseTableName="target_test_case"
+                baseTableName="benchmark"
                 baseColumnNames="target_sut_id"
-                constraintName="fk_target_test_case_target_sut"
+                constraintName="fk_benchmark_target_sut"
                 referencedTableName="system_under_test"
                 referencedColumnNames="id"/>
     </changeSet>

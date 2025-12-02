@@ -1,6 +1,5 @@
 package cz.bodnor.serviceslicer.adapter.out.prometheus
 
-import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationId
 import java.math.BigDecimal
 
 data class PrometheusMetrics(

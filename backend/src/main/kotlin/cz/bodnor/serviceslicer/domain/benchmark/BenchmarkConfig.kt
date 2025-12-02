@@ -9,6 +9,8 @@ import java.util.UUID
  */
 data class BenchmarkConfig(
     val id: UUID = UUID.randomUUID(),
+    // Test duration (e.g., 1m, 5m, 10m)
+    val testDuration: String? = null,
     // Reference to the OpenAPI specification file
     var openApiFileId: UUID,
     // Behavior models representing user flows/scenarios

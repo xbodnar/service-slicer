@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { Layers, FlaskConical, Scissors, Github, Menu, X, FileArchive } from 'lucide-react'
+import { Layers, FlaskConical, Scissors, Github, Menu, X, FileArchive, Server } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ScrollProgress } from './ScrollProgress'
@@ -17,6 +17,7 @@ export function MainLayout() {
   const navItems = [
     { path: '/projects', label: 'Projects', icon: Layers },
     { path: '/benchmarks', label: 'Benchmarks', icon: FlaskConical },
+    { path: '/systems-under-test', label: 'Systems Under Test', icon: Server },
     { path: '/files', label: 'Files', icon: FileArchive },
   ]
 

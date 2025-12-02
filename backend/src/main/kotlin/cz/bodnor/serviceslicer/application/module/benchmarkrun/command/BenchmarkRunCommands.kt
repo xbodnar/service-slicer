@@ -1,6 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun.command
 
-import cz.bodnor.serviceslicer.domain.sut.ValidationResult
+import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID

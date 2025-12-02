@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
+import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRun
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
+import cz.bodnor.serviceslicer.domain.testcase.TestCase
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -20,6 +23,7 @@ import kotlin.io.path.writeText
 @Service
 class TestCaseRunner(
     private val benchmarkReadService: BenchmarkReadService,
+    private val sutReadService: SystemUnderTestReadService,
     private val sutRunner: SystemUnderTestRunner,
     private val k6Runner: K6Runner,
     private val k6Properties: K6Properties,
@@ -31,14 +35,6 @@ class TestCaseRunner(
 
     private val logger = KotlinLogging.logger {}
 
-    data class Input(
-        val benchmarkId: UUID,
-        val benchmarkRunId: UUID,
-        val sutId: UUID,
-        val load: Int,
-        val testCaseId: UUID,
-    )
-
     data class Result(
         val startTimestamp: Instant,
         val endTimestamp: Instant,
@@ -47,13 +43,25 @@ class TestCaseRunner(
         val jsonSummary: JsonNode?,
     )
 
-    fun runTestCase(input: Input): Result {
-        logger.info { "Starting benchmark run for SUT ${input.sutId} with load ${input.load}" }
+    fun runTestCase(
+        benchmarkRun: BenchmarkRun,
+        testCase: TestCase,
+    ): Result {
+        val benchmark = benchmarkRun.benchmark
+        val (sut, load) = if (testCase.id == benchmarkRun.baselineTestCase.id) {
+            benchmark.baselineSut to benchmark.config.operationalProfile.minBy { it.load }.load
+        } else {
+            val testCase = benchmarkRun.targetTestCases.find { it.id == testCase.id }
+                ?: error("No test case with id ${testCase.id}")
+            benchmark.targetSut to testCase.load
+        }
 
-        val benchmark = benchmarkReadService.getById(input.benchmarkId)
-
+        logger.info {
+            "Executing ${if (testCase.id == benchmarkRun.baselineTestCase.id) "Baseline" else "Target"}" +
+                "TestCase for SUT ${sut.name}[${sut.id}] with load $load"
+        }
         // Start the SUT (blocking call - waits until SUT is healthy and ready)
-        sutRunner.startSUT(input.sutId)
+        sutRunner.startSUT(sut)
 
         var k6WorkDir: Path? = null
         try {
@@ -63,9 +71,13 @@ class TestCaseRunner(
             val configJsonPath = prepareLoadTestConfigFile(benchmark.config, k6WorkDir)
 
             // Build environment variables for k6
-            val envVars = input.buildEnvVars(
-                benchmark.getSystemUnderTest(input.sutId).dockerConfig.appPort,
-            )
+            val envVars =
+                buildEnvVars(
+                    appPort = sut.dockerConfig.appPort,
+                    load = load,
+                    testCaseId = testCase.id,
+                    testDuration = benchmark.config.testDuration,
+                )
 
             // Run WARMUP k6 tests (no metrics)
             k6Runner.runTest(
@@ -83,7 +95,7 @@ class TestCaseRunner(
             )
 
             val performanceMetrics = queryLoadTestMetrics(
-                testCaseId = input.testCaseId,
+                testCaseId = testCase.id,
                 start = k6Result.startTime,
                 end = k6Result.endTime,
             )
@@ -102,14 +114,19 @@ class TestCaseRunner(
         }
     }
 
-    private fun Input.buildEnvVars(appPort: Int): Map<String, String> {
+    private fun buildEnvVars(
+        appPort: Int,
+        load: Int,
+        testCaseId: UUID,
+        testDuration: String?,
+    ): Map<String, String> {
         val sutHost = getSutHost()
         val baseUrl = "http://$sutHost:$appPort"
 
         return mapOf(
             "BASE_URL" to baseUrl,
             "TARGET_VUS" to load.toString(),
-            "DURATION" to k6Properties.testDuration,
+            "DURATION" to (testDuration ?: k6Properties.testDuration),
             "TEST_CASE_ID" to testCaseId.toString(),
         )
     }

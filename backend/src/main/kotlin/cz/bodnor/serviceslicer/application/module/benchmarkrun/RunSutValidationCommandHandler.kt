@@ -6,9 +6,9 @@ import cz.bodnor.serviceslicer.application.module.benchmarkrun.service.K6Runner
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.service.SystemUnderTestRunner
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
+import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
+import cz.bodnor.serviceslicer.domain.benchmark.ValidationState
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
-import cz.bodnor.serviceslicer.domain.sut.ValidationResult
-import cz.bodnor.serviceslicer.domain.sut.ValidationState
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -43,7 +43,7 @@ class RunSutValidationCommandHandler(
         var k6WorkDir: Path? = null
         try {
             // Start the SUT (blocking call - waits until SUT is healthy and ready)
-            sutRunner.startSUT(sut.id)
+            sutRunner.startSUT(sut)
 
             // Prepare work directory
             k6WorkDir = Files.createTempDirectory("k6-validation-")

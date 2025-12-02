@@ -1,57 +1,43 @@
-package cz.bodnor.serviceslicer.domain.benchmarkrun
+package cz.bodnor.serviceslicer.domain.testcase
 
 import com.fasterxml.jackson.databind.JsonNode
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
-import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
-import jakarta.persistence.Column
+import cz.bodnor.serviceslicer.domain.benchmark.OperationalLoad
+import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
+import jakarta.persistence.ManyToOne
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
+import java.math.BigDecimal
 import java.time.Instant
-import java.util.UUID
 
 /**
  * Represents the baseline requirements
  */
 @Entity
 class BaselineTestCase(
-    val baselineSutId: UUID,
-    val load: Int,
-) : UpdatableEntity() {
-
-    @Enumerated(EnumType.STRING)
-    var status: TestCaseStatus = TestCaseStatus.RUNNING
-        private set
-
-    var startTimestamp: Instant = Instant.now()
-        private set
-
-    var endTimestamp: Instant? = null
-        private set
+    @ManyToOne
+    val baselineSut: SystemUnderTest,
+    operationalProfile: List<OperationalLoad>,
+) : TestCase(operationalProfile.minBy { it.load }.load) {
 
     @JdbcTypeCode(SqlTypes.JSON)
     var operationMetrics: Map<OperationId, BaselineTestCaseOperationMetrics> = emptyMap()
         private set
 
-    @Column(name = "k6_output")
-    var k6Output: String? = null
-        private set
-
     @JdbcTypeCode(SqlTypes.JSON)
-    var jsonSummary: JsonNode? = null
-        private set
+    val relativeDomainMetrics: Map<Int, BigDecimal> = operationalProfile.associate {
+        it.load to it.frequency.toBigDecimal()
+    }
 
-    fun markCompleted(
-        endTime: Instant,
-        measurements: List<QueryLoadTestMetrics.PerformanceMetrics>,
+    override fun completed(
+        performanceMetrics: List<QueryLoadTestMetrics.PerformanceMetrics>,
         k6Output: String,
         jsonSummary: JsonNode?,
     ) {
         this.status = TestCaseStatus.COMPLETED
-        this.endTimestamp = endTime
-        this.operationMetrics = measurements.map { metrics ->
+        this.endTimestamp = Instant.now()
+        this.operationMetrics = performanceMetrics.map { metrics ->
             BaselineTestCaseOperationMetrics(
                 operationId = OperationId(metrics.operationId),
                 totalRequests = metrics.totalRequests,
@@ -66,10 +52,5 @@ class BaselineTestCase(
         }.associateBy { it.operationId }
         this.k6Output = k6Output
         this.jsonSummary = jsonSummary
-    }
-
-    fun markFailed(endTime: Instant) {
-        this.status = TestCaseStatus.FAILED
-        this.endTimestamp = endTime
     }
 }

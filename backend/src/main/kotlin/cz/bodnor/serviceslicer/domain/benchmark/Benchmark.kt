@@ -2,13 +2,13 @@ package cz.bodnor.serviceslicer.domain.benchmark
 
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
-import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
-import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -24,31 +24,31 @@ class Benchmark(
     var name: String,
     // Description of this benchmark
     var description: String? = null,
+    @OneToOne
+    val baselineSut: SystemUnderTest,
+    @OneToOne
+    val targetSut: SystemUnderTest,
 ) : UpdatableEntity() {
 
-    // Systems under test
-    @OneToMany(mappedBy = "benchmarkId", orphanRemoval = true, cascade = [CascadeType.ALL])
-    val systemsUnderTest: MutableList<SystemUnderTest> = mutableListOf()
+    @JdbcTypeCode(SqlTypes.JSON)
+    var baselineSutValidationResult: ValidationResult? = null
 
-    fun getSystemUnderTest(systemUnderTestId: UUID) = systemsUnderTest.find { it.id == systemUnderTestId }
-        ?: error("SystemUnderTest with id $systemUnderTestId not found in benchmark $id")
-
-    fun addSystemUnderTest(systemUnderTest: SystemUnderTest) {
-        val containsBaseline = systemsUnderTest.any { it.isBaseline }
-        require(!containsBaseline || !systemUnderTest.isBaseline) {
-            "Can't add another baseline SUT"
-        }
-        systemsUnderTest.add(systemUnderTest)
-    }
-
-    fun removeSystemUnderTest(systemUnderTestId: UUID) {
-        val sutToRemove = systemsUnderTest.find { it.id == systemUnderTestId } ?: return
-        require(!sutToRemove.isBaseline) {
-            "Can't remove baseline SUT"
-        }
-        systemsUnderTest.remove(sutToRemove)
-    }
+    @JdbcTypeCode(SqlTypes.JSON)
+    var targetSutValidationResult: ValidationResult? = null
 }
 
 @Repository
 interface BenchmarkRepository : JpaRepository<Benchmark, UUID>
+
+data class ValidationResult(
+    val validationState: ValidationState = ValidationState.PENDING,
+    val timestamp: Instant = Instant.now(),
+    val errorMessage: String? = null,
+    val k6Output: String? = null,
+)
+
+enum class ValidationState {
+    PENDING,
+    VALID,
+    INVALID,
+}

@@ -1,9 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.benchmark.command
 
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
-import cz.bodnor.serviceslicer.domain.sut.DatabaseSeedConfig
-import cz.bodnor.serviceslicer.domain.sut.DockerConfig
-import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
@@ -12,7 +9,8 @@ data class CreateBenchmarkCommand(
     val name: String,
     val description: String? = null,
     val benchmarkConfig: BenchmarkConfig,
-    val systemsUnderTest: List<CreateBenchmarkCommand.UpdateSystemUnderTest>,
+    val baselineSutId: UUID,
+    val targetSutId: UUID,
 ) : Command<CreateBenchmarkCommand.Result> {
 
     @Schema(name = "CreateBenchmarkResult", description = "Result of creating a benchmark")
@@ -20,23 +18,6 @@ data class CreateBenchmarkCommand(
         @field:Schema(description = "ID of the created benchmark")
         val benchmarkId: UUID,
     )
-
-    data class UpdateSystemUnderTest(
-        val name: String,
-        val description: String? = null,
-        val isBaseline: Boolean,
-        val dockerConfig: DockerConfig,
-        val databaseSeedConfigs: List<DatabaseSeedConfig> = emptyList(),
-    ) {
-        fun toDomain(benchmarkId: UUID) = SystemUnderTest(
-            benchmarkId = benchmarkId,
-            name = name,
-            description = description,
-            isBaseline = isBaseline,
-            dockerConfig = dockerConfig,
-            databaseSeedConfigs = databaseSeedConfigs,
-        )
-    }
 }
 
 data class UpdateBenchmarkCommand(

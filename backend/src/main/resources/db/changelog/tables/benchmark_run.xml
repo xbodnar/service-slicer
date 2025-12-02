@@ -22,38 +22,19 @@
             <column name="benchmark_id" type="uuid">
                 <constraints nullable="false"/>
             </column>
+            <column name="baseline_test_case_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
             <column name="state" type="text">
                 <constraints nullable="false"/>
             </column>
-            <column name="sut_load_test_runs" type="jsonb">
-                <constraints nullable="false"/>
+            <column name="experiment_results" type="jsonb">
+                <constraints nullable="true"/>
             </column>
         </createTable>
         <addUniqueConstraint tableName="benchmark_run" columnNames="benchmark_id"/>
     </changeSet>
-    <changeSet id="remove-unique-constraint" author="Norbert Bodnar">
+    <changeSet id="drop-unique-constraint" author="Norbert Bodnar">
         <dropUniqueConstraint tableName="benchmark_run" constraintName="benchmark_run_benchmark_id_key"/>
-    </changeSet>
-    <changeSet id="add-baseline-load-test-run-column" author="Norbert Bodnar">
-        <addColumn tableName="benchmark_run">
-            <column name="baseline_load_test_run" type="jsonb"/>
-        </addColumn>
-    </changeSet>
-    <changeSet id="rename-load-test-runs-columns" author="Norbert Bodnar">
-        <renameColumn tableName="benchmark_run" oldColumnName="sut_load_test_runs"
-                      newColumnName="architecture_test_suites"/>
-        <renameColumn tableName="benchmark_run" oldColumnName="baseline_load_test_run"
-                      newColumnName="baseline_test_case"/>
-    </changeSet>
-
-    <changeSet id="refactor-test-cases-to-entities" author="Norbert Bodnar">
-        <dropColumn tableName="benchmark_run" columnName="architecture_test_suites"/>
-        <dropColumn tableName="benchmark_run" columnName="baseline_test_case"/>
-
-        <addColumn tableName="benchmark_run">
-            <column name="baseline_test_case_id" type="uuid">
-                <constraints nullable="true"/>
-            </column>
-        </addColumn>
     </changeSet>
 </databaseChangeLog>

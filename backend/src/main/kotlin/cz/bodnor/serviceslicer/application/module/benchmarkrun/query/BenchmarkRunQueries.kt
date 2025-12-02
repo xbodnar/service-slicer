@@ -1,12 +1,12 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun.query
 
 import com.fasterxml.jackson.databind.JsonNode
-import cz.bodnor.serviceslicer.domain.benchmarkrun.BaselineTestCaseOperationMetrics
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRunState
-import cz.bodnor.serviceslicer.domain.benchmarkrun.OperationId
-import cz.bodnor.serviceslicer.domain.benchmarkrun.TargetTestCaseOperationMetrics
-import cz.bodnor.serviceslicer.domain.benchmarkrun.TestCaseStatus
-import cz.bodnor.serviceslicer.domain.benchmarkrun.TestSuiteStatus
+import cz.bodnor.serviceslicer.domain.benchmarkrun.ExperimentResults
+import cz.bodnor.serviceslicer.domain.testcase.BaselineTestCaseOperationMetrics
+import cz.bodnor.serviceslicer.domain.testcase.OperationId
+import cz.bodnor.serviceslicer.domain.testcase.TargetTestCaseOperationMetrics
+import cz.bodnor.serviceslicer.domain.testcase.TestCaseStatus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.Query
 import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
@@ -29,8 +29,6 @@ data class ListBenchmarkRunsQuery(val benchmarkId: UUID) : Query<ListBenchmarkRu
         val benchmarkId: UUID,
         @Schema(description = "State of the benchmark run")
         val state: BenchmarkRunState,
-        @Schema(description = "Number of systems under test in this run")
-        val sutCount: Int,
         @Schema(description = "Creation timestamp")
         val createdAt: Instant,
         @Schema(description = "Last update timestamp")
@@ -43,15 +41,17 @@ data class GetBenchmarkRunQuery(val benchmarkId: UUID, val benchmarkRunId: UUID)
     @Schema(name = "GetBenchmarkRunResult", description = "Detailed benchmark run information")
     data class Result(
         @Schema(description = "ID of the benchmark run")
-        val benchmarkRunId: UUID,
+        val id: UUID,
         @Schema(description = "ID of the benchmark")
         val benchmarkId: UUID,
+        @Schema(description = "Baseline test case")
+        val baselineTestCase: BaselineTestCaseDto,
+        @Schema(description = "List of target test cases")
+        val targetTestCases: List<TargetTestCaseDto>,
         @Schema(description = "State of the benchmark run")
         val state: BenchmarkRunState,
-        @Schema(description = "List of SUT load test runs")
-        val architectureTestSuites: List<ArchitectureTestSuiteDto>,
-        @Schema(description = "Baseline test case")
-        val baselineTestCase: BaselineTestCaseDto?,
+        @Schema(description = "Experiment results")
+        val experimentResults: ExperimentResults?,
         @Schema(description = "Creation timestamp")
         val createdAt: Instant,
         @Schema(description = "Last update timestamp")
@@ -64,34 +64,22 @@ data class GetBenchmarkRunQuery(val benchmarkId: UUID, val benchmarkRunId: UUID)
         val id: UUID,
         @Schema(description = "ID of the baseline SUT")
         val baselineSutId: UUID,
+        @Schema(description = "Relative domain metrics by load level")
+        val relativeDomainMetrics: Map<Int, BigDecimal>,
         @Schema(description = "Load level")
         val load: Int,
         @Schema(description = "Status of the test case")
         val status: TestCaseStatus,
         @Schema(description = "Start timestamp")
-        val startTimestamp: Instant,
+        val startTimestamp: Instant?,
         @Schema(description = "End timestamp")
         val endTimestamp: Instant?,
         @Schema(description = "Operation metrics by operation ID")
         val operationMetrics: Map<OperationId, BaselineTestCaseOperationMetrics>,
         @Schema(description = "K6 output")
         val k6Output: String?,
-    )
-
-    @Schema(description = "Architecture test suite DTO")
-    data class ArchitectureTestSuiteDto(
-        @Schema(description = "ID of the test suite")
-        val id: UUID,
-        @Schema(description = "ID of the target SUT")
-        val targetSutId: UUID,
-        @Schema(description = "Status of the test suite")
-        val status: TestSuiteStatus,
-        @Schema(description = "List of target test cases")
-        val targetTestCases: List<TargetTestCaseDto>,
-        @Schema(description = "Total domain metric")
-        val totalDomainMetric: BigDecimal?,
-        @Schema(description = "Scalability footprint by operation ID")
-        val scalabilityFootprint: Map<OperationId, Int>,
+        @Schema(description = "JSON summary of the K6 run")
+        val jsonSummary: JsonNode?,
     )
 
     @Schema(description = "Target test case DTO")

@@ -16,17 +16,20 @@ import { Stepper, StepContent, StepNavigation, type Step } from '@/components/ui
 import { useToast } from '@/components/ui/use-toast'
 import { type UploadedFile } from '@/hooks/useFileUpload'
 import { useCreateBenchmark } from '@/hooks/useBenchmarks'
-import { ArrowLeft, Plus, Trash2, Check, Server, Activity, FileCode } from 'lucide-react'
+import { useListSystemsUnderTest } from '@/api/generated/system-under-test-controller/system-under-test-controller'
+import { ArrowLeft, Plus, Trash2, Check, Server, Activity, FileCode, Loader2, FileJson } from 'lucide-react'
+
+type BehaviorModelInputMode = 'auto-generate' | 'json' | 'manual'
 
 // Step definitions
 const STEPS: Step[] = [
   { id: 'basic', title: 'Basic Info' },
   { id: 'loadtest', title: 'Load Test Config' },
-  { id: 'suts', title: 'Systems Under Test' },
+  { id: 'suts', title: 'Select Systems' },
   { id: 'review', title: 'Review' },
 ]
 
-// Form schemas for each step
+// Form schemas
 const basicInfoSchema = z.object({
   name: z.string().min(1, 'Benchmark name is required'),
   description: z.string().optional(),
@@ -59,6 +62,11 @@ const behaviorModelSchema = z.object({
 const loadTestConfigSchema = z.object({
   generateBehaviorModels: z.boolean().default(false),
   behaviorModels: z.array(behaviorModelSchema).optional(),
+  behaviorModelsJson: z.string().optional(),
+  testDuration: z.string()
+    .regex(/^\d+[smh]$/, 'Duration must be in format like "30s", "5m", or "1h"')
+    .optional()
+    .or(z.literal('')),
   operationalProfile: z.array(
     z.object({
       load: z.coerce.number().min(1, 'Load must be at least 1'),
@@ -67,46 +75,34 @@ const loadTestConfigSchema = z.object({
   ).min(1, 'At least one operational load is required'),
 })
 
-const databaseSeedConfigSchema = z.object({
-  id: z.string(),
-  dbContainerName: z.string().min(1, 'DB container name is required'),
-  dbPort: z.coerce.number().min(1, 'DB port is required'),
-  dbName: z.string().min(1, 'Database name is required'),
-  dbUsername: z.string().min(1, 'DB username is required'),
-})
-
-const sutSchema = z.object({
-  id: z.string(),
-  name: z.string().min(1, 'System name is required'),
-  description: z.string().optional(),
-  isBaseline: z.boolean().default(false),
-  healthCheckPath: z.string().default('/actuator/health'),
-  appPort: z.coerce.number().default(8080),
-  startupTimeoutSeconds: z.coerce.number().default(180),
-  // Database seed configs (multiple DBs for microservices)
-  databaseSeedConfigs: z.array(databaseSeedConfigSchema).default([]),
-})
-
 const benchmarkSchema = z.object({
   ...basicInfoSchema.shape,
   ...loadTestConfigSchema.shape,
-  systemsUnderTest: z.array(sutSchema).min(1, 'At least one system under test is required'),
+  baselineSutId: z.string().min(1, 'Baseline system is required'),
+  targetSutId: z.string().min(1, 'Target system is required'),
 }).refine((data) => {
-  if (!data.generateBehaviorModels && (!data.behaviorModels || data.behaviorModels.length === 0)) {
-    return false
+  // If auto-generate is enabled, validation passes
+  if (data.generateBehaviorModels) {
+    return true
   }
-  return true
+  // If manual mode, check for behaviorModels
+  if (data.behaviorModels && data.behaviorModels.length > 0) {
+    return true
+  }
+  // If JSON mode, check for behaviorModelsJson
+  if (data.behaviorModelsJson && data.behaviorModelsJson.trim() !== '') {
+    return true
+  }
+  return false
 }, {
-  message: 'Either enable auto-generation or define at least one behavior model',
+  message: 'Either enable auto-generation, provide JSON, or define at least one behavior model manually',
   path: ['behaviorModels'],
+}).refine((data) => data.baselineSutId !== data.targetSutId, {
+  message: 'Baseline and target systems must be different',
+  path: ['targetSutId'],
 })
 
 type BenchmarkFormData = z.infer<typeof benchmarkSchema>
-
-interface SystemFiles {
-  composeFile: UploadedFile | null
-  sqlSeedFiles: (UploadedFile | null)[]
-}
 
 interface KeyValuePairListProps {
   name: string
@@ -201,19 +197,14 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Step {stepIndex + 1}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => removeStep(stepIndex)}
-              >
+              <Button type="button" variant="ghost" size="sm" onClick={() => removeStep(stepIndex)}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-method`}>Method</Label>
+                <Label>Method</Label>
                 <Select
                   defaultValue={field.method}
                   onValueChange={(value) => {
@@ -221,7 +212,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
                     if (input) input.value = value
                   }}
                 >
-                  <SelectTrigger id={`behavior-${behaviorIndex}-step-${stepIndex}-method`}>
+                  <SelectTrigger>
                     <SelectValue placeholder="Select method" />
                   </SelectTrigger>
                   <SelectContent>
@@ -240,9 +231,8 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-path`}>Path</Label>
+                <Label>Path</Label>
                 <Input
-                  id={`behavior-${behaviorIndex}-step-${stepIndex}-path`}
                   {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.path`)}
                   placeholder="/api/resource"
                 />
@@ -250,9 +240,8 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-operationId`}>Operation ID</Label>
+              <Label>Operation ID</Label>
               <Input
-                id={`behavior-${behaviorIndex}-step-${stepIndex}-operationId`}
                 {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.operationId`)}
                 placeholder="getUser"
               />
@@ -263,7 +252,6 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
               )}
             </div>
 
-            {/* Headers, Query Params, and Save Fields side by side */}
             <div className="grid grid-cols-3 gap-3">
               <KeyValuePairList
                 name={`behaviorModels.${behaviorIndex}.steps.${stepIndex}.headers`}
@@ -289,129 +277,13 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`behavior-${behaviorIndex}-step-${stepIndex}-body`}>Body (JSON)</Label>
+              <Label>Body (JSON)</Label>
               <Textarea
-                id={`behavior-${behaviorIndex}-step-${stepIndex}-body`}
                 {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.body`)}
                 placeholder='{"key": "value"}'
                 rows={3}
                 className="font-mono text-xs"
               />
-              {errors?.behaviorModels?.[behaviorIndex]?.steps?.[stepIndex]?.body && (
-                <p className="text-sm text-destructive">
-                  {errors.behaviorModels[behaviorIndex].steps[stepIndex].body.message}
-                </p>
-              )}
-            </div>
-          </div>
-        </Card>
-      ))}
-    </div>
-  )
-}
-
-interface DatabaseSeedConfigListProps {
-  systemIndex: number
-  control: any
-  register: any
-  onFileSelected: (systemIndex: number, dbConfigIndex: number, file: UploadedFile | null) => void
-  sqlSeedFiles: (UploadedFile | null)[]
-}
-
-function DatabaseSeedConfigList({ systemIndex, control, register, onFileSelected, sqlSeedFiles }: DatabaseSeedConfigListProps) {
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: `systemsUnderTest.${systemIndex}.databaseSeedConfigs`,
-  })
-
-  const handleAddDbConfig = () => {
-    append({
-      id: uuidv4(),
-      dbContainerName: '',
-      dbPort: 5432,
-      dbName: '',
-      dbUsername: '',
-    })
-  }
-
-  return (
-    <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold">Database Seed Configurations (optional)</Label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleAddDbConfig}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Database
-        </Button>
-      </div>
-
-      {fields.length === 0 && (
-        <p className="text-xs text-muted-foreground italic">No database configurations. Add one if this system requires database seeding.</p>
-      )}
-
-      {fields.map((field, dbIndex) => (
-        <Card key={field.id} className="p-4 bg-background">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Database {dbIndex + 1}</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => remove(dbIndex)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <FileSelector
-              id={`sql-seed-file-${systemIndex}-${dbIndex}`}
-              label="SQL Seed File *"
-              accept=".sql"
-              required
-              onFileSelected={(file) => onFileSelected(systemIndex, dbIndex, file)}
-              selectedFile={sqlSeedFiles[dbIndex] || null}
-              mimeTypeFilter="sql"
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor={`db-container-${systemIndex}-${dbIndex}`}>DB Container Name *</Label>
-                <Input
-                  id={`db-container-${systemIndex}-${dbIndex}`}
-                  {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbContainerName`)}
-                  placeholder="postgres"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`db-port-${systemIndex}-${dbIndex}`}>DB Port *</Label>
-                <Input
-                  id={`db-port-${systemIndex}-${dbIndex}`}
-                  type="number"
-                  {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbPort`)}
-                  placeholder="5432"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`db-name-${systemIndex}-${dbIndex}`}>Database Name *</Label>
-                <Input
-                  id={`db-name-${systemIndex}-${dbIndex}`}
-                  {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbName`)}
-                  placeholder="mydb"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`db-username-${systemIndex}-${dbIndex}`}>DB Username *</Label>
-                <Input
-                  id={`db-username-${systemIndex}-${dbIndex}`}
-                  {...register(`systemsUnderTest.${systemIndex}.databaseSeedConfigs.${dbIndex}.dbUsername`)}
-                  placeholder="postgres"
-                />
-              </div>
             </div>
           </div>
         </Card>
@@ -424,39 +296,26 @@ export function BenchmarkCreatePage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const createBenchmark = useCreateBenchmark()
+  const { data: sutsData, isLoading: sutsLoading } = useListSystemsUnderTest()
 
   const [currentStep, setCurrentStep] = useState(0)
   const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
-  const [systemFiles, setSystemFiles] = useState<SystemFiles[]>([
-    { composeFile: null, sqlSeedFiles: [] },
-  ])
+  const [behaviorModelInputMode, setBehaviorModelInputMode] = useState<BehaviorModelInputMode>('auto-generate')
+  const [jsonValidationError, setJsonValidationError] = useState<string | null>(null)
 
   const form = useForm<BenchmarkFormData>({
     resolver: zodResolver(benchmarkSchema),
     defaultValues: {
       name: '',
       description: '',
-      generateBehaviorModels: false,
+      generateBehaviorModels: true,
       behaviorModels: [],
+      behaviorModelsJson: '',
+      testDuration: '',
       operationalProfile: [{ load: 25, frequency: 1.0 }],
-      systemsUnderTest: [
-        {
-          id: uuidv4(),
-          name: '',
-          description: '',
-          isBaseline: true,
-          healthCheckPath: '/actuator/health',
-          appPort: 8080,
-          startupTimeoutSeconds: 180,
-          databaseSeedConfigs: [],
-        },
-      ],
+      baselineSutId: '',
+      targetSutId: '',
     },
-  })
-
-  const { fields: systemFields, append: appendSystem, remove: removeSystem } = useFieldArray({
-    control: form.control,
-    name: 'systemsUnderTest',
   })
 
   const { fields: behaviorFields, append: appendBehavior, remove: removeBehavior } = useFieldArray({
@@ -469,145 +328,6 @@ export function BenchmarkCreatePage() {
     name: 'operationalProfile',
   })
 
-  // File handlers
-  const handleOpenApiFileSelected = (file: UploadedFile | null) => {
-    setOpenApiFile(file)
-  }
-
-  const handleComposeFileSelected = (index: number, file: UploadedFile | null) => {
-    setSystemFiles((prev) => {
-      const updated = [...prev]
-      updated[index] = { ...updated[index], composeFile: file }
-      return updated
-    })
-  }
-
-  const handleSqlSeedFileSelected = (systemIndex: number, dbConfigIndex: number, file: UploadedFile | null) => {
-    setSystemFiles((prev) => {
-      const updated = [...prev]
-      const sqlSeedFiles = [...(updated[systemIndex]?.sqlSeedFiles || [])]
-      sqlSeedFiles[dbConfigIndex] = file
-      updated[systemIndex] = { ...updated[systemIndex], sqlSeedFiles }
-      return updated
-    })
-  }
-
-  const handleAddSystem = () => {
-    appendSystem({
-      id: uuidv4(),
-      name: '',
-      description: '',
-      isBaseline: false,
-      healthCheckPath: '/actuator/health',
-      appPort: 8080,
-      startupTimeoutSeconds: 180,
-      databaseSeedConfigs: [],
-    })
-    setSystemFiles((prev) => [...prev, { composeFile: null, sqlSeedFiles: [] }])
-  }
-
-  const handleRemoveSystem = (index: number) => {
-    removeSystem(index)
-    setSystemFiles((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  const handleAddBehaviorModel = () => {
-    appendBehavior({
-      id: '',
-      actor: '',
-      usageProfile: 0.5,
-      steps: [{ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] }],
-      thinkFrom: 1000,
-      thinkTo: 3000,
-    })
-  }
-
-  const handleAddOperationalProfile = () => {
-    appendOperationalProfile({ load: 25, frequency: 0.2 })
-  }
-
-  // Step validation
-  const validateCurrentStep = async (): Promise<boolean> => {
-    switch (currentStep) {
-      case 0: // Basic Info
-        return form.trigger(['name', 'description'])
-      case 1: // Load Test Config
-        if (!openApiFile) {
-          toast({
-            variant: 'destructive',
-            title: 'OpenAPI file required',
-            description: 'Please upload an OpenAPI specification file',
-          })
-          return false
-        }
-        const opProfile = form.getValues('operationalProfile')
-        const freqSum = opProfile.reduce((sum, p) => sum + Number(p.frequency), 0)
-        if (Math.abs(freqSum - 1.0) > 0.001) {
-          toast({
-            variant: 'destructive',
-            title: 'Invalid operational profile',
-            description: `Frequencies must sum to 1.0 (current sum: ${freqSum.toFixed(3)})`,
-          })
-          return false
-        }
-        if (!form.getValues('generateBehaviorModels')) {
-          const behaviorModels = form.getValues('behaviorModels')
-          if (!behaviorModels || behaviorModels.length === 0) {
-            toast({
-              variant: 'destructive',
-              title: 'Behavior models required',
-              description: 'Either enable auto-generation or define at least one behavior model',
-            })
-            return false
-          }
-        }
-        return form.trigger(['generateBehaviorModels', 'behaviorModels', 'operationalProfile'])
-      case 2: // Systems Under Test
-        const missingFiles = systemFiles.some((files) => !files.composeFile)
-        if (missingFiles) {
-          toast({
-            variant: 'destructive',
-            title: 'Missing files',
-            description: 'Each system must have a docker-compose file',
-          })
-          return false
-        }
-        // Validate exactly one baseline
-        const suts = form.getValues('systemsUnderTest')
-        const baselineCount = suts.filter(s => s.isBaseline).length
-        if (baselineCount === 0) {
-          toast({
-            variant: 'destructive',
-            title: 'No baseline selected',
-            description: 'Please mark exactly one system as the baseline for comparison',
-          })
-          return false
-        }
-        if (baselineCount > 1) {
-          toast({
-            variant: 'destructive',
-            title: 'Multiple baselines selected',
-            description: 'Only one system can be marked as the baseline',
-          })
-          return false
-        }
-        return form.trigger(['systemsUnderTest'])
-      default:
-        return true
-    }
-  }
-
-  const handleNext = async () => {
-    const isValid = await validateCurrentStep()
-    if (isValid) {
-      setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1))
-    }
-  }
-
-  const handlePrevious = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 0))
-  }
-
   // Helper to convert key-value pairs array to object
   const keyValuePairsToObject = (pairs: { key: string; value: string }[]): Record<string, string> => {
     return pairs.reduce((acc, { key, value }) => {
@@ -618,13 +338,98 @@ export function BenchmarkCreatePage() {
     }, {} as Record<string, string>)
   }
 
+  // Validate JSON input in real-time
+  const validateBehaviorModelsJson = (jsonString: string) => {
+    if (!jsonString || jsonString.trim() === '') {
+      setJsonValidationError(null)
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(jsonString)
+      if (!Array.isArray(parsed)) {
+        setJsonValidationError('Behavior models must be an array')
+        return
+      }
+
+      // Basic schema validation
+      for (let i = 0; i < parsed.length; i++) {
+        const model = parsed[i]
+        if (!model.id) {
+          setJsonValidationError(`Model at index ${i} is missing required field: id`)
+          return
+        }
+        if (!model.actor) {
+          setJsonValidationError(`Model at index ${i} is missing required field: actor`)
+          return
+        }
+        if (typeof model.usageProfile !== 'number') {
+          setJsonValidationError(`Model at index ${i} is missing required field: usageProfile`)
+          return
+        }
+        if (!Array.isArray(model.steps) || model.steps.length === 0) {
+          setJsonValidationError(`Model at index ${i} must have at least one step`)
+          return
+        }
+
+        // Validate steps
+        for (let j = 0; j < model.steps.length; j++) {
+          const step = model.steps[j]
+          if (!step.method || !step.path || !step.operationId) {
+            setJsonValidationError(`Model ${model.id}, step ${j}: missing required fields (method, path, operationId)`)
+            return
+          }
+        }
+      }
+
+      setJsonValidationError(null)
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        setJsonValidationError(`Invalid JSON syntax: ${e.message}`)
+      } else {
+        setJsonValidationError(`Validation error: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    }
+  }
+
   const onSubmit = async (data: BenchmarkFormData) => {
+    if (!openApiFile) {
+      toast({
+        variant: 'destructive',
+        title: 'OpenAPI file is required',
+      })
+      return
+    }
+
+    // Check for JSON validation errors
+    if (behaviorModelInputMode === 'json' && jsonValidationError) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid behavior models JSON',
+        description: jsonValidationError,
+      })
+      return
+    }
+
     try {
       // Process behavioral models
       let behaviorModels: any[] = []
-      if (!data.generateBehaviorModels && data.behaviorModels && data.behaviorModels.length > 0) {
-        behaviorModels = data.behaviorModels.map((model) => {
-          const steps = model.steps.map((step) => {
+
+      // Handle JSON input mode
+      if (behaviorModelInputMode === 'json' && data.behaviorModelsJson) {
+        try {
+          behaviorModels = JSON.parse(data.behaviorModelsJson)
+          if (!Array.isArray(behaviorModels)) {
+            throw new Error('Behavior models must be an array')
+          }
+        } catch (e) {
+          throw new Error(`Invalid JSON format: ${e instanceof Error ? e.message : String(e)}`)
+        }
+      }
+      // Handle manual input mode
+      else if (behaviorModelInputMode === 'manual' && data.behaviorModels && data.behaviorModels.length > 0) {
+        behaviorModels = data.behaviorModels.map((model: any) => {
+          const steps = model.steps.map((step: any) => {
             const headers = keyValuePairsToObject(step.headers || [])
             const params = keyValuePairsToObject(step.params || [])
             const save = keyValuePairsToObject(step.save || [])
@@ -654,6 +459,18 @@ export function BenchmarkCreatePage() {
           }
         })
       }
+      // Auto-generate mode - behaviorModels will be empty array
+
+      // Validate operational profile
+      const freqSum = data.operationalProfile.reduce((sum: number, p: any) => sum + Number(p.frequency), 0)
+      if (Math.abs(freqSum - 1.0) > 0.001) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid operational profile',
+          description: `Frequencies must sum to 1.0 (current sum: ${freqSum.toFixed(3)})`,
+        })
+        return
+      }
 
       const result = await createBenchmark.mutateAsync({
         data: {
@@ -661,38 +478,13 @@ export function BenchmarkCreatePage() {
           description: data.description || undefined,
           benchmarkConfig: {
             id: uuidv4(),
-            openApiFileId: openApiFile!.fileId,
+            openApiFileId: openApiFile.fileId,
             behaviorModels,
             operationalProfile: data.operationalProfile,
+            testDuration: data.testDuration && data.testDuration.trim() !== '' ? data.testDuration : undefined,
           },
-          systemsUnderTest: data.systemsUnderTest.map((system, index) => {
-            const databaseSeedConfigs = system.databaseSeedConfigs
-              .map((dbConfig, dbIndex) => {
-                const sqlSeedFile = systemFiles[index]?.sqlSeedFiles?.[dbIndex]
-                if (!sqlSeedFile) return null
-                return {
-                  sqlSeedFileId: sqlSeedFile.fileId,
-                  dbContainerName: dbConfig.dbContainerName,
-                  dbPort: dbConfig.dbPort,
-                  dbName: dbConfig.dbName,
-                  dbUsername: dbConfig.dbUsername,
-                }
-              })
-              .filter((config): config is NonNullable<typeof config> => config !== null)
-
-            return {
-              name: system.name,
-              description: system.description || undefined,
-              isBaseline: system.isBaseline,
-              dockerConfig: {
-                composeFileId: systemFiles[index].composeFile!.fileId,
-                healthCheckPath: system.healthCheckPath,
-                appPort: system.appPort,
-                startupTimeoutSeconds: system.startupTimeoutSeconds,
-              },
-              databaseSeedConfigs,
-            }
-          }),
+          baselineSutId: data.baselineSutId,
+          targetSutId: data.targetSutId,
         },
       })
 
@@ -715,6 +507,24 @@ export function BenchmarkCreatePage() {
     form.handleSubmit(onSubmit)()
   }
 
+  const handleAddBehaviorModel = () => {
+    appendBehavior({
+      id: '',
+      actor: '',
+      usageProfile: 0.5,
+      steps: [{ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] }],
+      thinkFrom: 1000,
+      thinkTo: 3000,
+    })
+  }
+
+  const handleAddOperationalProfile = () => {
+    appendOperationalProfile({ load: 50, frequency: 0 })
+  }
+
+  // Get available systems
+  const systems = (sutsData as any)?.systemsUnderTest || []
+
   // Render step content
   const renderStepContent = () => {
     switch (currentStep) {
@@ -728,9 +538,9 @@ export function BenchmarkCreatePage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name *</Label>
-                <Input id="name" {...form.register('name')} placeholder="Benchmark 1" />
+                <Input id="name" {...form.register('name')} placeholder="Performance Comparison Test" />
                 {form.formState.errors.name && (
-                  <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+                  <p className="text-sm text-destructive">{String(form.formState.errors.name.message)}</p>
                 )}
               </div>
 
@@ -739,7 +549,7 @@ export function BenchmarkCreatePage() {
                 <Textarea
                   id="description"
                   {...form.register('description')}
-                  placeholder="Comparing monolithic vs microservices performance"
+                  placeholder="Compare performance between monolithic and microservices architecture"
                   rows={3}
                 />
               </div>
@@ -749,47 +559,133 @@ export function BenchmarkCreatePage() {
 
       case 1:
         return (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>OpenAPI Specification</CardTitle>
-                <CardDescription>Upload your API specification file</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FileSelector
-                  id="openapi-file"
-                  label="OpenAPI Specification File"
-                  accept=".json,.yaml,.yml"
-                  required
-                  onFileSelected={handleOpenApiFileSelected}
-                  selectedFile={openApiFile}
-                  mimeTypeFilter="json"
-                />
-              </CardContent>
-            </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Load Test Configuration</CardTitle>
+              <CardDescription>Configure the load test parameters</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* OpenAPI File */}
+              <FileSelector
+                id="openapi-file"
+                label="OpenAPI Specification File"
+                accept=".json,.yaml,.yml"
+                required
+                onFileSelected={setOpenApiFile}
+                selectedFile={openApiFile}
+                mimeTypeFilter="json"
+              />
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Behavior Models</CardTitle>
-                <CardDescription>Define user behavior patterns for load testing</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="generateBehaviorModels"
-                    {...form.register('generateBehaviorModels')}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label htmlFor="generateBehaviorModels" className="cursor-pointer">
-                    Auto-generate behavior models from OpenAPI specification
-                  </Label>
+              {/* Test Duration */}
+              <div className="space-y-2">
+                <Label htmlFor="test-duration">Test Duration (optional)</Label>
+                <Input
+                  id="test-duration"
+                  {...form.register('testDuration')}
+                  placeholder="30s"
+                  className="max-w-xs"
+                />
+                {form.formState.errors.testDuration && (
+                  <p className="text-sm text-destructive">{String(form.formState.errors.testDuration.message)}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Duration format: <span className="font-mono">30s</span> (seconds), <span className="font-mono">5m</span> (minutes),
+                  or <span className="font-mono">1h</span> (hours). Leave empty for default.
+                </p>
+              </div>
+
+              {/* Behavior Models */}
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <Label>Behavior Models Input Method</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <Button
+                      type="button"
+                      variant={behaviorModelInputMode === 'auto-generate' ? 'default' : 'outline'}
+                      className="w-full"
+                      onClick={() => {
+                        setBehaviorModelInputMode('auto-generate')
+                        form.setValue('generateBehaviorModels', true)
+                        setJsonValidationError(null)
+                      }}
+                    >
+                      <Activity className="h-4 w-4 mr-2" />
+                      Auto-generate
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={behaviorModelInputMode === 'json' ? 'default' : 'outline'}
+                      className="w-full"
+                      onClick={() => {
+                        setBehaviorModelInputMode('json')
+                        form.setValue('generateBehaviorModels', false)
+                        // Re-validate current JSON if any
+                        const currentJson = form.watch('behaviorModelsJson')
+                        if (currentJson) {
+                          validateBehaviorModelsJson(currentJson)
+                        }
+                      }}
+                    >
+                      <FileJson className="h-4 w-4 mr-2" />
+                      Raw JSON
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={behaviorModelInputMode === 'manual' ? 'default' : 'outline'}
+                      className="w-full"
+                      onClick={() => {
+                        setBehaviorModelInputMode('manual')
+                        form.setValue('generateBehaviorModels', false)
+                        setJsonValidationError(null)
+                      }}
+                    >
+                      <FileCode className="h-4 w-4 mr-2" />
+                      Manual Input
+                    </Button>
+                  </div>
                 </div>
 
-                {!form.watch('generateBehaviorModels') && (
+                {behaviorModelInputMode === 'auto-generate' && (
+                  <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                    <p className="text-sm text-blue-900">
+                      Behavior models will be automatically generated from the OpenAPI specification file.
+                    </p>
+                  </div>
+                )}
+
+                {behaviorModelInputMode === 'json' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="behavior-models-json">Behavior Models JSON</Label>
+                    <Textarea
+                      id="behavior-models-json"
+                      {...form.register('behaviorModelsJson', {
+                        onChange: (e) => validateBehaviorModelsJson(e.target.value)
+                      })}
+                      placeholder={`[\n  {\n    "id": "checkout-flow",\n    "actor": "Customer",\n    "usageProfile": 0.7,\n    "steps": [\n      {\n        "method": "GET",\n        "path": "/api/products",\n        "operationId": "listProducts",\n        "headers": {},\n        "params": {},\n        "body": {},\n        "save": {}\n      }\n    ],\n    "thinkFrom": 1000,\n    "thinkTo": 3000\n  }\n]`}
+                      rows={15}
+                      className={`font-mono text-xs ${jsonValidationError ? 'border-destructive' : ''}`}
+                    />
+                    {jsonValidationError && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive">
+                        <p className="text-sm text-destructive">{jsonValidationError}</p>
+                      </div>
+                    )}
+                    {!jsonValidationError && form.watch('behaviorModelsJson') && form.watch('behaviorModelsJson').trim() !== '' && (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 border border-green-200">
+                        <Check className="h-4 w-4 text-green-600" />
+                        <p className="text-sm text-green-900">Valid JSON format</p>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Paste the complete JSON array of behavior models. Must be valid JSON matching the BehaviorModel schema.
+                    </p>
+                  </div>
+                )}
+
+                {behaviorModelInputMode === 'manual' && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label>Manual Behavior Models</Label>
+                      <Label>Behavior Models</Label>
                       <Button type="button" variant="outline" size="sm" onClick={handleAddBehaviorModel}>
                         <Plus className="h-4 w-4 mr-2" />
                         Add Model
@@ -798,60 +694,35 @@ export function BenchmarkCreatePage() {
 
                     {behaviorFields.map((field, index) => (
                       <Card key={field.id} className="p-4">
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-semibold">Behavior Model {index + 1}</h4>
+                        <div className="space-y-3">
+                          <div className="flex items-end gap-2">
+                            <div className="flex-1 grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label>ID</Label>
+                                <Input {...form.register(`behaviorModels.${index}.id`)} placeholder="checkout-flow" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Actor</Label>
+                                <Input {...form.register(`behaviorModels.${index}.actor`)} placeholder="Customer" />
+                              </div>
+                            </div>
                             <Button type="button" variant="ghost" size="icon" onClick={() => removeBehavior(index)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-3 gap-3">
                             <div className="space-y-2">
-                              <Label htmlFor={`behavior-id-${index}`}>ID</Label>
-                              <Input
-                                id={`behavior-id-${index}`}
-                                {...form.register(`behaviorModels.${index}.id`)}
-                                placeholder="checkout-flow"
-                              />
+                              <Label>Usage Profile (0-1)</Label>
+                              <Input type="number" step="0.01" min="0" max="1" {...form.register(`behaviorModels.${index}.usageProfile`)} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor={`behavior-actor-${index}`}>Actor</Label>
-                              <Input
-                                id={`behavior-actor-${index}`}
-                                {...form.register(`behaviorModels.${index}.actor`)}
-                                placeholder="Customer"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor={`usage-profile-${index}`}>Usage Profile (0-1)</Label>
-                              <Input
-                                id={`usage-profile-${index}`}
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="1"
-                                {...form.register(`behaviorModels.${index}.usageProfile`)}
-                              />
+                              <Label>Think From (ms)</Label>
+                              <Input type="number" {...form.register(`behaviorModels.${index}.thinkFrom`)} />
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor={`behavior-think-from-${index}`}>Think From (ms)</Label>
-                              <Input
-                                id={`behavior-think-from-${index}`}
-                                type="number"
-                                {...form.register(`behaviorModels.${index}.thinkFrom`)}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`behavior-think-to-${index}`}>Think To (ms)</Label>
-                              <Input
-                                id={`behavior-think-to-${index}`}
-                                type="number"
-                                {...form.register(`behaviorModels.${index}.thinkTo`)}
-                              />
+                              <Label>Think To (ms)</Label>
+                              <Input type="number" {...form.register(`behaviorModels.${index}.thinkTo`)} />
                             </div>
                           </div>
 
@@ -865,21 +736,23 @@ export function BenchmarkCreatePage() {
                       </Card>
                     ))}
 
+                    {behaviorFields.length === 0 && (
+                      <p className="text-sm text-muted-foreground italic">
+                        No behavior models defined. Click "Add Model" to create one.
+                      </p>
+                    )}
+
                     {form.formState.errors.behaviorModels && (
-                      <p className="text-sm text-destructive">{form.formState.errors.behaviorModels.message}</p>
+                      <p className="text-sm text-destructive">{form.formState.errors.behaviorModels.message as any}</p>
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Operational Profile</CardTitle>
-                <CardDescription>Define load levels and their frequency (must sum to 1.0)</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-end">
+              {/* Operational Profile */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Operational Profile</Label>
                   <Button type="button" variant="outline" size="sm" onClick={handleAddOperationalProfile}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Load Level
@@ -890,23 +763,12 @@ export function BenchmarkCreatePage() {
                   <div key={field.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
                     <div className="flex-1 grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor={`op-load-${index}`}>Load (users)</Label>
-                        <Input
-                          id={`op-load-${index}`}
-                          type="number"
-                          {...form.register(`operationalProfile.${index}.load`)}
-                        />
+                        <Label>Load (users)</Label>
+                        <Input type="number" {...form.register(`operationalProfile.${index}.load`)} />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor={`op-freq-${index}`}>Frequency (0-1)</Label>
-                        <Input
-                          id={`op-freq-${index}`}
-                          type="number"
-                          step="0.001"
-                          min="0"
-                          max="1"
-                          {...form.register(`operationalProfile.${index}.frequency`)}
-                        />
+                        <Label>Frequency (0-1)</Label>
+                        <Input type="number" step="0.001" min="0" max="1" {...form.register(`operationalProfile.${index}.frequency`)} />
                       </div>
                     </div>
                     {operationalProfileFields.length > 1 && (
@@ -916,142 +778,98 @@ export function BenchmarkCreatePage() {
                     )}
                   </div>
                 ))}
-
-                {(() => {
-                  const opProfile = form.watch('operationalProfile')
-                  if (!opProfile || opProfile.length === 0) return null
-                  const sum = opProfile.reduce((s, p) => s + (Number(p.frequency) || 0), 0)
-                  const isValid = Math.abs(sum - 1.0) <= 0.001
-                  return (
-                    <p className={`text-xs font-medium ${isValid ? 'text-green-600' : 'text-destructive'}`}>
-                      {isValid ? (
-                        <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Frequencies sum to 1.0</span>
-                      ) : (
-                        `Frequencies must sum to 1.0 (current: ${sum.toFixed(2)})`
-                      )}
-                    </p>
-                  )
-                })()}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         )
 
       case 2:
         return (
           <Card>
             <CardHeader>
-              <CardTitle>Systems Under Test</CardTitle>
-              <CardDescription>Configure the systems to be tested</CardDescription>
+              <CardTitle>Select Systems Under Test</CardTitle>
+              <CardDescription>
+                Choose the baseline and target systems to compare.
+                {systems.length === 0 && (
+                  <span className="block mt-2 text-destructive">
+                    No systems available. <Link to="/systems-under-test/new" className="underline">Create a system</Link> first.
+                  </span>
+                )}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {systemFields.map((field, index) => (
-                <Card key={field.id} className="relative">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        System {index + 1}
-                        {form.watch(`systemsUnderTest.${index}.isBaseline`) && (
-                          <Badge variant="secondary">Baseline</Badge>
-                        )}
-                      </CardTitle>
-                      {systemFields.length > 1 && (
-                        <Button type="button" variant="ghost" size="icon" onClick={() => handleRemoveSystem(index)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor={`system-name-${index}`}>Name *</Label>
-                        <Input
-                          id={`system-name-${index}`}
-                          {...form.register(`systemsUnderTest.${index}.name`)}
-                          placeholder="Monolithic deployment"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`system-description-${index}`}>Description</Label>
-                        <Input
-                          id={`system-description-${index}`}
-                          {...form.register(`systemsUnderTest.${index}.description`)}
-                          placeholder="Original monolithic version"
-                        />
-                      </div>
-                    </div>
+              {sutsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="baseline-sut">Baseline System *</Label>
+                    <Select
+                      value={form.watch('baselineSutId')}
+                      onValueChange={(value) => form.setValue('baselineSutId', value)}
+                    >
+                      <SelectTrigger id="baseline-sut">
+                        <SelectValue placeholder="Select baseline system" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {systems.map((system: any) => (
+                          <SelectItem key={system.id} value={system.id}>
+                            <div className="flex items-center gap-2">
+                              <Server className="h-4 w-4" />
+                              {system.name}
+                              {system.description && (
+                                <span className="text-xs text-muted-foreground">- {system.description}</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.baselineSutId && (
+                      <p className="text-sm text-destructive">{String(form.formState.errors.baselineSutId.message)}</p>
+                    )}
+                  </div>
 
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`system-baseline-${index}`}
-                        {...form.register(`systemsUnderTest.${index}.isBaseline`)}
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
-                      <Label htmlFor={`system-baseline-${index}`} className="cursor-pointer">
-                        Use as baseline for comparison
-                      </Label>
-                    </div>
-
-                    <FileSelector
-                      id={`compose-file-${index}`}
-                      label="Docker Compose File *"
-                      accept=".yaml,.yml"
-                      required
-                      onFileSelected={(file) => handleComposeFileSelected(index, file)}
-                      selectedFile={systemFiles[index]?.composeFile}
-                      mimeTypeFilter="yaml"
-                    />
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor={`health-check-${index}`}>Health Check Path</Label>
-                        <Input
-                          id={`health-check-${index}`}
-                          {...form.register(`systemsUnderTest.${index}.healthCheckPath`)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`app-port-${index}`}>App Port</Label>
-                        <Input
-                          id={`app-port-${index}`}
-                          type="number"
-                          {...form.register(`systemsUnderTest.${index}.appPort`)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`timeout-${index}`}>Startup Timeout (s)</Label>
-                        <Input
-                          id={`timeout-${index}`}
-                          type="number"
-                          {...form.register(`systemsUnderTest.${index}.startupTimeoutSeconds`)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Database Seed Configs (multiple for microservices) */}
-                    <DatabaseSeedConfigList
-                      systemIndex={index}
-                      control={form.control}
-                      register={form.register}
-                      onFileSelected={handleSqlSeedFileSelected}
-                      sqlSeedFiles={systemFiles[index]?.sqlSeedFiles || []}
-                    />
-                  </CardContent>
-                </Card>
-              ))}
-
-              <Button type="button" variant="outline" onClick={handleAddSystem} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add System
-              </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="target-sut">Target System *</Label>
+                    <Select
+                      value={form.watch('targetSutId')}
+                      onValueChange={(value) => form.setValue('targetSutId', value)}
+                    >
+                      <SelectTrigger id="target-sut">
+                        <SelectValue placeholder="Select target system" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {systems.map((system: any) => (
+                          <SelectItem key={system.id} value={system.id}>
+                            <div className="flex items-center gap-2">
+                              <Server className="h-4 w-4" />
+                              {system.name}
+                              {system.description && (
+                                <span className="text-xs text-muted-foreground">- {system.description}</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.targetSutId && (
+                      <p className="text-sm text-destructive">{String(form.formState.errors.targetSutId.message)}</p>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         )
 
       case 3:
         const formData = form.getValues()
+        const baselineSut = systems.find((s: any) => s.id === formData.baselineSutId)
+        const targetSut = systems.find((s: any) => s.id === formData.targetSutId)
+
         return (
           <div className="space-y-6">
             <Card>
@@ -1086,12 +904,18 @@ export function BenchmarkCreatePage() {
                   <div className="pl-6 space-y-1 text-sm">
                     <p><span className="text-muted-foreground">OpenAPI File:</span> {openApiFile?.filename}</p>
                     <p>
+                      <span className="text-muted-foreground">Test Duration:</span>{' '}
+                      {formData.testDuration && formData.testDuration.trim() !== '' ? formData.testDuration : 'Default'}
+                    </p>
+                    <p>
                       <span className="text-muted-foreground">Behavior Models:</span>{' '}
-                      {formData.generateBehaviorModels ? 'Auto-generated' : `${formData.behaviorModels?.length || 0} defined`}
+                      {behaviorModelInputMode === 'auto-generate' && 'Auto-generated from OpenAPI spec'}
+                      {behaviorModelInputMode === 'json' && 'Defined via raw JSON'}
+                      {behaviorModelInputMode === 'manual' && `${formData.behaviorModels?.length || 0} manually defined`}
                     </p>
                     <p>
                       <span className="text-muted-foreground">Operational Profile:</span>{' '}
-                      {formData.operationalProfile.map(p => `${p.load} users (${(Number(p.frequency) * 100).toFixed(0)}%)`).join(', ')}
+                      {formData.operationalProfile.map((p: any) => `${p.load} users (${(Number(p.frequency) * 100).toFixed(0)}%)`).join(', ')}
                     </p>
                   </div>
                 </div>
@@ -1100,23 +924,28 @@ export function BenchmarkCreatePage() {
                 <div className="space-y-2">
                   <h4 className="font-semibold flex items-center gap-2">
                     <Server className="h-4 w-4" />
-                    Systems Under Test ({formData.systemsUnderTest.length})
+                    Systems Under Test
                   </h4>
                   <div className="pl-6 space-y-3">
-                    {formData.systemsUnderTest.map((system, index) => (
-                      <div key={system.id} className="p-3 rounded-lg bg-muted/50 text-sm">
-                        <p className="font-medium flex items-center gap-2">
-                          {system.name}
-                          {system.isBaseline && <Badge variant="secondary" className="text-xs">Baseline</Badge>}
-                        </p>
-                        {system.description && (
-                          <p className="text-muted-foreground text-xs">{system.description}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Port: {system.appPort} | Health: {system.healthCheckPath} | Compose: {systemFiles[index]?.composeFile?.filename}
-                        </p>
+                    <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="default" className="bg-blue-600">Baseline</Badge>
+                        <span className="font-medium">{baselineSut?.name || 'Not selected'}</span>
                       </div>
-                    ))}
+                      {baselineSut?.description && (
+                        <p className="text-xs text-muted-foreground">{baselineSut.description}</p>
+                      )}
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-purple-50 border border-purple-200 text-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="default" className="bg-purple-600">Target</Badge>
+                        <span className="font-medium">{targetSut?.name || 'Not selected'}</span>
+                      </div>
+                      {targetSut?.description && (
+                        <p className="text-xs text-muted-foreground">{targetSut.description}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -1138,34 +967,28 @@ export function BenchmarkCreatePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Create Load Test Benchmark</h1>
-          <p className="text-muted-foreground mt-2">
-            Compare performance across different deployments
-          </p>
+          <h1 className="text-3xl font-bold">Create Benchmark</h1>
+          <p className="text-muted-foreground">Set up a new performance benchmark</p>
         </div>
       </div>
 
-      <Stepper steps={STEPS} currentStep={currentStep} className="mb-8" />
-
-      <StepContent>
-        {renderStepContent()}
-      </StepContent>
-
+      <Stepper steps={STEPS} currentStep={currentStep} />
+      <StepContent>{renderStepContent()}</StepContent>
       <StepNavigation
         currentStep={currentStep}
         totalSteps={STEPS.length}
-        onNext={handleNext}
-        onPrevious={handlePrevious}
+        onNext={() => setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1))}
+        onPrevious={() => setCurrentStep((prev) => Math.max(prev - 1, 0))}
         onSubmit={handleSubmit}
         isSubmitting={createBenchmark.isPending}
-        submitLabel="Create Benchmark"
-      >
-        <Link to="/benchmarks">
-          <Button type="button" variant="outline">
-            Cancel
-          </Button>
-        </Link>
-      </StepNavigation>
+        canProceed={
+          currentStep === 0
+            ? !!form.watch('name')
+            : currentStep === 1
+              ? !!openApiFile && (behaviorModelInputMode !== 'json' || !jsonValidationError)
+              : true
+        }
+      />
     </div>
   )
 }

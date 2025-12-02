@@ -18,9 +18,8 @@ class ListBenchmarkRunsQueryHandler(
             benchmarkRuns = benchmarkRuns.map { run ->
                 ListBenchmarkRunsQuery.BenchmarkRunSummary(
                     benchmarkRunId = run.id,
-                    benchmarkId = run.benchmarkId,
+                    benchmarkId = run.benchmark.id,
                     state = run.state,
-                    sutCount = run.architectureTestSuites.size,
                     createdAt = run.createdAt,
                     updatedAt = run.updatedAt,
                 )
