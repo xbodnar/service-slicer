@@ -1048,32 +1048,15 @@ export function BenchmarkRunDetailPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead rowSpan={2} className="py-2 align-bottom border-r">Operation ID</TableHead>
-                        <TableHead colSpan={7} className="text-center py-2 bg-blue-50 dark:bg-blue-950/30 border-r">
-                          <Badge variant="default" className="bg-blue-600">Baseline</Badge>
-                        </TableHead>
-                        <TableHead colSpan={9} className="text-center py-2 bg-purple-50 dark:bg-purple-950/30">
-                          <Badge variant="default" className="bg-purple-600">Target</Badge>
-                        </TableHead>
-                      </TableRow>
-                      <TableRow>
-                        {/* Baseline columns */}
-                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">Total Req</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">Failed</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">Mean (ms)</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">Std Dev</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">P95</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">P99</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30 border-r">Threshold</TableHead>
-                        {/* Target columns */}
-                        <TableHead className="text-center py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Status</TableHead>
-                        <TableHead className="text-center py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Share</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Total Req</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Failed</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Mean (ms)</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Std Dev</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">P95</TableHead>
-                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">P99</TableHead>
+                        <TableHead className="py-2 align-middle border-r">Operation ID</TableHead>
+                        <TableHead colSpan={2} className="text-center py-2 text-xs border-r">Total Req</TableHead>
+                        <TableHead colSpan={2} className="text-center py-2 text-xs border-r">Failed</TableHead>
+                        <TableHead colSpan={2} className="text-center py-2 text-xs border-r">Mean (ms)</TableHead>
+                        <TableHead colSpan={2} className="text-center py-2 text-xs border-r">Std Dev</TableHead>
+                        <TableHead colSpan={2} className="text-center py-2 text-xs border-r">P95</TableHead>
+                        <TableHead colSpan={2} className="text-center py-2 text-xs border-r">P99</TableHead>
+                        <TableHead colSpan={2} className="text-center py-2 text-xs border-r">Threshold / Status</TableHead>
+                        <TableHead className="text-center py-2 text-xs">Share</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1085,62 +1068,89 @@ export function BenchmarkRunDetailPage() {
                           <TableRow key={operationId}>
                             <TableCell className="font-mono text-xs font-medium py-2 border-r">{operationId}</TableCell>
 
-                            {/* Baseline columns */}
-                            {baselineMetric ? (
-                              <>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">{baselineMetric.totalRequests}</TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">{baselineMetric.failedRequests}</TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">
-                                  <span className="font-semibold text-amber-600 dark:text-amber-400">
-                                    {Number(baselineMetric.meanResponseTimeMs).toFixed(2)}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">{Number(baselineMetric.stdDevResponseTimeMs).toFixed(2)}</TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">{Number(baselineMetric.p95DurationMs).toFixed(2)}</TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">{Number(baselineMetric.p99DurationMs).toFixed(2)}</TableCell>
-                                <TableCell className="text-right font-mono text-xs font-medium py-2 bg-blue-50/30 dark:bg-blue-950/10 border-r text-blue-600 dark:text-blue-400">
-                                  {Number(baselineMetric.scalabilityThreshold).toFixed(2)}
-                                </TableCell>
-                              </>
-                            ) : (
-                              <>
-                                <TableCell colSpan={7} className="text-center text-xs text-muted-foreground py-2 bg-blue-50/30 dark:bg-blue-950/10 border-r">N/A</TableCell>
-                              </>
-                            )}
+                            {/* Total Requests - Baseline */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-blue-50 dark:bg-blue-950/30">
+                              {baselineMetric ? baselineMetric.totalRequests : 'N/A'}
+                            </TableCell>
+                            {/* Total Requests - Target */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-purple-50 dark:bg-purple-950/30 border-r">
+                              {targetMetric ? targetMetric.totalRequests : 'N/A'}
+                            </TableCell>
 
-                            {/* Target columns */}
-                            {targetMetric ? (
-                              <>
-                                <TableCell className="text-center py-2 bg-purple-50/30 dark:bg-purple-950/10">
-                                  {targetMetric.passScalabilityThreshold !== undefined && (
-                                    <Badge variant={targetMetric.passScalabilityThreshold ? "default" : "destructive"} className={`text-xs ${targetMetric.passScalabilityThreshold ? 'bg-green-600' : ''}`}>
-                                      {targetMetric.passScalabilityThreshold ? 'Pass' : 'Fail'}
-                                    </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-center py-2 bg-purple-50/30 dark:bg-purple-950/10">
-                                  {targetMetric.scalabilityShare !== undefined && (
-                                    <Badge variant="outline" className="text-xs font-mono">
-                                      {targetMetric.scalabilityShare.toFixed(4)}
-                                    </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">{targetMetric.totalRequests}</TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">{targetMetric.failedRequests}</TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">
-                                  <span className="font-semibold text-amber-600 dark:text-amber-400">
-                                    {Number(targetMetric.meanResponseTimeMs).toFixed(2)}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">{Number(targetMetric.stdDevResponseTimeMs).toFixed(2)}</TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">{Number(targetMetric.p95DurationMs).toFixed(2)}</TableCell>
-                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">{Number(targetMetric.p99DurationMs).toFixed(2)}</TableCell>
-                              </>
-                            ) : (
-                              <>
-                                <TableCell colSpan={8} className="text-center text-xs text-muted-foreground py-2 bg-purple-50/30 dark:bg-purple-950/10">N/A</TableCell>
-                              </>
-                            )}
+                            {/* Failed Requests - Baseline */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-blue-50 dark:bg-blue-950/30">
+                              {baselineMetric ? baselineMetric.failedRequests : 'N/A'}
+                            </TableCell>
+                            {/* Failed Requests - Target */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-purple-50 dark:bg-purple-950/30 border-r">
+                              {targetMetric ? targetMetric.failedRequests : 'N/A'}
+                            </TableCell>
+
+                            {/* Mean Response Time - Baseline */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-blue-50 dark:bg-blue-950/30">
+                              {baselineMetric ? (
+                                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                                  {Number(baselineMetric.meanResponseTimeMs).toFixed(2)}
+                                </span>
+                              ) : 'N/A'}
+                            </TableCell>
+                            {/* Mean Response Time - Target */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-purple-50 dark:bg-purple-950/30 border-r">
+                              {targetMetric ? (
+                                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                                  {Number(targetMetric.meanResponseTimeMs).toFixed(2)}
+                                </span>
+                              ) : 'N/A'}
+                            </TableCell>
+
+                            {/* Std Dev - Baseline */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-blue-50 dark:bg-blue-950/30">
+                              {baselineMetric ? Number(baselineMetric.stdDevResponseTimeMs).toFixed(2) : 'N/A'}
+                            </TableCell>
+                            {/* Std Dev - Target */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-purple-50 dark:bg-purple-950/30 border-r">
+                              {targetMetric ? Number(targetMetric.stdDevResponseTimeMs).toFixed(2) : 'N/A'}
+                            </TableCell>
+
+                            {/* P95 - Baseline */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-blue-50 dark:bg-blue-950/30">
+                              {baselineMetric ? Number(baselineMetric.p95DurationMs).toFixed(2) : 'N/A'}
+                            </TableCell>
+                            {/* P95 - Target */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-purple-50 dark:bg-purple-950/30 border-r">
+                              {targetMetric ? Number(targetMetric.p95DurationMs).toFixed(2) : 'N/A'}
+                            </TableCell>
+
+                            {/* P99 - Baseline */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-blue-50 dark:bg-blue-950/30">
+                              {baselineMetric ? Number(baselineMetric.p99DurationMs).toFixed(2) : 'N/A'}
+                            </TableCell>
+                            {/* P99 - Target */}
+                            <TableCell className="text-right font-mono text-xs py-2 bg-purple-50 dark:bg-purple-950/30 border-r">
+                              {targetMetric ? Number(targetMetric.p99DurationMs).toFixed(2) : 'N/A'}
+                            </TableCell>
+
+                            {/* Threshold - Baseline */}
+                            <TableCell className="text-right font-mono text-xs font-medium py-2 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300">
+                              {baselineMetric ? Number(baselineMetric.scalabilityThreshold).toFixed(2) : 'N/A'}
+                            </TableCell>
+                            {/* Status - Target */}
+                            <TableCell className="text-center py-2 bg-purple-50 dark:bg-purple-950/30 border-r">
+                              {targetMetric?.passScalabilityThreshold !== undefined ? (
+                                <Badge variant={targetMetric.passScalabilityThreshold ? "default" : "destructive"} className={`text-xs ${targetMetric.passScalabilityThreshold ? 'bg-green-600' : ''}`}>
+                                  {targetMetric.passScalabilityThreshold ? 'Pass' : 'Fail'}
+                                </Badge>
+                              ) : 'N/A'}
+                            </TableCell>
+
+                            {/* Share - Target only */}
+                            <TableCell className="text-center py-2 bg-purple-50 dark:bg-purple-950/30">
+                              {targetMetric?.scalabilityShare !== undefined ? (
+                                <Badge variant="outline" className="text-xs font-mono">
+                                  {targetMetric.scalabilityShare.toFixed(4)}
+                                </Badge>
+                              ) : 'N/A'}
+                            </TableCell>
                           </TableRow>
                         )
                       })}
