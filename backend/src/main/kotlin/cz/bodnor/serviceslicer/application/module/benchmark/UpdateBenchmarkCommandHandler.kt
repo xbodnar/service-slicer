@@ -21,7 +21,7 @@ class UpdateBenchmarkCommandHandler(
 
         benchmark.name = command.name
         benchmark.description = command.description
-        benchmark.config = command.benchmarkConfig
+        benchmark.operationalSetting = command.operationalSetting
 
         benchmarkWriteService.save(benchmark)
 

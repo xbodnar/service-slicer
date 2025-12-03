@@ -105,8 +105,6 @@ export function BenchmarkRunListPage() {
                           </Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{run.sutCount} system{run.sutCount !== 1 ? 's' : ''} tested</span>
-                          <span>•</span>
                           <span>Created {format(new Date(run.createdAt), 'PPpp')}</span>
                         </div>
                       </div>

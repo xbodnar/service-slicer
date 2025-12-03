@@ -3,7 +3,6 @@ package cz.bodnor.serviceslicer.domain.benchmarkrun
 import com.fasterxml.jackson.databind.JsonNode
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.benchmark.Benchmark
-import cz.bodnor.serviceslicer.domain.benchmark.OperationalLoad
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import cz.bodnor.serviceslicer.domain.testcase.BaselineTestCase
@@ -26,6 +25,7 @@ import org.springframework.stereotype.Repository
 import java.math.BigDecimal
 import java.math.MathContext
 import java.util.UUID
+import kotlin.time.Duration
 
 @Entity
 class BenchmarkRun(
@@ -35,14 +35,15 @@ class BenchmarkRun(
     @OneToOne(cascade = [CascadeType.ALL], orphanRemoval = true)
     val baselineTestCase: BaselineTestCase,
 
+    val testDuration: Duration,
 ) : UpdatableEntity() {
-
-    @OneToMany(cascade = [CascadeType.ALL], orphanRemoval = true, mappedBy = "benchmarkRun", fetch = FetchType.EAGER)
-    val targetTestCases: MutableList<TargetTestCase> = mutableListOf()
 
     @Enumerated(EnumType.STRING)
     var state: BenchmarkRunState = BenchmarkRunState.PENDING
         private set
+
+    @OneToMany(cascade = [CascadeType.ALL], orphanRemoval = true, mappedBy = "benchmarkRun", fetch = FetchType.EAGER)
+    val targetTestCases: MutableList<TargetTestCase> = mutableListOf()
 
     @JdbcTypeCode(SqlTypes.JSON)
     var experimentResults: ExperimentResults? = null
@@ -50,9 +51,10 @@ class BenchmarkRun(
 
     fun addTargetTestCase(
         sut: SystemUnderTest,
-        load: OperationalLoad,
+        load: Int,
+        frequency: BigDecimal,
     ) {
-        this.targetTestCases.add(TargetTestCase(this, sut, load.load, load.frequency))
+        this.targetTestCases.add(TargetTestCase(this, sut, load, frequency))
     }
 
     fun markTestCaseCompleted(

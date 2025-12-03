@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.domain.testcase
 
 import com.fasterxml.jackson.databind.JsonNode
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
-import cz.bodnor.serviceslicer.domain.benchmark.OperationalLoad
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import jakarta.persistence.Entity
 import jakarta.persistence.ManyToOne
@@ -18,17 +17,15 @@ import java.time.Instant
 class BaselineTestCase(
     @ManyToOne
     val baselineSut: SystemUnderTest,
-    operationalProfile: List<OperationalLoad>,
-) : TestCase(operationalProfile.minBy { it.load }.load) {
+    operationalProfile: Map<Int, BigDecimal>,
+) : TestCase(operationalProfile.keys.min()) {
 
     @JdbcTypeCode(SqlTypes.JSON)
     var operationMetrics: Map<OperationId, BaselineTestCaseOperationMetrics> = emptyMap()
         private set
 
     @JdbcTypeCode(SqlTypes.JSON)
-    val relativeDomainMetrics: Map<Int, BigDecimal> = operationalProfile.associate {
-        it.load to it.frequency.toBigDecimal()
-    }
+    val relativeDomainMetrics: Map<Int, BigDecimal> = operationalProfile
 
     override fun completed(
         performanceMetrics: List<QueryLoadTestMetrics.PerformanceMetrics>,

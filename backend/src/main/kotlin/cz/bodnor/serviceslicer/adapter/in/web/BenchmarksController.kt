@@ -6,7 +6,7 @@ import cz.bodnor.serviceslicer.application.module.benchmark.command.GenerateBeha
 import cz.bodnor.serviceslicer.application.module.benchmark.query.GetBenchmarkQuery
 import cz.bodnor.serviceslicer.application.module.benchmark.query.ListBenchmarksQuery
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.CreateBenchmarkRunCommand
-import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.ValidateSutBenchmarkConfigCommand
+import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.ValidateSutOperationalSettingCommand
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.query.GetBenchmarkRunQuery
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.query.ListBenchmarkRunsQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
@@ -17,8 +17,10 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
+import kotlin.time.Duration
 
 @RestController
 @RequestMapping("/benchmarks")
@@ -44,18 +46,28 @@ class BenchmarksController(
     ) = commandBus(request.toCommand(benchmarkId))
 
     @PostMapping("/{benchmarkId}/run")
-    fun runBenchmark(@PathVariable benchmarkId: UUID) = commandBus(CreateBenchmarkRunCommand(benchmarkId = benchmarkId))
+    fun runBenchmark(
+        @PathVariable benchmarkId: UUID,
+        @RequestParam("testDuration", required = false) testDuration: String?,
+    ) = commandBus(
+        CreateBenchmarkRunCommand(
+            benchmarkId = benchmarkId,
+            testDuration = testDuration?.let {
+                Duration.parse(it)
+            },
+        ),
+    )
 
     @PostMapping("/{benchmarkId}/generate-bm")
     fun generateBehaviorModels(@PathVariable benchmarkId: UUID) =
         commandBus(GenerateBehaviorModelsCommand(benchmarkId = benchmarkId))
 
     @PostMapping("/{benchmarkId}/sut/{systemUnderTestId}/validate")
-    fun validateBenchmarkConfig(
+    fun validateOperationalSetting(
         @PathVariable benchmarkId: UUID,
         @PathVariable systemUnderTestId: UUID,
     ) = commandBus(
-        ValidateSutBenchmarkConfigCommand(
+        ValidateSutOperationalSettingCommand(
             benchmarkId = benchmarkId,
             systemUnderTestId = systemUnderTestId,
         ),

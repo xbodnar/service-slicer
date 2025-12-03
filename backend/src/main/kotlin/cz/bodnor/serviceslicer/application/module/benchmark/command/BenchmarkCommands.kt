@@ -1,6 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.benchmark.command
 
-import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
+import cz.bodnor.serviceslicer.domain.operationalsetting.OperationalSetting
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
@@ -8,7 +8,7 @@ import java.util.UUID
 data class CreateBenchmarkCommand(
     val name: String,
     val description: String? = null,
-    val benchmarkConfig: BenchmarkConfig,
+    val operationalSetting: OperationalSetting,
     val baselineSutId: UUID,
     val targetSutId: UUID,
 ) : Command<CreateBenchmarkCommand.Result> {
@@ -24,7 +24,7 @@ data class UpdateBenchmarkCommand(
     val benchmarkId: UUID,
     val name: String,
     val description: String? = null,
-    val benchmarkConfig: BenchmarkConfig,
+    val operationalSetting: OperationalSetting,
 ) : Command<UpdateBenchmarkCommand.Result> {
 
     @Schema(name = "UpdateBenchmarkResult", description = "Result of updating a benchmark")

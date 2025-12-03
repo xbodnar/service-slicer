@@ -18,4 +18,12 @@
                 referencedTableName="system_under_test"
                 referencedColumnNames="id"/>
     </changeSet>
+    <changeSet id="create-operational-setting-fk" author="Norbert Bodnar">
+        <addForeignKeyConstraint
+                baseTableName="benchmark"
+                baseColumnNames="config_id"
+                constraintName="fk_benchmark_operational_setting"
+                referencedTableName="operational_setting"
+                referencedColumnNames="id"/>
+    </changeSet>
 </databaseChangeLog>

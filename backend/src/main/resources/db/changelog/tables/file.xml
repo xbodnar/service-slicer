@@ -19,7 +19,7 @@
             <column name="mime_type" type="varchar(127)">
                 <constraints nullable="false"/>
             </column>
-            <column name="expected_size" type="bigint">
+            <column name="file_size" type="bigint">
                 <constraints nullable="false"/>
             </column>
             <column name="storage_key" type="varchar(512)">

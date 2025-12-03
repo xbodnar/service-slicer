@@ -47,13 +47,9 @@
             <column name="operation_metrics" type="jsonb">
                 <constraints nullable="false"/>
             </column>
-        </createTable>
-    </changeSet>
-    <changeSet id="add-relative-dms" author="Norbert Bodnar">
-        <addColumn tableName="baseline_test_case">
             <column name="relative_domain_metrics" type="jsonb" defaultValueComputed="'{}'::jsonb">
                 <constraints nullable="false"/>
             </column>
-        </addColumn>
+        </createTable>
     </changeSet>
 </databaseChangeLog>

@@ -17,6 +17,7 @@ interface FileSelectorProps {
   onFileSelected: (file: UploadedFile | null) => void
   selectedFile?: UploadedFile | null
   mimeTypeFilter?: string
+  disabled?: boolean
 }
 
 export function FileSelector({
@@ -27,6 +28,7 @@ export function FileSelector({
   onFileSelected,
   selectedFile,
   mimeTypeFilter,
+  disabled = false,
 }: FileSelectorProps) {
   const [mode, setMode] = useState<'upload' | 'existing'>('upload')
   const { uploadFile, isUploading } = useFileUpload()
@@ -94,15 +96,15 @@ export function FileSelector({
         {label} {required && <span className="text-destructive">*</span>}
       </Label>
 
-      <RadioGroup value={mode} onValueChange={(value) => setMode(value as 'upload' | 'existing')}>
+      <RadioGroup value={mode} onValueChange={(value) => setMode(value as 'upload' | 'existing')} disabled={disabled}>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="upload" id={`${id}-upload`} />
+          <RadioGroupItem value="upload" id={`${id}-upload`} disabled={disabled} />
           <Label htmlFor={`${id}-upload`} className="font-normal cursor-pointer">
             Upload new file
           </Label>
         </div>
         <div className="flex items-center space-x-2">
-          <RadioGroupItem value="existing" id={`${id}-existing`} />
+          <RadioGroupItem value="existing" id={`${id}-existing`} disabled={disabled} />
           <Label htmlFor={`${id}-existing`} className="font-normal cursor-pointer">
             Select existing file
           </Label>
@@ -115,7 +117,7 @@ export function FileSelector({
             id={id}
             accept={accept}
             onChange={handleFileUpload}
-            disabled={isUploading}
+            disabled={isUploading || disabled}
           />
           {isUploading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -128,6 +130,7 @@ export function FileSelector({
         <Select
           onValueChange={handleExistingFileSelect}
           value={selectedFile?.fileId}
+          disabled={disabled}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select a file..." />

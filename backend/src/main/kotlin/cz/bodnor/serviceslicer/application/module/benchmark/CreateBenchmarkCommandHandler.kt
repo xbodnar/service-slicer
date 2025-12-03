@@ -2,6 +2,8 @@ package cz.bodnor.serviceslicer.application.module.benchmark
 
 import cz.bodnor.serviceslicer.application.module.benchmark.command.CreateBenchmarkCommand
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkWriteService
+import cz.bodnor.serviceslicer.domain.operationalsetting.OperationalSettingReadService
+import cz.bodnor.serviceslicer.domain.operationalsetting.OperationalSettingWriteService
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import cz.bodnor.serviceslicer.infrastructure.exception.verify
@@ -11,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional
 @Component
 class CreateBenchmarkCommandHandler(
     private val benchmarkWriteService: BenchmarkWriteService,
+    private val operationalSettingReadService: OperationalSettingReadService,
+    private val operationalSettingWriteService: OperationalSettingWriteService,
     private val sutReadService: SystemUnderTestReadService,
 ) : CommandHandler<CreateBenchmarkCommand.Result, CreateBenchmarkCommand> {
 
@@ -24,8 +28,12 @@ class CreateBenchmarkCommandHandler(
         val baselineSut = sutReadService.getById(command.baselineSutId)
         val targetSut = sutReadService.getById(command.targetSutId)
 
+        if (!operationalSettingReadService.existsById(command.operationalSetting.id)) {
+            operationalSettingWriteService.save(command.operationalSetting)
+        }
+
         val benchmark = benchmarkWriteService.create(
-            benchmarkConfig = command.benchmarkConfig,
+            operationalSetting = command.operationalSetting,
             name = command.name,
             description = command.description,
             baselineSut = baselineSut,

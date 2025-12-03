@@ -1,6 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.sut.query
 
-import cz.bodnor.serviceslicer.application.module.benchmark.query.FileDto
+import cz.bodnor.serviceslicer.domain.file.File
 import cz.bodnor.serviceslicer.domain.sut.DatabaseSeedConfig
 import cz.bodnor.serviceslicer.domain.sut.DockerConfig
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
@@ -33,7 +33,7 @@ data class SystemUnderTestDto(
 
 data class DockerConfigDto(
     @field:Schema(description = "ID of the Docker Compose file")
-    val composeFile: FileDto,
+    val composeFile: File,
     @field:Schema(description = "Health check endpoint path")
     val healthCheckPath: String,
     @field:Schema(description = "Application port")
@@ -42,7 +42,7 @@ data class DockerConfigDto(
     val startupTimeoutSeconds: Long,
 ) {
     fun toDomain() = DockerConfig(
-        composeFileId = composeFile.fileId,
+        composeFileId = composeFile.id,
         healthCheckPath = healthCheckPath,
         appPort = appPort,
         startupTimeoutSeconds = startupTimeoutSeconds,
@@ -51,7 +51,7 @@ data class DockerConfigDto(
 
 data class DatabaseSeedConfigDto(
     @field:Schema(description = "ID of the SQL seed file")
-    val sqlSeedFile: FileDto,
+    val sqlSeedFile: File,
     @field:Schema(description = "Database container name in docker-compose")
     val dbContainerName: String,
     @field:Schema(description = "Database port inside container")
@@ -62,7 +62,7 @@ data class DatabaseSeedConfigDto(
     val dbUsername: String,
 ) {
     fun toDomain() = DatabaseSeedConfig(
-        sqlSeedFileId = sqlSeedFile.fileId,
+        sqlSeedFileId = sqlSeedFile.id,
         dbContainerName = dbContainerName,
         dbPort = dbPort,
         dbName = dbName,

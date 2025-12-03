@@ -29,7 +29,7 @@ class BenchmarkTests(
         val openApiFile = File(
             id = 1.toUUID(),
             filename = "openapi.json",
-            expectedSize = 1024,
+            fileSize = 1024,
             mimeType = "application/json",
         )
         openApiFile.markAsReady()
@@ -40,7 +40,7 @@ class BenchmarkTests(
         val jarFile = File(
             id = 2.toUUID(),
             filename = "blog-app.jar",
-            expectedSize = 2048,
+            fileSize = 2048,
             mimeType = "application/zip",
         )
         jarFile.markAsReady()
@@ -50,7 +50,7 @@ class BenchmarkTests(
         val composeFile = File(
             id = 3.toUUID(),
             filename = "docker-compose.yml",
-            expectedSize = 3072,
+            fileSize = 3072,
             mimeType = "application/yaml",
         )
         composeFile.markAsReady()

@@ -18,10 +18,9 @@ class GenerateBehaviorModelsCommandHandler(
     @Transactional
     override fun handle(command: GenerateBehaviorModelsCommand): GenerateBehaviorModelsCommand.Result {
         val benchmark = benchmarkReadService.getById(command.benchmarkId)
-        val loadTestConfig = benchmark.config
+        val loadTestConfig = benchmark.operationalSetting
 
-        val behaviorModels = generateBehaviorModels(loadTestConfig.openApiFileId)
-        benchmark.config = loadTestConfig.copy(behaviorModels = behaviorModels)
+        loadTestConfig.usageProfile = generateBehaviorModels(loadTestConfig.openApiFile.id)
 
         return GenerateBehaviorModelsCommand.Result(
             loadTestConfigId = loadTestConfig.id,

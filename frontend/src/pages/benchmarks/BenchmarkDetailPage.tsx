@@ -3,8 +3,8 @@ import { useParams, Link } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { useBenchmark, useUpdateBenchmark } from '@/hooks/useBenchmarks'
-import { useGenerateBehaviorModels, useRunBenchmark, useValidateBenchmarkConfig } from '@/api/generated/benchmarks-controller/benchmarks-controller'
+import { useBenchmark, useUpdateBenchmark, useValidateOperationalSetting } from '@/hooks/useBenchmarks'
+import { useGenerateBehaviorModels, useRunBenchmark } from '@/api/generated/benchmarks-controller/benchmarks-controller'
 import { type UploadedFile } from '@/hooks/useFileUpload'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
@@ -62,8 +62,6 @@ const editBenchmarkSchema = z.object({
           save: z.array(keyValuePairSchema).default([]),
         })
       ).min(1, 'At least one step is required'),
-      thinkFrom: z.coerce.number().min(0),
-      thinkTo: z.coerce.number().min(0),
     })
   ).optional(),
   operationalProfile: z.array(
@@ -104,6 +102,7 @@ function KeyValuePairList({ name, control, label, keyPlaceholder = 'Key', valueP
           <Plus className="h-3 w-3" />
         </Button>
       </div>
+
       <div className="space-y-1.5">
         {fields.map((field, index) => (
           <div key={field.id} className="flex items-center gap-1.5">
@@ -151,18 +150,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Label>API Request Steps</Label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => appendStep({ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] })}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Step
-        </Button>
-      </div>
+      <Label>API Request Steps</Label>
 
       {stepFields.map((field: any, stepIndex) => (
         <Card key={field.id} className="p-3 bg-muted/30">
@@ -174,7 +162,20 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>Operation ID</Label>
+                <Input
+                  {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.operationId`)}
+                  placeholder="getUser"
+                />
+                {errors?.behaviorModels?.[behaviorIndex]?.steps?.[stepIndex]?.operationId && (
+                  <p className="text-sm text-destructive">
+                    {errors.behaviorModels[behaviorIndex].steps[stepIndex].operationId.message}
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label>Method</Label>
                 <Select
@@ -209,19 +210,6 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
                   placeholder="/api/resource"
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Operation ID</Label>
-              <Input
-                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.operationId`)}
-                placeholder="getUser"
-              />
-              {errors?.behaviorModels?.[behaviorIndex]?.steps?.[stepIndex]?.operationId && (
-                <p className="text-sm text-destructive">
-                  {errors.behaviorModels[behaviorIndex].steps[stepIndex].operationId.message}
-                </p>
-              )}
             </div>
 
             {/* Headers, Query Params, and Save Fields side by side */}
@@ -266,6 +254,16 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors }: Behavi
           </div>
         </Card>
       ))}
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => appendStep({ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] })}
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        Add Step
+      </Button>
     </div>
   )
 }
@@ -285,12 +283,14 @@ export function BenchmarkDetailPage() {
   const updateBenchmark = useUpdateBenchmark()
   const generateBehaviorModels = useGenerateBehaviorModels()
   const runBenchmark = useRunBenchmark()
-  const validateConfig = useValidateBenchmarkConfig()
+  const validateConfig = useValidateOperationalSetting()
 
   const [isEditing, setIsEditing] = useState(false)
   const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
   const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set())
   const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
+  const [showRunModal, setShowRunModal] = useState(false)
+  const [testDuration, setTestDuration] = useState('')
 
   // Poll for validation results when any validation is PENDING
   useEffect(() => {
@@ -349,11 +349,11 @@ export function BenchmarkDetailPage() {
   const handleStartEdit = () => {
     if (!data) return
 
-    const behaviorModels = data.config.behaviorModels.map((model: any) => ({
+    const behaviorModels = data.operationalSetting.usageProfile.map((model: any) => ({
       id: model.id,
       actor: model.actor,
-      usageProfile: model.usageProfile,
-      steps: model.steps.map((step: any) => ({
+      usageProfile: model.frequency ?? model.usageProfile ?? 0,  // Map API 'frequency' to form 'usageProfile'
+      steps: (model.steps || []).map((step: any) => ({
         method: step.method,
         path: step.path,
         operationId: step.operationId,
@@ -362,15 +362,19 @@ export function BenchmarkDetailPage() {
         body: JSON.stringify(step.body || {}),
         save: objectToKeyValuePairs(step.save),
       })),
-      thinkFrom: model.thinkFrom,
-      thinkTo: model.thinkTo,
+    }))
+
+    // Convert operationalProfile from object to array format for form
+    const operationalProfileArray = Object.entries(data.operationalSetting.operationalProfile || {}).map(([load, frequency]) => ({
+      load: Number(load),
+      frequency: Number(frequency),
     }))
 
     form.reset({
       name: data.name,
       description: data.description || '',
       behaviorModels,
-      operationalProfile: data.config.operationalProfile || [],
+      operationalProfile: operationalProfileArray,
     })
 
     setOpenApiFile(null)
@@ -389,8 +393,6 @@ export function BenchmarkDetailPage() {
       actor: '',
       usageProfile: 0.5,
       steps: [{ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] }],
-      thinkFrom: 1000,
-      thinkTo: 3000,
     })
   }
 
@@ -422,15 +424,15 @@ export function BenchmarkDetailPage() {
             params,
             body,
             save,
+            waitMsFrom: 0,
+            waitMsTo: 0,
           }
         })
         return {
           id: model.id,
           actor: model.actor,
-          usageProfile: model.usageProfile,
+          frequency: model.usageProfile,  // Map form 'usageProfile' to API 'frequency'
           steps,
-          thinkFrom: model.thinkFrom,
-          thinkTo: model.thinkTo,
         }
       })
 
@@ -445,16 +447,22 @@ export function BenchmarkDetailPage() {
         return
       }
 
+      // Transform operationalProfile from array to object
+      const operationalProfile = formData.operationalProfile.reduce((acc: Record<string, number>, p: any) => {
+        acc[p.load.toString()] = Number(p.frequency)
+        return acc
+      }, {})
+
       await updateBenchmark.mutateAsync({
         benchmarkId: benchmarkId!,
         data: {
           name: formData.name,
           description: formData.description || undefined,
-          benchmarkConfig: {
-            id: data.config.loadTestConfigId,
-            openApiFileId: openApiFile?.fileId || data.config.openApiFile.fileId,
-            behaviorModels,
-            operationalProfile: formData.operationalProfile,
+          operationalSetting: {
+            ...data.operationalSetting,
+            usageProfile: behaviorModels,
+            operationalProfile,
+            openApiFile: openApiFile ? { ...data.operationalSetting.openApiFile, id: openApiFile.fileId } : data.operationalSetting.openApiFile,
           },
         },
       })
@@ -493,13 +501,25 @@ export function BenchmarkDetailPage() {
     }
   }
 
-  const handleRunBenchmark = async () => {
+  const handleRunBenchmark = () => {
+    setShowRunModal(true)
+  }
+
+  const confirmRunBenchmark = async () => {
+    const duration = testDuration.trim()
+
     try {
-      const result = await runBenchmark.mutateAsync({ benchmarkId: benchmarkId! })
+      const result = await runBenchmark.mutateAsync({
+        benchmarkId: benchmarkId!,
+        params: duration ? { testDuration: duration } : undefined,
+      })
       toast({
         title: 'Benchmark started',
-        description: `Benchmark run ${result.benchmarkRunId} has been started`,
+        description: `Benchmark run ${result.benchmarkRunId} has been started${duration ? ` (duration: ${duration})` : ''}`,
+        className: 'border-green-500 bg-green-50 text-green-900',
       })
+      setShowRunModal(false)
+      setTestDuration('')
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -516,8 +536,6 @@ export function BenchmarkDetailPage() {
         title: 'Validation started',
         description: 'Configuration validation is running...',
       })
-      // Refetch to get the updated validation result
-      refetch()
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -606,10 +624,10 @@ export function BenchmarkDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Benchmark Configuration */}
+          {/* Operational Setting */}
           <Card>
             <CardHeader>
-              <CardTitle>Benchmark Configuration</CardTitle>
+              <CardTitle>Operational Setting</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* OpenAPI File */}
@@ -625,7 +643,7 @@ export function BenchmarkDetailPage() {
                 {!openApiFile && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
                     <FileCode className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Current: {data.config.openApiFile.filename}</span>
+                    <span className="text-sm">Current: {data.operationalSetting.openApiFile.filename}</span>
                   </div>
                 )}
               </div>
@@ -659,19 +677,9 @@ export function BenchmarkDetailPage() {
                         </Button>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="space-y-2">
-                          <Label>Usage Profile</Label>
-                          <Input type="number" step="0.01" min="0" max="1" {...form.register(`behaviorModels.${index}.usageProfile`)} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Think From (ms)</Label>
-                          <Input type="number" {...form.register(`behaviorModels.${index}.thinkFrom`)} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Think To (ms)</Label>
-                          <Input type="number" {...form.register(`behaviorModels.${index}.thinkTo`)} />
-                        </div>
+                      <div className="space-y-2">
+                        <Label>Usage Profile (0-1)</Label>
+                        <Input type="number" step="0.01" min="0" max="1" {...form.register(`behaviorModels.${index}.usageProfile`)} />
                       </div>
 
                       <BehaviorModelSteps
@@ -772,13 +780,13 @@ export function BenchmarkDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Benchmark Configuration */}
+        {/* Operational Setting */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
-                <CardTitle>Benchmark Configuration</CardTitle>
+                <CardTitle>Operational Setting</CardTitle>
               </div>
               <Button
                 variant="default"
@@ -794,7 +802,7 @@ export function BenchmarkDetailPage() {
                 ) : (
                   <>
                     <Activity className="h-4 w-4 mr-2" />
-                    {data.config.behaviorModels.length > 0 ? 'Regenerate Behavior Models' : 'Generate Behavior Models'}
+                    {data.operationalSetting.usageProfile.length > 0 ? 'Regenerate Behavior Models' : 'Generate Behavior Models'}
                   </>
                 )}
               </Button>
@@ -808,24 +816,26 @@ export function BenchmarkDetailPage() {
                 <span>OpenAPI Specification</span>
               </div>
               <div className="flex items-center gap-2 pl-6">
-                <span className="font-medium">{data.config.openApiFile.filename}</span>
+                <span className="font-medium">{data.operationalSetting.openApiFile.filename}</span>
                 <Badge variant="secondary" className="text-xs">
-                  {formatFileSize(data.config.openApiFile.fileSize)}
+                  {formatFileSize(data.operationalSetting.openApiFile.fileSize)}
                 </Badge>
               </div>
             </div>
 
             {/* Behavior Models */}
-            {data.config.behaviorModels.length > 0 && (
+            {data.operationalSetting.usageProfile.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-muted-foreground">Behavior Models</span>
-                  <Badge variant="outline">{data.config.behaviorModels.length}</Badge>
+                  <Badge variant="outline">{data.operationalSetting.usageProfile.length}</Badge>
                 </div>
                 <div className="space-y-2 pl-6">
-                  {data.config.behaviorModels.map((model: any) => {
+                  {data.operationalSetting.usageProfile.map((model: any) => {
                     const isExpanded = expandedModels.has(model.id)
+                    const frequency = model.frequency ?? model.usageProfile ?? 0
+                    const steps = model.steps || []
                     return (
                       <div key={model.id} className="p-3 rounded-lg bg-muted/50 space-y-2">
                         <div className="flex items-center gap-2">
@@ -833,13 +843,13 @@ export function BenchmarkDetailPage() {
                           <span className="text-xs text-muted-foreground">-</span>
                           <span className="text-sm text-muted-foreground">{model.actor}</span>
                           <Badge variant="secondary" className="ml-auto">
-                            {(model.usageProfile * 100).toFixed(0)}%
+                            {(frequency * 100).toFixed(0)}%
                           </Badge>
                         </div>
 
                         {!isExpanded && (
                           <p className="text-xs text-muted-foreground">
-                            {model.steps.map((step: any) => `${step.method} ${step.path}`).join(' -> ')}
+                            {steps.map((step: any) => `${step.method} ${step.path}`).join(' -> ')}
                           </p>
                         )}
 
@@ -862,18 +872,6 @@ export function BenchmarkDetailPage() {
 
                         {isExpanded && (
                           <div className="space-y-3 pt-2 border-t">
-                            {/* Think Time */}
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <span className="text-muted-foreground">Think From:</span>
-                                <span className="ml-2 font-mono">{model.thinkFrom}ms</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Think To:</span>
-                                <span className="ml-2 font-mono">{model.thinkTo}ms</span>
-                              </div>
-                            </div>
-
                             {/* Steps */}
                             <div className="space-y-2">
                               <p className="text-xs font-semibold text-muted-foreground">API Request Steps:</p>
@@ -956,17 +954,17 @@ export function BenchmarkDetailPage() {
             )}
 
             {/* Operational Profile */}
-            {data.config.operationalProfile?.length > 0 && (
+            {data.operationalSetting.operationalProfile && Object.keys(data.operationalSetting.operationalProfile).length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Activity className="h-4 w-4" />
                   <span>Operational Profile</span>
                 </div>
                 <div className="pl-6 text-sm">
-                  {data.config.operationalProfile.map((p: any, i: number) => (
-                    <span key={i}>
-                      {p.load} users ({(p.frequency * 100).toFixed(0)}%)
-                      {i < data.config.operationalProfile.length - 1 && ', '}
+                  {Object.entries(data.operationalSetting.operationalProfile).map(([load, frequency], i) => (
+                    <span key={load}>
+                      {load} users ({(Number(frequency) * 100).toFixed(0)}%)
+                      {i < Object.keys(data.operationalSetting.operationalProfile).length - 1 && ', '}
                     </span>
                   ))}
                 </div>
@@ -1304,6 +1302,48 @@ export function BenchmarkDetailPage() {
           </CardContent>
         </Card>
       </div>
+      {showRunModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-background w-full max-w-md rounded-lg border shadow-lg">
+            <div className="p-6 space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold">Run Benchmark</h2>
+                <p className="text-sm text-muted-foreground">
+                  Optional: set test duration. Leave blank to use the default 1m.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="test-duration">Test Duration</Label>
+                <Input
+                  id="test-duration"
+                  placeholder="1m (default)"
+                  value={testDuration}
+                  onChange={(e) => setTestDuration(e.target.value)}
+                  disabled={runBenchmark.isPending}
+                />
+                <p className="text-xs text-muted-foreground">Sent to the backend as a request parameter.</p>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" type="button" onClick={() => setShowRunModal(false)} disabled={runBenchmark.isPending}>
+                  Cancel
+                </Button>
+                <Button type="button" onClick={confirmRunBenchmark} disabled={runBenchmark.isPending}>
+                  {runBenchmark.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    'Start Run'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

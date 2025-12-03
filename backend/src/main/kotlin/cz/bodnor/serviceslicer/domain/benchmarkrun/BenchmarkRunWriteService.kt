@@ -3,28 +3,34 @@ package cz.bodnor.serviceslicer.domain.benchmarkrun
 import cz.bodnor.serviceslicer.domain.benchmark.Benchmark
 import cz.bodnor.serviceslicer.domain.testcase.BaselineTestCase
 import org.springframework.stereotype.Service
+import kotlin.time.Duration
 
 @Service
 class BenchmarkRunWriteService(
     private val repository: BenchmarkRunRepository,
 ) {
 
-    fun create(benchmark: Benchmark): BenchmarkRun {
+    fun create(
+        benchmark: Benchmark,
+        testDuration: Duration,
+    ): BenchmarkRun {
         val baselineTestCase =
             BaselineTestCase(
                 baselineSut = benchmark.baselineSut,
-                operationalProfile = benchmark.config.operationalProfile,
+                operationalProfile = benchmark.operationalSetting.operationalProfile,
             )
 
         val benchmarkRun = BenchmarkRun(
             benchmark = benchmark,
             baselineTestCase = baselineTestCase,
+            testDuration = testDuration,
         )
 
-        benchmark.config.operationalProfile.forEach { profile ->
+        benchmark.operationalSetting.operationalProfile.forEach { profile ->
             benchmarkRun.addTargetTestCase(
                 sut = benchmark.targetSut,
-                load = profile,
+                load = profile.key,
+                frequency = profile.value,
             )
         }
 

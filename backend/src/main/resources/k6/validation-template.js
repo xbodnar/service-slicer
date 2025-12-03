@@ -3,14 +3,14 @@ import {check, sleep} from 'k6';
 
 // --- CONFIG FROM ORCHESTRATOR / GENERATED ---
 const BASE_URL = __ENV.BASE_URL;
-const LOAD_TEST_CONFIG_FILE = __ENV.LOAD_TEST_CONFIG_FILE;
+const OPERATIONAL_SETTING_FILE = __ENV.OPERATIONAL_SETTING_FILE;
 const BENCHMARK_ID = __ENV.BENCHMARK_ID;
 const SUT_ID = __ENV.SUT_ID;
 
 // Validate required environment variables
 const requiredEnvVars = {
     BASE_URL,
-    LOAD_TEST_CONFIG_FILE,
+    OPERATIONAL_SETTING_FILE,
     BENCHMARK_ID,
     SUT_ID,
 };
@@ -23,9 +23,8 @@ if (missingVars.length > 0) {
     throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
 }
 
-const loadTestConfig = JSON.parse(open(LOAD_TEST_CONFIG_FILE));
-
-const behaviorModels = loadTestConfig.behaviorModels;
+const operationalSetting = JSON.parse(open(OPERATIONAL_SETTING_FILE));
+const usageProfile = operationalSetting.usageProfile;
 
 // Use per-vu-iterations executor to run all behavior models once
 export const options = {
@@ -232,9 +231,9 @@ function executeBehaviorModel(bm) {
 
 // Main test function - run all behavior models sequentially
 export default function () {
-    console.log(`Starting validation run for ${behaviorModels.length} behavior models`);
+    console.log(`Starting validation run for ${usageProfile.length} behavior models`);
 
-    for (const bm of behaviorModels) {
+    for (const bm of usageProfile) {
         executeBehaviorModel(bm);
     }
 

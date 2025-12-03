@@ -22,7 +22,7 @@ class TargetTestCase(
 
     load: Int,
 
-    val loadFrequency: Double,
+    val loadFrequency: BigDecimal,
 ) : TestCase(load) {
 
     @JdbcTypeCode(SqlTypes.JSON)
@@ -80,6 +80,6 @@ class TargetTestCase(
 
     private fun computeRelativeDomainMetric(): BigDecimal {
         val sumShares = operationMetrics.values.sumOf { it.scalabilityShare }
-        return loadFrequency.toBigDecimal().multiply(sumShares)
+        return loadFrequency.multiply(sumShares)
     }
 }

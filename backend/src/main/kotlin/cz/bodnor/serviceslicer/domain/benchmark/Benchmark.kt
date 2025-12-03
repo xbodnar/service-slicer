@@ -1,8 +1,10 @@
 package cz.bodnor.serviceslicer.domain.benchmark
 
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
+import cz.bodnor.serviceslicer.domain.operationalsetting.OperationalSetting
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import jakarta.persistence.Entity
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToOne
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
@@ -18,8 +20,8 @@ import java.util.UUID
 @Entity
 class Benchmark(
     // Reference to the load test configuration
-    @JdbcTypeCode(SqlTypes.JSON)
-    var config: BenchmarkConfig,
+    @ManyToOne
+    var operationalSetting: OperationalSetting,
     // Custom name to identify this benchmark
     var name: String,
     // Description of this benchmark
@@ -32,9 +34,30 @@ class Benchmark(
 
     @JdbcTypeCode(SqlTypes.JSON)
     var baselineSutValidationResult: ValidationResult? = null
+        private set
 
     @JdbcTypeCode(SqlTypes.JSON)
     var targetSutValidationResult: ValidationResult? = null
+        private set
+
+    fun startValidationRun(systemUnderTestId: UUID) {
+        when (systemUnderTestId) {
+            baselineSut.id -> baselineSutValidationResult = ValidationResult()
+            targetSut.id -> targetSutValidationResult = ValidationResult()
+            else -> error("SUT $systemUnderTestId not found in benchmark $this")
+        }
+    }
+
+    fun completeValidationRun(
+        systemUnderTestId: UUID,
+        result: ValidationResult,
+    ) {
+        when (systemUnderTestId) {
+            baselineSut.id -> baselineSutValidationResult = result
+            targetSut.id -> targetSutValidationResult = result
+            else -> error("SUT $systemUnderTestId not found in benchmark $this")
+        }
+    }
 }
 
 @Repository

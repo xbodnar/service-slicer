@@ -3,9 +3,9 @@ package cz.bodnor.serviceslicer.application.module.benchmarkrun.service
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
-import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRun
+import cz.bodnor.serviceslicer.domain.operationalsetting.OperationalSetting
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
 import cz.bodnor.serviceslicer.domain.testcase.TestCase
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
@@ -49,7 +49,7 @@ class TestCaseRunner(
     ): Result {
         val benchmark = benchmarkRun.benchmark
         val (sut, load) = if (testCase.id == benchmarkRun.baselineTestCase.id) {
-            benchmark.baselineSut to benchmark.config.operationalProfile.minBy { it.load }.load
+            benchmark.baselineSut to benchmark.operationalSetting.operationalProfile.keys.min()
         } else {
             val testCase = benchmarkRun.targetTestCases.find { it.id == testCase.id }
                 ?: error("No test case with id ${testCase.id}")
@@ -58,7 +58,7 @@ class TestCaseRunner(
 
         logger.info {
             "Executing ${if (testCase.id == benchmarkRun.baselineTestCase.id) "Baseline" else "Target"}" +
-                "TestCase for SUT ${sut.name}[${sut.id}] with load $load"
+                "TestCase for SUT ${sut.id} [${sut.name}] with load=$load and duration=${benchmarkRun.testDuration}"
         }
         // Start the SUT (blocking call - waits until SUT is healthy and ready)
         sutRunner.startSUT(sut)
@@ -68,7 +68,7 @@ class TestCaseRunner(
             // Prepare work directory
             k6WorkDir = Files.createTempDirectory("k6-run-")
             val k6ScriptPath = copyK6ScriptToWorkDir(k6WorkDir)
-            val configJsonPath = prepareLoadTestConfigFile(benchmark.config, k6WorkDir)
+            val configJsonPath = prepareOperationalSettingFile(benchmark.operationalSetting, k6WorkDir)
 
             // Build environment variables for k6
             val envVars =
@@ -76,13 +76,13 @@ class TestCaseRunner(
                     appPort = sut.dockerConfig.appPort,
                     load = load,
                     testCaseId = testCase.id,
-                    testDuration = benchmark.config.testDuration,
+                    testDuration = benchmarkRun.testDuration.toString(),
                 )
 
             // Run WARMUP k6 tests (no metrics)
             k6Runner.runTest(
                 scriptPath = k6ScriptPath,
-                configPath = configJsonPath,
+                operationalSettingPath = configJsonPath,
                 environmentVariables = envVars + mapOf("DURATION" to "30s"),
                 ignoreMetrics = true,
             )
@@ -90,7 +90,7 @@ class TestCaseRunner(
             // Run k6 test and record start/end times
             val k6Result = k6Runner.runTest(
                 scriptPath = k6ScriptPath,
-                configPath = configJsonPath,
+                operationalSettingPath = configJsonPath,
                 environmentVariables = envVars,
             )
 
@@ -108,7 +108,7 @@ class TestCaseRunner(
                 jsonSummary = k6Result.summaryJson,
             )
         } finally {
-            logger.info { "Load test execution finished, cleaning up..." }
+            logger.info { "Test Case execution finished, cleaning up..." }
             sutRunner.stopSUT()
             k6WorkDir?.toFile()?.deleteRecursively()
         }
@@ -118,7 +118,7 @@ class TestCaseRunner(
         appPort: Int,
         load: Int,
         testCaseId: UUID,
-        testDuration: String?,
+        testDuration: String,
     ): Map<String, String> {
         val sutHost = getSutHost()
         val baseUrl = "http://$sutHost:$appPort"
@@ -126,7 +126,7 @@ class TestCaseRunner(
         return mapOf(
             "BASE_URL" to baseUrl,
             "TARGET_VUS" to load.toString(),
-            "DURATION" to (testDuration ?: k6Properties.testDuration),
+            "DURATION" to testDuration,
             "TEST_CASE_ID" to testCaseId.toString(),
         )
     }
@@ -140,12 +140,12 @@ class TestCaseRunner(
         "host.docker.internal"
     }
 
-    private fun prepareLoadTestConfigFile(
-        benchmarkConfig: BenchmarkConfig,
+    private fun prepareOperationalSettingFile(
+        operationalSetting: OperationalSetting,
         workDir: Path,
     ): Path {
-        val configFile = workDir.resolve("benchmark-config.json")
-        configFile.writeText(objectMapper.writeValueAsString(benchmarkConfig))
+        val configFile = workDir.resolve("operational-setting.json")
+        configFile.writeText(objectMapper.writeValueAsString(operationalSetting))
 
         return configFile
     }

@@ -1,11 +1,9 @@
 package cz.bodnor.serviceslicer.application.module.benchmark
 
-import cz.bodnor.serviceslicer.application.module.benchmark.query.FileDto
 import cz.bodnor.serviceslicer.application.module.benchmark.query.GetBenchmarkQuery
 import cz.bodnor.serviceslicer.application.module.sut.query.DatabaseSeedConfigDto
 import cz.bodnor.serviceslicer.application.module.sut.query.DockerConfigDto
 import cz.bodnor.serviceslicer.application.module.sut.query.SystemUnderTestDto
-import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkConfig
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
 import cz.bodnor.serviceslicer.domain.file.File
 import cz.bodnor.serviceslicer.domain.file.FileReadService
@@ -26,14 +24,14 @@ class GetBenchmarkQueryHandler(
     override fun handle(query: GetBenchmarkQuery): GetBenchmarkQuery.Result {
         val benchmark = benchmarkReadService.getById(query.benchmarkId)
         val fileIds =
-            benchmark.baselineSut.getFileIds() + benchmark.targetSut.getFileIds() + benchmark.config.openApiFileId
-        val files = fileReadService.findAllByIds(fileIds.toSet()).map { it.toDto() }.associateBy { it.fileId }
+            benchmark.baselineSut.getFileIds() + benchmark.targetSut.getFileIds()
+        val files = fileReadService.findAllByIds(fileIds.toSet()).associateBy { it.id }
 
         return GetBenchmarkQuery.Result(
             id = benchmark.id,
             name = benchmark.name,
             description = benchmark.description,
-            config = benchmark.config.toDto(files),
+            operationalSetting = benchmark.operationalSetting,
             baselineSut = benchmark.baselineSut.toDto(files),
             baselineSutValidationResult = benchmark.baselineSutValidationResult,
             targetSut = benchmark.targetSut.toDto(files),
@@ -43,16 +41,10 @@ class GetBenchmarkQueryHandler(
         )
     }
 
-    private fun File.toDto() = FileDto(
-        fileId = this.id,
-        filename = this.filename,
-        fileSize = this.expectedSize,
-    )
-
     private fun SystemUnderTest.getFileIds(): List<UUID> = databaseSeedConfigs.map { it.sqlSeedFileId } +
         dockerConfig.composeFileId
 
-    private fun SystemUnderTest.toDto(files: Map<UUID, FileDto>) = SystemUnderTestDto(
+    private fun SystemUnderTest.toDto(files: Map<UUID, File>) = SystemUnderTestDto(
         id = this.id,
         name = this.name,
         description = this.description,
@@ -60,7 +52,7 @@ class GetBenchmarkQueryHandler(
         databaseSeedConfigs = this.databaseSeedConfigs.map { it.toDto(files) },
     )
 
-    private fun DatabaseSeedConfig.toDto(files: Map<UUID, FileDto>) = DatabaseSeedConfigDto(
+    private fun DatabaseSeedConfig.toDto(files: Map<UUID, File>) = DatabaseSeedConfigDto(
         sqlSeedFile = files[this.sqlSeedFileId]!!,
         dbContainerName = this.dbContainerName,
         dbPort = this.dbPort,
@@ -68,17 +60,10 @@ class GetBenchmarkQueryHandler(
         dbUsername = this.dbUsername,
     )
 
-    private fun DockerConfig.toDto(files: Map<UUID, FileDto>) = DockerConfigDto(
+    private fun DockerConfig.toDto(files: Map<UUID, File>) = DockerConfigDto(
         composeFile = files[this.composeFileId]!!,
         healthCheckPath = this.healthCheckPath,
         appPort = this.appPort,
         startupTimeoutSeconds = this.startupTimeoutSeconds,
-    )
-
-    private fun BenchmarkConfig.toDto(files: Map<UUID, FileDto>) = GetBenchmarkQuery.LoadTestConfigDto(
-        loadTestConfigId = this.id,
-        openApiFile = files[this.openApiFileId]!!,
-        behaviorModels = this.behaviorModels,
-        operationalProfile = this.operationalProfile,
     )
 }

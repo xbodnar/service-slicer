@@ -17,7 +17,7 @@ class File(
     id: UUID = UUID.randomUUID(),
     // An empty string for directories
     val filename: String,
-    val expectedSize: Long,
+    val fileSize: Long,
     val mimeType: String,
 ) : UpdatableEntity(id) {
 

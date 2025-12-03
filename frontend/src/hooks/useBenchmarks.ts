@@ -8,6 +8,7 @@ import {
   useGetBenchmark as useGetBenchmarkGenerated,
   useCreateBenchmark as useCreateBenchmarkGenerated,
   useUpdateBenchmark as useUpdateBenchmarkGenerated,
+  useValidateOperationalSetting as useValidateOperationalSettingGenerated,
   getGetBenchmarkQueryKey,
 } from '@/api/generated/benchmarks-controller/benchmarks-controller'
 import { useQueryClient } from '@tanstack/react-query'
@@ -59,6 +60,25 @@ export function useUpdateBenchmark() {
         // Invalidate benchmark list
         queryClient.invalidateQueries({ queryKey: ['/benchmarks'] })
         // Invalidate specific benchmark
+        queryClient.invalidateQueries({
+          queryKey: getGetBenchmarkQueryKey(variables.benchmarkId),
+        })
+      },
+    },
+  })
+}
+
+/**
+ * Mutation hook for validating operational setting
+ * Wraps the generated hook to handle cache invalidation
+ */
+export function useValidateOperationalSetting() {
+  const queryClient = useQueryClient()
+
+  return useValidateOperationalSettingGenerated({
+    mutation: {
+      onSuccess: (_data, variables) => {
+        // Invalidate specific benchmark to refresh validation status
         queryClient.invalidateQueries({
           queryKey: getGetBenchmarkQueryKey(variables.benchmarkId),
         })

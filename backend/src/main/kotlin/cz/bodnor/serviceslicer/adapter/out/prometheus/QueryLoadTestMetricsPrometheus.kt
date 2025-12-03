@@ -34,16 +34,16 @@ class QueryLoadTestMetricsPrometheus(
         val failedRequestsQuery = "sum by (operation, sut_id, load) (k6_http_reqs_total{$labelFilter,status!~\"2..\"})"
 
         // Query 3: Get mean response time histogram per operation
-        val meanResponseTimeQuery = "histogram_avg(sum by (operation, sut_id, load) (rate(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
+        val meanResponseTimeQuery = "histogram_avg(sum by (operation, sut_id, load) (increase(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
 
         // Query 4: Standard deviation of response time
-        val stdDevResponseTimeQuery = "histogram_stddev(sum by (operation, sut_id, load) (rate(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
+        val stdDevResponseTimeQuery = "histogram_stddev(sum by (operation, sut_id, load) (increase(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
 
         // Query 5: 95th percentile response time
-        val p95ResponseTimeQuery = "histogram_quantile(0.95, sum by (operation, sut_id, load) (rate(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
+        val p95ResponseTimeQuery = "histogram_quantile(0.95, sum by (operation, sut_id, load, le) (increase(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
 
         // Query 6: 99th percentile response time
-        val p99ResponseTimeQuery = "histogram_quantile(0.99, sum by (operation, sut_id, load) (rate(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
+        val p99ResponseTimeQuery = "histogram_quantile(0.99, sum by (operation, sut_id, load, le) (increase(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
 
         // Execute instant queries at the end time with a lookback window to the start
         val totalRequests = prometheusConnector.query(totalRequestsQuery, end)

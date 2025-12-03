@@ -41,7 +41,5 @@ class ExecuteTestCaseTasklet(
     }.onFailure { error ->
         logger.error(error) { "Failed to execute test case" }
         contribution.exitStatus = ExitStatus.FAILED
-    }.getOrElse {
-        RepeatStatus.FINISHED
-    }
+    }.getOrThrow()
 }

@@ -47,7 +47,7 @@
             <column name="target_sut_id" type="uuid">
                 <constraints nullable="false"/>
             </column>
-            <column name="load_frequency" type="double">
+            <column name="load_frequency" type="numeric">
                 <constraints nullable="false"/>
             </column>
             <column name="operation_metrics" type="jsonb">

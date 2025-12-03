@@ -8,6 +8,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.nio.file.Path
 import java.time.Instant
+import java.util.UUID
 
 @Service
 class K6Runner(
@@ -22,19 +23,18 @@ class K6Runner(
     data class K6Result(
         val startTime: Instant,
         val endTime: Instant,
-        val exitCode: Int,
         val output: String,
         val summaryJson: JsonNode? = null,
     )
 
     fun runTest(
         scriptPath: Path,
-        configPath: Path,
+        operationalSettingPath: Path,
         environmentVariables: Map<String, String> = emptyMap(),
         ignoreMetrics: Boolean = false,
     ): K6Result {
         logger.info { "Executing k6 ${if (ignoreMetrics) "warmup run..." else "test run..."}" }
-        val command = buildK6Command(scriptPath, configPath, environmentVariables, ignoreMetrics)
+        val command = buildK6Command(scriptPath, operationalSettingPath, environmentVariables, ignoreMetrics)
 
         logger.debug { "Executing k6 command: ${command.joinToString(" ")}" }
 
@@ -47,18 +47,12 @@ class K6Runner(
             error("k6 test failed with exit code ${result.exitCode}, output:\n${result.output}")
         }
 
-        // Log the full output so we can see what k6 did
-        if (result.output.isNotEmpty()) {
-            logger.debug { "k6 output:\n${result.output}" }
-        }
-
         // Read the summary JSON file that k6 wrote
         val summaryJsonContent = readSummaryJson(scriptPath)
 
         return K6Result(
             startTime = startTime,
             endTime = endTime,
-            exitCode = result.exitCode,
             output = result.output,
             summaryJson = objectMapper.readTree(summaryJsonContent),
         )
@@ -66,7 +60,7 @@ class K6Runner(
 
     private fun buildK6Command(
         scriptPath: Path,
-        configPath: Path,
+        operationalSettingPath: Path,
         environmentVariables: Map<String, String>,
         ignoreMetrics: Boolean,
     ): List<String> {
@@ -88,7 +82,7 @@ class K6Runner(
             ),
         )
 
-        command.addAll(listOf("-e", "LOAD_TEST_CONFIG_FILE=$CONTAINER_WORKDIR/${configPath.fileName}"))
+        command.addAll(listOf("-e", "OPERATIONAL_SETTING_FILE=$CONTAINER_WORKDIR/${operationalSettingPath.fileName}"))
 
         // Add environment variables
         environmentVariables.forEach { (key, value) ->

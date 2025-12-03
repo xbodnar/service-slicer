@@ -5,7 +5,7 @@ import {check, sleep} from 'k6';
 const BASE_URL = __ENV.BASE_URL;
 const TARGET_VUS = parseInt(__ENV.TARGET_VUS);
 const DURATION = __ENV.DURATION;
-const LOAD_TEST_CONFIG_FILE = __ENV.LOAD_TEST_CONFIG_FILE;
+const OPERATIONAL_SETTING_FILE = __ENV.OPERATIONAL_SETTING_FILE;
 const TEST_CASE_ID = __ENV.TEST_CASE_ID;
 
 // Validate required environment variables
@@ -13,7 +13,7 @@ const requiredEnvVars = {
     BASE_URL,
     TARGET_VUS, // load
     DURATION,
-    LOAD_TEST_CONFIG_FILE,
+    OPERATIONAL_SETTING_FILE,
     TEST_CASE_ID,
 };
 
@@ -25,9 +25,8 @@ if (missingVars.length > 0) {
     throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
 }
 
-const loadTestConfig = JSON.parse(open(LOAD_TEST_CONFIG_FILE));
-
-const behaviorModels = loadTestConfig.behaviorModels;
+const operationalSetting = JSON.parse(open(OPERATIONAL_SETTING_FILE));
+const usageProfile = operationalSetting.usageProfile;
 
 export const options = {
     vus: TARGET_VUS,
@@ -63,13 +62,13 @@ function randomThinkTime(thinkFromMs, thinkToMs) {
 function pickBehaviorModel() {
     const r = Math.random();
     let cumulative = 0.0;
-    for (const bm of behaviorModels) {
-        const weight = bm.usageProfile || 0;
+    for (const bm of usageProfile) {
+        const weight = bm.frequency || 0;
         cumulative += weight;
         if (r <= cumulative) return bm;
     }
     // Fallback: first model
-    return behaviorModels[0];
+    return usageProfile[0];
 }
 
 function applyTemplateToString(str, ctx) {
@@ -218,6 +217,8 @@ function executeStep(step, ctx) {
             ctx[varName] = jsonBody ? getFromJsonPath(jsonBody, selector) : null;
         }
     }
+
+    return ok;
 }
 
 export default function () {
@@ -228,7 +229,11 @@ export default function () {
     };
 
     for (const step of bm.steps) {
-        executeStep(step, context);
-        sleep(randomThinkTime(bm.thinkFrom, bm.thinkTo));
+        const success = executeStep(step, context);
+        if (!success) {
+            // Stop executing remaining steps and move to next iteration
+            return;
+        }
+        sleep(randomThinkTime(step.waitMsFrom, step.waitMsTo));
     }
 }

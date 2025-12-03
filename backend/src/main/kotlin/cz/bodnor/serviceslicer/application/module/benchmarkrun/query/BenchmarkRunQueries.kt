@@ -48,6 +48,8 @@ data class GetBenchmarkRunQuery(val benchmarkId: UUID, val benchmarkRunId: UUID)
         val baselineTestCase: BaselineTestCaseDto,
         @Schema(description = "List of target test cases")
         val targetTestCases: List<TargetTestCaseDto>,
+        @Schema(description = "Test duration")
+        val testDuration: String,
         @Schema(description = "State of the benchmark run")
         val state: BenchmarkRunState,
         @Schema(description = "Experiment results")
@@ -89,7 +91,7 @@ data class GetBenchmarkRunQuery(val benchmarkId: UUID, val benchmarkRunId: UUID)
         @Schema(description = "Load level")
         val load: Int,
         @Schema(description = "Load frequency")
-        val loadFrequency: Double,
+        val loadFrequency: BigDecimal,
         @Schema(description = "Status of the test case")
         val status: TestCaseStatus,
         @Schema(description = "Start timestamp")

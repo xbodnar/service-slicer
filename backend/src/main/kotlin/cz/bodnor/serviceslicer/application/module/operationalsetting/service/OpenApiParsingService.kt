@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.benchmark.service
+package cz.bodnor.serviceslicer.application.module.operationalsetting.service
 
 import cz.bodnor.serviceslicer.application.module.file.service.DiskOperations
 import cz.bodnor.serviceslicer.domain.apiop.ApiOperation
@@ -30,16 +30,13 @@ class OpenApiParsingService(
         val parseResult = parser.readLocation(openApiPath.toUri().toString(), null, parserOptions)
         val openAPI = parseResult.openAPI
 
-        var idCounter = 1
-
         openAPI.paths.flatMap { (path, pathItem) ->
             pathItem.readOperationsMap().map { (method, operation) ->
                 ApiOperation(
                     openApiFileId = openApiFileId,
-                    operationId = "o${idCounter++}",
+                    operationId = operation.operationId ?: error("Operation ID not found for operation $operation"),
                     method = method.name,
                     path = path,
-                    name = operation.operationId ?: error("Operation ID not found for operation $operation"),
                     parameters = operation.parameters?.mapNotNull { param ->
                         param?.schema?.`$ref`?.let { schemaName ->
                             ApiParameter(

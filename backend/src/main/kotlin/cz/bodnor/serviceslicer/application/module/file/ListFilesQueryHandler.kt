@@ -27,7 +27,7 @@ class ListFilesQueryHandler(
                 ListFilesQuery.FileSummary(
                     fileId = it.id,
                     filename = it.filename,
-                    expectedSize = it.expectedSize,
+                    expectedSize = it.fileSize,
                     mimeType = it.mimeType,
                     status = it.status,
                     createdAt = it.createdAt,

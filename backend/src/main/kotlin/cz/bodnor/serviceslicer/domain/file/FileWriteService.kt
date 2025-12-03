@@ -17,7 +17,7 @@ class FileWriteService(
             id = UUID.randomUUID(),
             filename = filename,
             mimeType = mimeType,
-            expectedSize = expectedSize,
+            fileSize = expectedSize,
         ),
     )
 }

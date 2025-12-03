@@ -80,6 +80,7 @@ services:
           cpus: '0.5'
           memory: 512M
     image: ghcr.io/xbodnar/realworld-app-microservice-user-service:latest
+    pull_policy: always
     ports:
       - "8082:8082"
     environment:
@@ -106,6 +107,7 @@ services:
           cpus: '0.5'
           memory: 512M
     image: ghcr.io/xbodnar/realworld-app-microservice-article-service:latest
+    pull_policy: always
     ports:
       - "8083:8083"
     environment:
@@ -135,6 +137,7 @@ services:
           cpus: '0.5'
           memory: 512M
     image: ghcr.io/xbodnar/realworld-app-microservice-comment-service:latest
+    pull_policy: always
     ports:
       - "8084:8084"
     environment:
@@ -167,6 +170,7 @@ services:
           cpus: '0.5'
           memory: 512M
     image: ghcr.io/xbodnar/realworld-app-microservice-api-gateway:latest
+    pull_policy: always
     ports:
       - "8081:8081"
     environment:

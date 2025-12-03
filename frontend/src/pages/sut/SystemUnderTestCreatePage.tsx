@@ -147,91 +147,89 @@ export function SystemUnderTestCreatePage() {
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input id="name" {...form.register('name')} placeholder="Monolithic Architecture" />
-              {form.formState.errors.name && (
-                <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                {...form.register('description')}
-                placeholder="Description of the system architecture..."
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Docker Configuration */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Docker Configuration</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FileSelector
-              id="compose-file"
-              label="Docker Compose File"
-              accept=".yml,.yaml"
-              required
-              onFileSelected={setComposeFile}
-              selectedFile={composeFile}
-              mimeTypeFilter="yaml"
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Basic Information */}
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="health-check">Health Check Path *</Label>
-                <Input
-                  id="health-check"
-                  {...form.register('healthCheckPath')}
-                  placeholder="/actuator/health"
+                <Label htmlFor="name">Name *</Label>
+                <Input id="name" {...form.register('name')} placeholder="Monolithic Architecture" />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  {...form.register('description')}
+                  placeholder="Description of the system architecture..."
+                  rows={3}
                 />
-                {form.formState.errors.healthCheckPath && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.healthCheckPath.message}
-                  </p>
-                )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="app-port">App Port *</Label>
-                <Input type="number" id="app-port" {...form.register('appPort')} />
-                {form.formState.errors.appPort && (
-                  <p className="text-sm text-destructive">{form.formState.errors.appPort.message}</p>
-                )}
+            </CardContent>
+          </Card>
+
+          {/* Docker Configuration */}
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle>Docker Configuration</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FileSelector
+                id="compose-file"
+                label="Docker Compose File"
+                accept=".yml,.yaml"
+                required
+                onFileSelected={setComposeFile}
+                selectedFile={composeFile}
+                mimeTypeFilter="yaml"
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="health-check">Health Check Path *</Label>
+                  <Input
+                    id="health-check"
+                    {...form.register('healthCheckPath')}
+                    placeholder="/actuator/health"
+                  />
+                  {form.formState.errors.healthCheckPath && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.healthCheckPath.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="app-port">App Port *</Label>
+                  <Input type="number" id="app-port" {...form.register('appPort')} />
+                  {form.formState.errors.appPort && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.appPort.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timeout">Startup Timeout (sec) *</Label>
+                  <Input type="number" id="timeout" {...form.register('startupTimeoutSeconds')} />
+                  {form.formState.errors.startupTimeoutSeconds && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.startupTimeoutSeconds.message}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="timeout">Startup Timeout (seconds) *</Label>
-                <Input type="number" id="timeout" {...form.register('startupTimeoutSeconds')} />
-                {form.formState.errors.startupTimeoutSeconds && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.startupTimeoutSeconds.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Database Configurations */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Database Configurations</CardTitle>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddDbConfig}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Database
-              </Button>
-            </div>
+            <CardTitle>Database Configurations</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {dbConfigFields.length === 0 ? (
@@ -320,6 +318,12 @@ export function SystemUnderTestCreatePage() {
                 </div>
               ))
             )}
+            <div className="flex justify-end">
+              <Button type="button" variant="outline" size="sm" onClick={handleAddDbConfig}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Database
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

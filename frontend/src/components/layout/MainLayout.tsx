@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { Layers, FlaskConical, Scissors, Github, Menu, X, FileArchive, Server } from 'lucide-react'
+import { Layers, FlaskConical, Scissors, Github, Menu, X, FileArchive, Server, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ScrollProgress } from './ScrollProgress'
@@ -17,6 +17,7 @@ export function MainLayout() {
   const navItems = [
     { path: '/projects', label: 'Projects', icon: Layers },
     { path: '/benchmarks', label: 'Benchmarks', icon: FlaskConical },
+    { path: '/operational-settings', label: 'Operational Settings', icon: Settings },
     { path: '/systems-under-test', label: 'Systems Under Test', icon: Server },
     { path: '/files', label: 'Files', icon: FileArchive },
   ]
@@ -134,7 +135,7 @@ export function MainLayout() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-h-screen lg:min-h-0">
           <main className="flex-1 overflow-auto">
-            <div className="container mx-auto px-4 lg:px-8 py-6 lg:py-8 max-w-7xl">
+            <div className="container mx-auto px-4 lg:px-8 py-6 lg:py-8 max-w-[1600px]">
               <Outlet />
             </div>
           </main>

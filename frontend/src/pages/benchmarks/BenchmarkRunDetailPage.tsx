@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useGetBenchmarkRun } from '@/api/generated/benchmarks-controller/benchmarks-controller'
+import { useGetBenchmarkRun, useGetBenchmark } from '@/api/generated/benchmarks-controller/benchmarks-controller'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Loader2, CheckCircle, XCircle, Clock, PlayCircle, Activity, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import { format } from 'date-fns'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ComposedChart, Scatter, ReferenceLine } from 'recharts'
 
 const getStateColor = (state: string) => {
   switch (state) {
@@ -47,8 +48,8 @@ const getStateIcon = (state: string) => {
 export function BenchmarkRunDetailPage() {
   const { benchmarkId, runId } = useParams<{ benchmarkId: string; runId: string }>()
   const { data, isLoading, error } = useGetBenchmarkRun(benchmarkId!, runId!)
+  const { data: benchmarkData, isLoading: isBenchmarkLoading } = useGetBenchmark(benchmarkId!)
   const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
-  const [expandedOperationMetrics, setExpandedOperationMetrics] = useState<Set<string>>(new Set())
   const [selectedLoad, setSelectedLoad] = useState<string>('')
 
   // Set initial selected load when data loads
@@ -71,19 +72,215 @@ export function BenchmarkRunDetailPage() {
     })
   }
 
-  const toggleOperationMetrics = (id: string) => {
-    setExpandedOperationMetrics((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
+  // Prepare chart data for Domain Metric comparison
+  const getDomainMetricChartData = () => {
+    if (!data?.baselineTestCase || !data?.targetTestCases || !benchmarkData?.operationalSetting?.operationalProfile) {
+      return []
+    }
+
+    // Get all loads from operational profile
+    const loads = Object.keys(benchmarkData.operationalSetting.operationalProfile)
+      .map(load => Number(load))
+      .sort((a, b) => a - b)
+
+    // Create chart data points
+    return loads.map(load => {
+      const baselineRDM = data.baselineTestCase.relativeDomainMetrics[load]
+      const targetTestCase = data.targetTestCases.find(tc => tc.load === load)
+
+      return {
+        load,
+        baseline: baselineRDM != null ? Number(baselineRDM) : null,
+        target: targetTestCase?.relativeDomainMetric != null ? Number(targetTestCase.relativeDomainMetric) : null
       }
-      return next
     })
   }
 
-  if (isLoading) {
+  const chartData = getDomainMetricChartData()
+
+  // Calculate dynamic Y axis domain for domain metric chart
+  const getDomainMetricYAxisDomain = () => {
+    if (chartData.length === 0) return [0, 1]
+
+    const allValues = chartData
+      .flatMap(d => [d.baseline, d.target])
+      .filter((v): v is number => v !== null && v !== undefined)
+
+    if (allValues.length === 0) return [0, 1]
+
+    const maxValue = Math.max(...allValues)
+    const minValue = Math.min(...allValues)
+
+    // Add 10% padding on top, and start from 0 or slightly below min
+    const padding = (maxValue - minValue) * 0.1
+    const yMax = maxValue + padding
+    const yMin = Math.max(0, minValue - padding)
+
+    return [yMin, yMax]
+  }
+
+  const yAxisDomain = getDomainMetricYAxisDomain()
+
+  // Prepare radar chart data for scalability footprints
+  const getScalabilityFootprintRadarData = () => {
+    if (!data?.experimentResults?.operationExperimentResults) {
+      return []
+    }
+
+    // Create radar data: each operation is a point on the radar
+    return Object.entries(data.experimentResults.operationExperimentResults).map(([operationId, result]: [string, any]) => {
+      const scalabilityFootprint = result.scalabilityFootprint
+
+      return {
+        operation: operationId,
+        gsl: scalabilityFootprint !== null && scalabilityFootprint !== undefined
+          ? Math.round(scalabilityFootprint)
+          : 0
+      }
+    })
+  }
+
+  const radarData = getScalabilityFootprintRadarData()
+
+  // Prepare load-based bar chart data for scalability gap
+  const getScalabilityGapLoadData = () => {
+    if (!data?.experimentResults?.operationExperimentResults || !benchmarkData?.operationalSetting?.operationalProfile) {
+      return { chartData: [], loads: [] }
+    }
+
+    // Get all loads from operational profile
+    const loads = Object.keys(benchmarkData.operationalSetting.operationalProfile)
+      .map(load => Number(load))
+      .sort((a, b) => a - b)
+
+    // Get max load to determine if we should show N/A
+    const maxLoad = loads.length > 0 ? Math.max(...loads) : null
+
+    // Create data structure: for each operation, include bars at all loads > GSL
+    const chartData: Array<{operation: string, load: number, value: number, loadStr: string}> = []
+
+    Object.entries(data.experimentResults.operationExperimentResults).forEach(([operationId, result]: [string, any]) => {
+      const scalabilityFootprint = result.scalabilityFootprint
+      const scalabilityGap = result.scalabilityGap
+
+      // Skip if operation always fails or never fails
+      const shouldShowNA = scalabilityFootprint === null || scalabilityFootprint === undefined ||
+                          (maxLoad !== null && scalabilityFootprint === maxLoad)
+
+      if (!shouldShowNA) {
+        // Add bar at the first load after GSL
+        const nextLoad = loads.find(load => load > scalabilityFootprint)
+        if (nextLoad !== undefined) {
+          chartData.push({
+            operation: operationId,
+            load: nextLoad,
+            value: scalabilityGap ?? 0, // Use 0 if null/undefined
+            loadStr: `${nextLoad}`
+          })
+        }
+      }
+    })
+
+    return { chartData, loads }
+  }
+
+  // Prepare load-based bar chart data for performance offset
+  const getPerformanceOffsetLoadData = () => {
+    if (!data?.experimentResults?.operationExperimentResults || !benchmarkData?.operationalSetting?.operationalProfile) {
+      return { chartData: [], loads: [] }
+    }
+
+    // Get all loads from operational profile
+    const loads = Object.keys(benchmarkData.operationalSetting.operationalProfile)
+      .map(load => Number(load))
+      .sort((a, b) => a - b)
+
+    // Get max load to determine if we should show N/A
+    const maxLoad = loads.length > 0 ? Math.max(...loads) : null
+
+    // Create data structure: for each operation, include bars at all loads > GSL
+    const chartData: Array<{operation: string, load: number, value: number, loadStr: string}> = []
+
+    Object.entries(data.experimentResults.operationExperimentResults).forEach(([operationId, result]: [string, any]) => {
+      const scalabilityFootprint = result.scalabilityFootprint
+      const performanceOffset = result.performanceOffset
+
+      // Skip if operation always fails or never fails
+      const shouldShowNA = scalabilityFootprint === null || scalabilityFootprint === undefined ||
+                          (maxLoad !== null && scalabilityFootprint === maxLoad)
+
+      if (!shouldShowNA) {
+        // Add bar at the first load after GSL
+        const nextLoad = loads.find(load => load > scalabilityFootprint)
+        if (nextLoad !== undefined) {
+          chartData.push({
+            operation: operationId,
+            load: nextLoad,
+            value: performanceOffset ?? 0, // Use 0 if null/undefined
+            loadStr: `${nextLoad}`
+          })
+        }
+      }
+    })
+
+    return { chartData, loads }
+  }
+
+  const scalabilityGapLoadData = getScalabilityGapLoadData()
+  const performanceOffsetLoadData = getPerformanceOffsetLoadData()
+
+  // Transform load data into chart-ready format with operations on X-axis
+  // Each data point represents a bar at a specific load level
+  const transformToChartData = (loadData: { chartData: Array<{operation: string, load: number, value: number, loadStr: string}>, loads: number[] }) => {
+    const { chartData, loads } = loadData
+
+    if (chartData.length === 0) {
+      return { formattedData: [], loads: [], rawData: [], loadIndexMap: new Map() }
+    }
+
+    // Create a map of load value to index for equal spacing
+    const loadIndexMap = new Map<number, number>()
+    loads.forEach((load, index) => {
+      loadIndexMap.set(load, index)
+    })
+
+    // Get unique operations
+    const operations = Array.from(new Set(chartData.map(d => d.operation))).sort()
+
+    // Create one data point per operation with load-specific values
+    const formattedData = operations.map(operation => {
+      const opData: any = { operation }
+
+      loads.forEach(load => {
+        const dataPoints = chartData.filter(d => d.operation === operation && d.load === load)
+        if (dataPoints.length > 0) {
+          // Store both the value and the load position using index for equal spacing
+          opData[`load_${load}`] = loadIndexMap.get(load)!  // Y position is the index (equal spacing)
+          opData[`value_${load}`] = dataPoints[0].value  // Store the percentage value separately
+        }
+      })
+
+      return opData
+    })
+
+    return { formattedData, loads, rawData: chartData, loadIndexMap }
+  }
+
+  const scalabilityGapChartData = transformToChartData(scalabilityGapLoadData)
+  const performanceOffsetChartData = transformToChartData(performanceOffsetLoadData)
+
+  // Calculate max load from operational profile for radar chart domain
+  const getMaxLoad = () => {
+    if (!benchmarkData?.operationalSetting?.operationalProfile) {
+      return 'auto'
+    }
+    const loads = Object.keys(benchmarkData.operationalSetting.operationalProfile).map(load => Number(load))
+    return loads.length > 0 ? Math.max(...loads) : 'auto'
+  }
+
+  const maxLoad = getMaxLoad()
+
+  if (isLoading || isBenchmarkLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -169,89 +366,468 @@ export function BenchmarkRunDetailPage() {
         </Card>
       </div>
 
-      {/* Total Domain Metric - Hero Section */}
-      {data.experimentResults && (
-        <Card className="border-2 border-green-200 dark:border-green-800">
-          <CardContent className="pt-6">
-            <div className="p-6 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="text-center md:text-left">
-                  <p className="text-lg font-bold text-green-900 dark:text-green-100 mb-2">Total Domain Metric (TDM)</p>
-                  <p className="text-sm text-muted-foreground">Overall scalability of the System Under Test</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-5xl font-bold text-green-700 dark:text-green-400">
-                    {data.experimentResults.totalDomainMetric.toFixed(4)}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2 font-medium">
-                    {data.experimentResults.totalDomainMetric >= 0.95 ? 'Excellent scalability' :
-                     data.experimentResults.totalDomainMetric >= 0.8 ? 'Good scalability' :
-                     data.experimentResults.totalDomainMetric >= 0.6 ? 'Moderate scalability' :
-                     'Poor scalability'}
-                  </p>
-                </div>
+      {/* Run Information and Total Domain Metric - Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Run Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Run Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Created</p>
+                <p className="font-medium">{format(new Date(data.createdAt), 'PPp')}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Last Updated</p>
+                <p className="font-medium">{format(new Date(data.updatedAt), 'PPp')}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Test Duration</p>
+                <p className="font-medium">{data.testDuration || 'Default (1ms)'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Status</p>
+                <Badge variant={getStateColor(data.state)} className={`flex items-center gap-1 w-fit ${getStateClassName(data.state)}`}>
+                  {getStateIcon(data.state)}
+                  {data.state}
+                </Badge>
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <p className="text-muted-foreground">Benchmark ID</p>
+                <p className="font-mono text-xs break-all">{data.benchmarkId}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Performance Charts Section - Placeholder for graphs */}
+        {/* Total Domain Metric */}
+        {data.experimentResults ? (
+          <Card className="border-2 border-green-200 dark:border-green-800">
+            <CardContent className="pt-6">
+              <div className="p-6 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-green-900 dark:text-green-100 mb-2">Total Domain Metric (TDM)</p>
+                    <p className="text-sm text-muted-foreground">Overall scalability of the System Under Test</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-5xl font-bold text-green-700 dark:text-green-400">
+                      {data.experimentResults.totalDomainMetric.toFixed(4)}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2 font-medium">
+                      {data.experimentResults.totalDomainMetric >= 0.95 ? 'Excellent scalability' :
+                       data.experimentResults.totalDomainMetric >= 0.8 ? 'Good scalability' :
+                       data.experimentResults.totalDomainMetric >= 0.6 ? 'Moderate scalability' :
+                       'Poor scalability'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : data.state === 'FAILED' ? (
+          <Card className="border-2 border-destructive/50">
+            <CardContent className="pt-6">
+              <div className="p-6 rounded-lg bg-destructive/10 border border-destructive/30 flex flex-col items-center gap-3 text-center">
+                <XCircle className="h-10 w-10 text-destructive" />
+                <div>
+                  <p className="text-lg font-bold text-destructive">Total Domain Metric unavailable</p>
+                  <p className="text-sm text-muted-foreground">
+                    The benchmark run failed before the Total Domain Metric could be calculated.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-2 border-muted">
+            <CardContent className="pt-6">
+              <div className="p-6 rounded-lg bg-muted/20">
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-muted-foreground mb-2">Total Domain Metric (TDM)</p>
+                    <p className="text-sm text-muted-foreground">Overall scalability of the System Under Test</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-3">
+                      <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+                      <p className="text-3xl font-bold text-muted-foreground">Calculating...</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2 font-medium">
+                      Waiting for all test cases to complete
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Domain Metric Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Performance Over Load</CardTitle>
+            <CardTitle className="text-base">Relative Domain Metrics over Load</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-center justify-center border-2 border-dashed border-muted rounded-lg bg-muted/20">
-              <p className="text-sm text-muted-foreground">Chart: Response time vs Load</p>
-            </div>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="load"
+                    label={{ value: 'Load (users)', position: 'insideBottomLeft', offset: -20}}
+                  />
+                  <YAxis
+                    label={{ value: 'Domain Metric', angle: -90, position: 'insideBottomLeft' }}
+                    domain={yAxisDomain}
+                    tickFormatter={(value) => value.toFixed(2)}
+                  />
+                  <RechartsTooltip
+                    formatter={(value: any) => value !== null ? value.toFixed(4) : 'N/A'}
+                    labelFormatter={(label) => `Load: ${label} users`}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="baseline"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    name="Baseline"
+                    connectNulls
+                    dot={{ r: 4 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="target"
+                    stroke="#a855f7"
+                    strokeWidth={2}
+                    name="Target"
+                    connectNulls
+                    dot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-muted rounded-lg bg-muted/20">
+                <p className="text-sm text-muted-foreground">
+                  {!benchmarkData ? 'Loading benchmark data...' : 'No data available for chart'}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* Scalability Footprint Radar Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Scalability Metrics</CardTitle>
+            <CardTitle className="text-base">Scalability Footprint by Operation (Raw GSL)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-center justify-center border-2 border-dashed border-muted rounded-lg bg-muted/20">
-              <p className="text-sm text-muted-foreground">Chart: Operation scalability comparison</p>
-            </div>
+            {radarData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <RadarChart data={radarData}>
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="operation" tick={{ fontSize: 11 }} />
+                  <PolarRadiusAxis angle={90} domain={[0, maxLoad]} tick={{ fontSize: 10 }} />
+                  <Radar
+                    name="GSL (users)"
+                    dataKey="gsl"
+                    stroke="#10b981"
+                    fill="#10b981"
+                    fillOpacity={0.3}
+                  />
+                  <Legend />
+                  <RechartsTooltip
+                    formatter={(value: any) => `${value} users`}
+                    labelFormatter={(label) => `Operation: ${label}`}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-muted rounded-lg bg-muted/20">
+                <p className="text-sm text-muted-foreground">
+                  {!data?.experimentResults ? 'No experiment results available' : 'No operation data available for chart'}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Scalability Gap Load-based Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Scalability Gap by Operation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {scalabilityGapChartData.formattedData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <ComposedChart data={scalabilityGapChartData.formattedData} margin={{ top: 20, right: 30, left: 60, bottom: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="operation"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    tick={{ fontSize: 11 }}
+                    padding={{ left: 30, right: 30 }}
+                  />
+                  <YAxis
+                    label={{ value: 'Load (users)', angle: -90, position: 'insideLeft' }}
+                    domain={scalabilityGapChartData.loads.length > 0 ? [-0.5, scalabilityGapChartData.loads.length + 1.5] : [0, 'auto']}
+                    ticks={scalabilityGapChartData.loads.map((_, idx) => idx)}
+                    tickFormatter={(value) => {
+                      const load = scalabilityGapChartData.loads[value]
+                      return load !== undefined ? load.toString() : ''
+                    }}
+                    type="number"
+                  />
+                  <RechartsTooltip
+                    content={({ active, payload }: any) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload
+                        return (
+                          <div className="bg-background border rounded p-2 shadow-lg">
+                            <p className="font-semibold">{data.operation}</p>
+                            {scalabilityGapChartData.loads.map(load => {
+                              const value = data[`value_${load}`]
+                              if (value !== undefined) {
+                                return (
+                                  <p key={load} className="text-sm">
+                                    Load {load}: {(value * 100).toFixed(0)}%
+                                  </p>
+                                )
+                              }
+                              return null
+                            })}
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  {/* Add reference lines for each load level */}
+                  {scalabilityGapChartData.loads.map((load, idx) => (
+                    <ReferenceLine key={load} y={idx} stroke="#94a3b8" strokeDasharray="3 3" />
+                  ))}
+                  {/* Add scatter points for each load level */}
+                  {scalabilityGapChartData.loads.map((load, idx) => (
+                    <Scatter
+                      key={load}
+                      dataKey={`load_${load}`}
+                      fill={`hsl(${30 + idx * 40}, 85%, 60%)`}
+                      shape={(props: any) => {
+                        const { cx, cy, payload } = props
+                        const percentageValue = payload[`value_${load}`]
+                        if (percentageValue === undefined) return <g />
+
+                        // Calculate bar height based on percentage value
+                        // Scale the percentage to a visible height on the chart
+                        const barHeight = percentageValue * 20 // Scale factor for visual height (reduced for smaller bars)
+                        const barWidth = 12
+
+                        // For zero values, show a small marker instead of a bar
+                        if (percentageValue === 0) {
+                          return (
+                            <g>
+                              <circle
+                                cx={cx}
+                                cy={cy}
+                                r={3}
+                                fill="#94a3b8"
+                                stroke="#64748b"
+                                strokeWidth={1}
+                              />
+                              <text
+                                x={cx}
+                                y={cy - 8}
+                                textAnchor="middle"
+                                fontSize={10}
+                                fill="#64748b"
+                              >
+                                0%
+                              </text>
+                            </g>
+                          )
+                        }
+
+                        return (
+                          <g>
+                            <rect
+                              x={cx - barWidth / 2}
+                              y={cy - barHeight}
+                              width={barWidth}
+                              height={barHeight}
+                              fill={`hsl(${30 + idx * 40}, 85%, 60%)`}
+                              stroke={`hsl(${30 + idx * 40}, 85%, 40%)`}
+                              strokeWidth={1}
+                            />
+                            <text
+                              x={cx}
+                              y={cy - barHeight - 5}
+                              textAnchor="middle"
+                              fontSize={10}
+                              fill="#374151"
+                            >
+                              {(percentageValue * 100).toFixed(0)}%
+                            </text>
+                          </g>
+                        )
+                      }}
+                    />
+                  ))}
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-muted rounded-lg bg-muted/20">
+                <p className="text-sm text-muted-foreground">
+                  {!data?.experimentResults ? 'No experiment results available' : 'No scalability gap data available'}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Performance Offset Load-based Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Performance Offset by Operation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {performanceOffsetChartData.formattedData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <ComposedChart data={performanceOffsetChartData.formattedData} margin={{ top: 20, right: 30, left: 60, bottom: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="operation"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    tick={{ fontSize: 11 }}
+                    padding={{ left: 30, right: 30 }}
+                  />
+                  <YAxis
+                    label={{ value: 'Load (users)', angle: -90, position: 'insideLeft' }}
+                    domain={performanceOffsetChartData.loads.length > 0 ? [-0.5, performanceOffsetChartData.loads.length + 1.5] : [0, 'auto']}
+                    ticks={performanceOffsetChartData.loads.map((_, idx) => idx)}
+                    tickFormatter={(value) => {
+                      const load = performanceOffsetChartData.loads[value]
+                      return load !== undefined ? load.toString() : ''
+                    }}
+                    type="number"
+                  />
+                  <RechartsTooltip
+                    content={({ active, payload }: any) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload
+                        return (
+                          <div className="bg-background border rounded p-2 shadow-lg">
+                            <p className="font-semibold">{data.operation}</p>
+                            {performanceOffsetChartData.loads.map(load => {
+                              const value = data[`value_${load}`]
+                              if (value !== undefined) {
+                                return (
+                                  <p key={load} className="text-sm">
+                                    Load {load}: {(value * 100).toFixed(0)}%
+                                  </p>
+                                )
+                              }
+                              return null
+                            })}
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  {/* Add reference lines for each load level */}
+                  {performanceOffsetChartData.loads.map((load, idx) => (
+                    <ReferenceLine key={load} y={idx} stroke="#94a3b8" strokeDasharray="3 3" />
+                  ))}
+                  {/* Add scatter points for each load level */}
+                  {performanceOffsetChartData.loads.map((load, idx) => (
+                    <Scatter
+                      key={load}
+                      dataKey={`load_${load}`}
+                      fill={`hsl(${260 + idx * 30}, 75%, 60%)`}
+                      shape={(props: any) => {
+                        const { cx, cy, payload } = props
+                        const percentageValue = payload[`value_${load}`]
+                        if (percentageValue === undefined) return <g />
+
+                        // Calculate bar height based on percentage value
+                        // Scale the percentage to a visible height on the chart
+                        const barHeight = percentageValue * 20 // Scale factor for visual height (reduced for smaller bars)
+                        const barWidth = 12
+
+                        // For zero values, show a small marker instead of a bar
+                        if (percentageValue === 0) {
+                          return (
+                            <g>
+                              <circle
+                                cx={cx}
+                                cy={cy}
+                                r={3}
+                                fill="#94a3b8"
+                                stroke="#64748b"
+                                strokeWidth={1}
+                              />
+                              <text
+                                x={cx}
+                                y={cy - 8}
+                                textAnchor="middle"
+                                fontSize={10}
+                                fill="#64748b"
+                              >
+                                0%
+                              </text>
+                            </g>
+                          )
+                        }
+
+                        return (
+                          <g>
+                            <rect
+                              x={cx - barWidth / 2}
+                              y={cy - barHeight}
+                              width={barWidth}
+                              height={barHeight}
+                              fill={`hsl(${260 + idx * 30}, 75%, 60%)`}
+                              stroke={`hsl(${260 + idx * 30}, 75%, 40%)`}
+                              strokeWidth={1}
+                            />
+                            <text
+                              x={cx}
+                              y={cy - barHeight - 5}
+                              textAnchor="middle"
+                              fontSize={10}
+                              fill="#374151"
+                            >
+                              {(percentageValue * 100).toFixed(0)}%
+                            </text>
+                          </g>
+                        )
+                      }}
+                    />
+                  ))}
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[400px] flex items-center justify-center border-2 border-dashed border-muted rounded-lg bg-muted/20">
+                <p className="text-sm text-muted-foreground">
+                  {!data?.experimentResults ? 'No experiment results available' : 'No performance offset data available'}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Run Metadata */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Run Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
-            <div>
-              <p className="text-muted-foreground mb-1">Created</p>
-              <p className="font-medium">{format(new Date(data.createdAt), 'PPp')}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1">Last Updated</p>
-              <p className="font-medium">{format(new Date(data.updatedAt), 'PPp')}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1">Status</p>
-              <Badge variant={getStateColor(data.state)} className={`flex items-center gap-1 w-fit ${getStateClassName(data.state)}`}>
-                {getStateIcon(data.state)}
-                {data.state}
-              </Badge>
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-1">Benchmark ID</p>
-              <p className="font-mono text-xs">{data.benchmarkId}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Operation Experiment Results */}
+      {/* Operation Experiment Results Summary */}
       {data.experimentResults && (
         <Card>
           <CardHeader>
@@ -360,290 +936,294 @@ export function BenchmarkRunDetailPage() {
         </Card>
       )}
 
-      {/* Test Cases Details - Collapsible Sections */}
-      <div className="grid grid-cols-1 gap-6">
-        {/* Baseline Test Case */}
-        {data.baselineTestCase && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CardTitle className="text-base">Baseline Test Case</CardTitle>
+      {/* Test Cases Comparison */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <CardTitle className="text-base">Test Case Comparison</CardTitle>
+            </div>
+            {data.targetTestCases && data.targetTestCases.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Select Target Load:</span>
+                <Select value={selectedLoad} onValueChange={setSelectedLoad}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Select load" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[...data.targetTestCases]
+                      .sort((a, b) => a.load - b.load)
+                      .map((tc) => (
+                        <SelectItem key={tc.id} value={tc.load.toString()}>
+                          {tc.load} users
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Test Case Info */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Baseline Info */}
+            {data.baselineTestCase && (
+              <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20">
+                <div className="flex items-center gap-2 mb-3">
                   <Badge variant="default" className="bg-blue-600">Baseline</Badge>
-                  <span className="text-sm font-medium text-muted-foreground">{data.baselineTestCase.load} users</span>
+                  <span className="text-sm font-medium">{data.baselineTestCase.load} users</span>
                   <Badge variant={getStateColor(data.baselineTestCase.status)} className={`flex items-center gap-1 ${getStateClassName(data.baselineTestCase.status)}`}>
                     {getStateIcon(data.baselineTestCase.status)}
                     {data.baselineTestCase.status}
                   </Badge>
                 </div>
-                <p className="text-xs font-mono text-muted-foreground">{data.baselineTestCase.baselineSutId}</p>
+                <p className="text-xs font-mono text-muted-foreground mb-2">{data.baselineTestCase.baselineSutId}</p>
+                {data.baselineTestCase.startTimestamp && data.baselineTestCase.endTimestamp && (
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(data.baselineTestCase.startTimestamp), 'PPp')} - {format(new Date(data.baselineTestCase.endTimestamp), 'p')}
+                  </p>
+                )}
               </div>
-              {data.baselineTestCase.startTimestamp && data.baselineTestCase.endTimestamp && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {format(new Date(data.baselineTestCase.startTimestamp), 'PPp')} - {format(new Date(data.baselineTestCase.endTimestamp), 'p')}
-                </p>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
+            )}
 
-              {/* Operation Metrics */}
-              {data.baselineTestCase.operationMetrics && Object.keys(data.baselineTestCase.operationMetrics).length > 0 ? (
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold">Operation Metrics</p>
-                  <div className="overflow-x-auto">
-                    <Table>
+            {/* Target Info */}
+            {data.targetTestCases && data.targetTestCases.length > 0 && (() => {
+              const testCase = data.targetTestCases.find(tc => tc.load.toString() === selectedLoad)
+              if (!testCase) return null
+
+              return (
+                <div className="p-4 rounded-lg border bg-purple-50/50 dark:bg-purple-950/20">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <Badge variant="default" className="bg-purple-600">Target</Badge>
+                    <span className="text-sm font-medium">{testCase.load} users</span>
+                    {testCase.loadFrequency !== undefined && (
+                      <span className="text-xs text-muted-foreground">
+                        ({(testCase.loadFrequency * 100).toFixed(0)}% probability)
+                      </span>
+                    )}
+                    <Badge variant={getStateColor(testCase.status)} className={`text-xs ${getStateClassName(testCase.status)}`}>
+                      {getStateIcon(testCase.status)}
+                      {testCase.status}
+                    </Badge>
+                  </div>
+                  {testCase.startTimestamp && testCase.endTimestamp && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {format(new Date(testCase.startTimestamp), 'PPp')} - {format(new Date(testCase.endTimestamp), 'p')}
+                    </p>
+                  )}
+                  {/* Relative Domain Metric */}
+                  {testCase.relativeDomainMetric !== undefined && (
+                    <div className="mt-3 p-3 rounded-lg bg-blue-100/50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-blue-900 dark:text-blue-100">RDM</p>
+                          <p className="text-xs text-muted-foreground">Relative Domain Metric</p>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">
+                          {testCase.relativeDomainMetric.toFixed(4)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+
+          {/* Combined Operation Metrics Table */}
+          {data.baselineTestCase?.operationMetrics && data.targetTestCases && data.targetTestCases.length > 0 && (() => {
+            const testCase = data.targetTestCases.find(tc => tc.load.toString() === selectedLoad)
+            if (!testCase?.operationMetrics) return null
+
+            // Get all unique operation IDs
+            const baselineOps = Object.keys(data.baselineTestCase.operationMetrics || {})
+            const targetOps = Object.keys(testCase.operationMetrics || {})
+            const allOperationIds = Array.from(new Set([...baselineOps, ...targetOps])).sort()
+
+            return (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold">Operation Metrics Comparison</p>
+                <div className="overflow-x-auto">
+                  <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="py-2">Operation ID</TableHead>
-                        <TableHead className="text-right py-2">Total Requests</TableHead>
-                        <TableHead className="text-right py-2">Failed</TableHead>
-                        <TableHead className="text-right py-2">Mean Response</TableHead>
-                        <TableHead className="text-right py-2">Std Dev</TableHead>
-                        <TableHead className="text-right py-2">P95</TableHead>
-                        <TableHead className="text-right py-2">P99</TableHead>
-                        <TableHead className="text-right py-2">Scalability Threshold</TableHead>
+                        <TableHead rowSpan={2} className="py-2 align-bottom border-r">Operation ID</TableHead>
+                        <TableHead colSpan={7} className="text-center py-2 bg-blue-50 dark:bg-blue-950/30 border-r">
+                          <Badge variant="default" className="bg-blue-600">Baseline</Badge>
+                        </TableHead>
+                        <TableHead colSpan={9} className="text-center py-2 bg-purple-50 dark:bg-purple-950/30">
+                          <Badge variant="default" className="bg-purple-600">Target</Badge>
+                        </TableHead>
+                      </TableRow>
+                      <TableRow>
+                        {/* Baseline columns */}
+                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">Total Req</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">Failed</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">Mean (ms)</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">Std Dev</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">P95</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30">P99</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-blue-50 dark:bg-blue-950/30 border-r">Threshold</TableHead>
+                        {/* Target columns */}
+                        <TableHead className="text-center py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Status</TableHead>
+                        <TableHead className="text-center py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Share</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Total Req</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Failed</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Mean (ms)</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">Std Dev</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">P95</TableHead>
+                        <TableHead className="text-right py-2 text-xs bg-purple-50 dark:bg-purple-950/30">P99</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {Object.entries(data.baselineTestCase.operationMetrics).map(([operationId, metric]: [string, any]) => (
-                        <TableRow key={operationId}>
-                          <TableCell className="font-mono text-xs font-medium py-2">{metric.operationId}</TableCell>
-                          <TableCell className="text-right font-mono text-xs py-2">{metric.totalRequests}</TableCell>
-                          <TableCell className="text-right font-mono text-xs py-2">{metric.failedRequests}</TableCell>
-                          <TableCell className="text-right font-mono text-xs py-2">
-                            <span className="font-semibold text-amber-600 dark:text-amber-400">
-                              {Number(metric.meanResponseTimeMs).toFixed(2)}ms
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs py-2">{Number(metric.stdDevResponseTimeMs).toFixed(2)}ms</TableCell>
-                          <TableCell className="text-right font-mono text-xs py-2">{Number(metric.p95DurationMs).toFixed(2)}ms</TableCell>
-                          <TableCell className="text-right font-mono text-xs py-2">{Number(metric.p99DurationMs).toFixed(2)}ms</TableCell>
-                          <TableCell className="text-right font-mono text-xs font-medium text-blue-600 dark:text-blue-400 py-2">
-                            {Number(metric.scalabilityThreshold).toFixed(2)}ms
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No operation metrics available</p>
-              )}
+                      {allOperationIds.map((operationId) => {
+                        const baselineMetric = data.baselineTestCase?.operationMetrics?.[operationId]
+                        const targetMetric = testCase.operationMetrics?.[operationId]
 
-              {/* K6 Output */}
-              {data.baselineTestCase.k6Output && (
+                        return (
+                          <TableRow key={operationId}>
+                            <TableCell className="font-mono text-xs font-medium py-2 border-r">{operationId}</TableCell>
+
+                            {/* Baseline columns */}
+                            {baselineMetric ? (
+                              <>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">{baselineMetric.totalRequests}</TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">{baselineMetric.failedRequests}</TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">
+                                  <span className="font-semibold text-amber-600 dark:text-amber-400">
+                                    {Number(baselineMetric.meanResponseTimeMs).toFixed(2)}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">{Number(baselineMetric.stdDevResponseTimeMs).toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">{Number(baselineMetric.p95DurationMs).toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-blue-50/30 dark:bg-blue-950/10">{Number(baselineMetric.p99DurationMs).toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-mono text-xs font-medium py-2 bg-blue-50/30 dark:bg-blue-950/10 border-r text-blue-600 dark:text-blue-400">
+                                  {Number(baselineMetric.scalabilityThreshold).toFixed(2)}
+                                </TableCell>
+                              </>
+                            ) : (
+                              <>
+                                <TableCell colSpan={7} className="text-center text-xs text-muted-foreground py-2 bg-blue-50/30 dark:bg-blue-950/10 border-r">N/A</TableCell>
+                              </>
+                            )}
+
+                            {/* Target columns */}
+                            {targetMetric ? (
+                              <>
+                                <TableCell className="text-center py-2 bg-purple-50/30 dark:bg-purple-950/10">
+                                  {targetMetric.passScalabilityThreshold !== undefined && (
+                                    <Badge variant={targetMetric.passScalabilityThreshold ? "default" : "destructive"} className={`text-xs ${targetMetric.passScalabilityThreshold ? 'bg-green-600' : ''}`}>
+                                      {targetMetric.passScalabilityThreshold ? 'Pass' : 'Fail'}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-center py-2 bg-purple-50/30 dark:bg-purple-950/10">
+                                  {targetMetric.scalabilityShare !== undefined && (
+                                    <Badge variant="outline" className="text-xs font-mono">
+                                      {targetMetric.scalabilityShare.toFixed(4)}
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">{targetMetric.totalRequests}</TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">{targetMetric.failedRequests}</TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">
+                                  <span className="font-semibold text-amber-600 dark:text-amber-400">
+                                    {Number(targetMetric.meanResponseTimeMs).toFixed(2)}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">{Number(targetMetric.stdDevResponseTimeMs).toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">{Number(targetMetric.p95DurationMs).toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-mono text-xs py-2 bg-purple-50/30 dark:bg-purple-950/10">{Number(targetMetric.p99DurationMs).toFixed(2)}</TableCell>
+                              </>
+                            ) : (
+                              <>
+                                <TableCell colSpan={8} className="text-center text-xs text-muted-foreground py-2 bg-purple-50/30 dark:bg-purple-950/10">N/A</TableCell>
+                              </>
+                            )}
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* K6 Output Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Baseline K6 Output */}
+            {data.baselineTestCase?.k6Output && (
+              <div className="space-y-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleK6Output('baseline')}
+                  className="text-xs"
+                >
+                  {expandedK6Outputs.has('baseline') ? (
+                    <>
+                      <ChevronUp className="h-3 w-3 mr-1" />
+                      Hide Baseline k6 Output
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3 w-3 mr-1" />
+                      Show Baseline k6 Output
+                    </>
+                  )}
+                </Button>
+                {expandedK6Outputs.has('baseline') && (
+                  <div className="p-3 rounded-lg bg-background border">
+                    <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto p-2 rounded bg-muted/30">
+                      {data.baselineTestCase.k6Output}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Target K6 Output */}
+            {data.targetTestCases && data.targetTestCases.length > 0 && (() => {
+              const testCase = data.targetTestCases.find(tc => tc.load.toString() === selectedLoad)
+              if (!testCase?.k6Output) return null
+
+              const testCaseIndex = data.targetTestCases.findIndex(tc => tc.id === testCase.id)
+
+              return (
                 <div className="space-y-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => toggleK6Output('baseline')}
+                    onClick={() => toggleK6Output(`target-${testCaseIndex}`)}
                     className="text-xs"
                   >
-                    {expandedK6Outputs.has('baseline') ? (
+                    {expandedK6Outputs.has(`target-${testCaseIndex}`) ? (
                       <>
                         <ChevronUp className="h-3 w-3 mr-1" />
-                        Hide k6 Output
+                        Hide Target k6 Output
                       </>
                     ) : (
                       <>
                         <ChevronDown className="h-3 w-3 mr-1" />
-                        Show k6 Output
+                        Show Target k6 Output
                       </>
                     )}
                   </Button>
-                  {expandedK6Outputs.has('baseline') && (
+                  {expandedK6Outputs.has(`target-${testCaseIndex}`) && (
                     <div className="p-3 rounded-lg bg-background border">
                       <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto p-2 rounded bg-muted/30">
-                        {data.baselineTestCase.k6Output}
+                        {testCase.k6Output}
                       </pre>
                     </div>
                   )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Target Test Cases Results */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Target Test Case Results</CardTitle>
-              {data.targetTestCases && data.targetTestCases.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Select Load:</span>
-                  <Select value={selectedLoad} onValueChange={setSelectedLoad}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select load" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[...data.targetTestCases]
-                        .sort((a, b) => a.load - b.load)
-                        .map((tc) => (
-                          <SelectItem key={tc.id} value={tc.load.toString()}>
-                            {tc.load} users
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!data.targetTestCases || data.targetTestCases.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No test results available</p>
-            ) : (
-              (() => {
-                const testCase = data.targetTestCases.find(tc => tc.load.toString() === selectedLoad)
-                if (!testCase) return null
-
-                const testCaseIndex = data.targetTestCases.findIndex(tc => tc.id === testCase.id)
-
-                return (
-                  <Card className="border-2">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-base font-semibold">{testCase.load} users</span>
-                          {testCase.loadFrequency !== undefined && (
-                            <span className="text-sm text-muted-foreground">
-                              ({(testCase.loadFrequency * 100).toFixed(0)}% probability)
-                            </span>
-                          )}
-                          <Badge variant={getStateColor(testCase.status)} className={`text-xs ${getStateClassName(testCase.status)}`}>
-                            {getStateIcon(testCase.status)}
-                            {testCase.status}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      {testCase.startTimestamp && testCase.endTimestamp && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {format(new Date(testCase.startTimestamp), 'PPp')} - {format(new Date(testCase.endTimestamp), 'p')}
-                        </p>
-                      )}
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Relative Domain Metric */}
-                      {testCase.relativeDomainMetric !== undefined && (
-                        <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-2 border-blue-200 dark:border-blue-800">
-                          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-                            <div className="text-center md:text-left">
-                              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">Relative Domain Metric (RDM)</p>
-                              <p className="text-xs text-muted-foreground">Probability of not failing under this load</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-3xl font-bold text-blue-700 dark:text-blue-400">
-                                {testCase.relativeDomainMetric.toFixed(4)}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {testCase.relativeDomainMetric >= 0.95 * (testCase.loadFrequency || 1) ? 'Very high reliability' :
-                                 testCase.relativeDomainMetric >= 0.8 * (testCase.loadFrequency || 1) ? 'High reliability' :
-                                 testCase.relativeDomainMetric >= 0.5 * (testCase.loadFrequency || 1) ? 'Moderate reliability' :
-                                 'High failure risk'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Operation Metrics */}
-                      {testCase.operationMetrics && Object.keys(testCase.operationMetrics).length > 0 ? (
-                        <div className="space-y-3">
-                          <p className="text-sm font-semibold">Operation Metrics</p>
-                          <div className="overflow-x-auto">
-                            <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="py-2">Operation ID</TableHead>
-                            <TableHead className="text-center py-2">Status</TableHead>
-                            <TableHead className="text-center py-2">Share</TableHead>
-                            <TableHead className="text-right py-2">Total Requests</TableHead>
-                            <TableHead className="text-right py-2">Failed</TableHead>
-                            <TableHead className="text-right py-2">Mean Response</TableHead>
-                            <TableHead className="text-right py-2">Std Dev</TableHead>
-                            <TableHead className="text-right py-2">P95</TableHead>
-                            <TableHead className="text-right py-2">P99</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {Object.entries(testCase.operationMetrics).map(([operationId, metric]: [string, any]) => (
-                            <TableRow key={operationId}>
-                              <TableCell className="font-mono text-xs font-medium py-2">{metric.operationId}</TableCell>
-                              <TableCell className="text-center py-2">
-                                {metric.passScalabilityThreshold !== undefined && (
-                                  <Badge variant={metric.passScalabilityThreshold ? "default" : "destructive"} className={`text-xs ${metric.passScalabilityThreshold ? 'bg-green-600' : ''}`}>
-                                    {metric.passScalabilityThreshold ? 'Pass' : 'Fail'}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-center py-2">
-                                {metric.scalabilityShare !== undefined && (
-                                  <Badge variant="outline" className="text-xs font-mono">
-                                    {metric.scalabilityShare.toFixed(4)}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-xs py-2">{metric.totalRequests}</TableCell>
-                              <TableCell className="text-right font-mono text-xs py-2">{metric.failedRequests}</TableCell>
-                              <TableCell className="text-right font-mono text-xs py-2">
-                                <span className="font-semibold text-amber-600 dark:text-amber-400">
-                                  {Number(metric.meanResponseTimeMs).toFixed(2)}ms
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-xs py-2">{Number(metric.stdDevResponseTimeMs).toFixed(2)}ms</TableCell>
-                              <TableCell className="text-right font-mono text-xs py-2">{Number(metric.p95DurationMs).toFixed(2)}ms</TableCell>
-                              <TableCell className="text-right font-mono text-xs py-2">{Number(metric.p99DurationMs).toFixed(2)}ms</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                            </Table>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No operation metrics available</p>
-                      )}
-
-                      {/* K6 Output */}
-                      {testCase.k6Output && (
-                        <div className="space-y-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleK6Output(`target-${testCaseIndex}`)}
-                            className="text-xs"
-                          >
-                            {expandedK6Outputs.has(`target-${testCaseIndex}`) ? (
-                              <>
-                                <ChevronUp className="h-3 w-3 mr-1" />
-                                Hide k6 Output
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown className="h-3 w-3 mr-1" />
-                                Show k6 Output
-                              </>
-                            )}
-                          </Button>
-                          {expandedK6Outputs.has(`target-${testCaseIndex}`) && (
-                            <div className="p-3 rounded-lg bg-background border">
-                              <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto p-2 rounded bg-muted/30">
-                                {testCase.k6Output}
-                              </pre>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )
-              })()
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              )
+            })()}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

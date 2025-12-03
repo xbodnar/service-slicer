@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="create-operational-setting-table" author="Norbert Bodnar">
+        <createTable tableName="operational_setting">
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="version" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="test_duration" type="varchar(255)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="open_api_file_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="usage_profile" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operational_profile" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="add-name-columns" author="Norbert Bodnar">
+        <addColumn tableName="operational_setting">
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="operational_setting">
+            <column name="description" type="text">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+    <changeSet id="remove-test-duration-column" author="Norbert Bodnar">
+        <dropColumn tableName="operational_setting" columnName="test_duration"/>
+    </changeSet>
+</databaseChangeLog>

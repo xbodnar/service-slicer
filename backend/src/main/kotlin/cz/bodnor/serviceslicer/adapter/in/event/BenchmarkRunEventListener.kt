@@ -50,25 +50,11 @@ class BenchmarkRunEventListener(
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun onValidateSutBenchmarkEvent(event: ValidateSutBenchmarkEvent) {
-        logger.info { "Validating SUT ${event.systemUnderTestId} for benchmark ${event.benchmarkId}" }
-
-        val validationResult = commandBus(
+        commandBus(
             RunSutValidationCommand(
                 benchmarkId = event.benchmarkId,
                 systemUnderTestId = event.systemUnderTestId,
             ),
         )
-
-        val benchmarkReadService = benchmarkReadService.getById(event.benchmarkId)
-        when (event.systemUnderTestId) {
-            benchmarkReadService.baselineSut.id -> benchmarkReadService.baselineSutValidationResult = validationResult
-            benchmarkReadService.targetSut.id -> benchmarkReadService.targetSutValidationResult = validationResult
-            else -> error("SUT ${event.systemUnderTestId} not found in benchmark ${event.benchmarkId}")
-        }
-        benchmarkWriteService.save(benchmarkReadService)
-
-        logger.info {
-            "Validation completed for SUT ${event.systemUnderTestId} with state: ${validationResult.validationState}"
-        }
     }
 }

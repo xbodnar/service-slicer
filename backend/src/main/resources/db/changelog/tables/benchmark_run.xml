@@ -19,10 +19,14 @@
             <column name="updated_at" type="timestamptz">
                 <constraints nullable="false"/>
             </column>
+            <!-- Entity -->
             <column name="benchmark_id" type="uuid">
                 <constraints nullable="false"/>
             </column>
             <column name="baseline_test_case_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="test_duration" type="bigint">
                 <constraints nullable="false"/>
             </column>
             <column name="state" type="text">
@@ -32,9 +36,5 @@
                 <constraints nullable="true"/>
             </column>
         </createTable>
-        <addUniqueConstraint tableName="benchmark_run" columnNames="benchmark_id"/>
-    </changeSet>
-    <changeSet id="drop-unique-constraint" author="Norbert Bodnar">
-        <dropUniqueConstraint tableName="benchmark_run" constraintName="benchmark_run_benchmark_id_key"/>
     </changeSet>
 </databaseChangeLog>

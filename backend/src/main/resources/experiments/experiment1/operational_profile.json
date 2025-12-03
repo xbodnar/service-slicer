@@ -1,0 +1,26 @@
+[
+  {
+    "load": 25,
+    "frequency": 0.186
+  },
+  {
+    "load": 50,
+    "frequency": 0.292
+  },
+  {
+    "load": 100,
+    "frequency": 0.313
+  },
+  {
+    "load": 150,
+    "frequency": 0.112
+  },
+  {
+    "load": 200,
+    "frequency": 0.07
+  },
+  {
+    "load": 300,
+    "frequency": 0.027
+  }
+]

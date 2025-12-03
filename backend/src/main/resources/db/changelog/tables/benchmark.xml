@@ -21,7 +21,7 @@
             </column>
 
             <!-- Entity -->
-            <column name="config" type="jsonb">
+            <column name="operational_setting_id" type="uuid">
                 <constraints nullable="false"/>
             </column>
             <column name="name" type="varchar(255)">

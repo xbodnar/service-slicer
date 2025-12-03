@@ -12,7 +12,6 @@ import java.util.UUID
 
 @Entity
 class ApiOperation(
-    id: UUID = UUID.randomUUID(),
     // ID of the OpenAPI file this operation belongs to
     val openApiFileId: UUID,
     // User readable operation id, such as o1, o2, etc.
@@ -21,8 +20,6 @@ class ApiOperation(
     val method: String,
     // Path with variables, such as /users/{id}
     val path: String,
-    // User readable name, such as "Get user by ID"
-    val name: String,
     // Request parameters (path, query, header, cookie)
     @JdbcTypeCode(SqlTypes.JSON)
     val parameters: List<ApiParameter> = emptyList(),
@@ -32,7 +29,7 @@ class ApiOperation(
     // Response schemas by status code
     @JdbcTypeCode(SqlTypes.JSON)
     val responses: Map<String, ApiResponse> = emptyMap(),
-) : UpdatableEntity(id)
+) : UpdatableEntity()
 
 data class ApiParameter(
     val name: String,

@@ -23,7 +23,7 @@ class CompleteFileUploadCommandHandler(
         val fileMetadata = getFileMetadataFromStorage(file.storageKey)
 
         // Verify size matches
-        require(fileMetadata.size == file.expectedSize) {
+        require(fileMetadata.size == file.fileSize) {
             file.markAsFailed()
             "File size does not match"
         }

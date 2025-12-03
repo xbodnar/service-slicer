@@ -22,6 +22,7 @@ class GetBenchmarkRunQueryHandler(
             id = benchmarkRun.id,
             benchmarkId = benchmarkRun.benchmark.id,
             state = benchmarkRun.state,
+            testDuration = benchmarkRun.testDuration.toString(),
             baselineTestCase = benchmarkRun.baselineTestCase.toDto(),
             targetTestCases = benchmarkRun.targetTestCases.map { it.toDto() },
             experimentResults = benchmarkRun.experimentResults,
