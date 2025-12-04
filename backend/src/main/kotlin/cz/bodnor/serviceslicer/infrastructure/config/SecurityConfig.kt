@@ -1,7 +1,7 @@
 package cz.bodnor.serviceslicer.infrastructure.config
 
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
@@ -22,16 +22,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(SecurityProperties::class)
 @ConditionalOnProperty("app.security.enabled", havingValue = "true", matchIfMissing = false)
-class SecurityConfig {
-    @Value("\${app.security.admin.username}")
-    private lateinit var adminUsername: String
-
-    @Value("\${app.security.admin.password}")
-    private lateinit var adminPassword: String
-
-    @Value("\${app.security.cors.allowed-origin-patterns:http://localhost:*,http://127.0.0.1:*}")
-    private lateinit var allowedOriginPatterns: List<String>
+class SecurityConfig(
+    private val securityProperties: SecurityProperties,
+) {
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
@@ -69,7 +64,7 @@ class SecurityConfig {
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration =
             CorsConfiguration().apply {
-                allowedOriginPatterns = this@SecurityConfig.allowedOriginPatterns
+                allowedOriginPatterns = securityProperties.cors.allowedOriginPatterns
                 allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 allowedHeaders = listOf("*")
                 allowCredentials = true
@@ -86,8 +81,8 @@ class SecurityConfig {
         val admin =
             User
                 .builder()
-                .username(adminUsername)
-                .password(passwordEncoder().encode(adminPassword))
+                .username(securityProperties.admin.username)
+                .password(passwordEncoder().encode(securityProperties.admin.password))
                 .roles("ADMIN")
                 .build()
 
