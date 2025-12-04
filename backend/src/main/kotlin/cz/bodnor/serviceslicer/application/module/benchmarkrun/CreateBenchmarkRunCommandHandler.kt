@@ -3,9 +3,7 @@ package cz.bodnor.serviceslicer.application.module.benchmarkrun
 import cz.bodnor.serviceslicer.application.module.benchmark.event.BenchmarkRunCreatedEvent
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.CreateBenchmarkRunCommand
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
-import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRunReadService
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRunWriteService
-import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import org.springframework.context.ApplicationEventPublisher

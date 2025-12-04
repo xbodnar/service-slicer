@@ -8,7 +8,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.nio.file.Path
 import java.time.Instant
-import java.util.UUID
 
 @Service
 class K6Runner(

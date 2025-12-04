@@ -4,7 +4,6 @@ import cz.bodnor.serviceslicer.application.module.sut.query.DatabaseSeedConfigDt
 import cz.bodnor.serviceslicer.application.module.sut.query.DockerConfigDto
 import cz.bodnor.serviceslicer.application.module.sut.query.GetSystemUnderTestQuery
 import cz.bodnor.serviceslicer.application.module.sut.query.SystemUnderTestDto
-import cz.bodnor.serviceslicer.domain.file.File
 import cz.bodnor.serviceslicer.domain.file.FileReadService
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryHandler

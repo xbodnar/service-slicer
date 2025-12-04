@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.application.module.benchmark.query
 
 import cz.bodnor.serviceslicer.application.module.sut.query.SystemUnderTestDto
 import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
-import cz.bodnor.serviceslicer.domain.file.File
 import cz.bodnor.serviceslicer.domain.operationalsetting.OperationalSetting
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.Query
 import io.swagger.v3.oas.annotations.media.Schema

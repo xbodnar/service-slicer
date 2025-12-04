@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.RunSutValidationCommand
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
 import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
 import cz.bodnor.serviceslicer.domain.benchmark.ValidationState
