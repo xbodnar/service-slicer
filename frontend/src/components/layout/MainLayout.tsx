@@ -1,17 +1,24 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { Layers, FlaskConical, Scissors, Github, Menu, X, FileArchive, Server, Settings } from 'lucide-react'
+import { Layers, FlaskConical, Scissors, Github, Menu, X, FileArchive, Server, Settings, LogOut, Shield, LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ScrollProgress } from './ScrollProgress'
+import { useAuth } from '@/contexts/AuthContext'
 import { useState } from 'react'
 
 export function MainLayout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { user, logout } = useAuth()
 
   const isActive = (path: string) => {
     return location.pathname.startsWith(path)
+  }
+
+  const handleLogout = async () => {
+    await logout()
   }
 
   const navItems = [
@@ -102,7 +109,41 @@ export function MainLayout() {
 
           {/* Footer Section */}
           <div className="p-4 border-t space-y-3">
-            <Separator />
+            {user ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-sm font-medium">{user.username}</span>
+                    <Badge variant="secondary" className="text-xs">Admin</Badge>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start gap-2 hover:bg-destructive/10 hover:text-destructive"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </Button>
+                <Separator />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Link to="/login" onClick={() => setSidebarOpen(false)}>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full justify-start gap-2"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    <span>Admin Login</span>
+                  </Button>
+                </Link>
+                <Separator />
+              </div>
+            )}
             <a
               href="https://github.com/xbodnar/service-slicer"
               target="_blank"

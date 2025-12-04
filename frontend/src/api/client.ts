@@ -8,12 +8,24 @@ const axiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Include cookies in requests for session-based auth
 })
 
 // Response interceptor for error handling
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Handle 401 Unauthorized - redirect to login
+    if (error.response?.status === 401) {
+      // Don't redirect if we're already on the login page or calling auth endpoints
+      const isAuthEndpoint = error.config?.url?.includes('/auth/')
+      const isLoginPage = window.location.pathname === '/login'
+
+      if (!isAuthEndpoint && !isLoginPage) {
+        window.location.href = '/login'
+      }
+    }
+
     // Extract detail from error responses (prioritize "detail" field for 400 errors)
     if (error.response?.data?.detail) {
       // Create a new error with the detail message

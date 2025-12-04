@@ -1,7 +1,9 @@
 import { Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
+import { AuthProvider } from '@/contexts/AuthContext'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { LandingPage } from '@/pages/LandingPage'
+import { LoginPage } from '@/pages/auth/LoginPage'
 import { ProjectListPage } from '@/pages/projects/ProjectListPage'
 import { ProjectDetailPage } from '@/pages/projects/ProjectDetailPage'
 import { ProjectCreatePage } from '@/pages/projects/ProjectCreatePage'
@@ -20,8 +22,9 @@ import { SystemUnderTestCreatePage } from '@/pages/sut/SystemUnderTestCreatePage
 
 function App() {
   return (
-    <>
+    <AuthProvider>
       <Routes>
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<MainLayout />}>
           <Route index element={<LandingPage />} />
 
@@ -52,7 +55,7 @@ function App() {
         </Route>
       </Routes>
       <Toaster />
-    </>
+    </AuthProvider>
   )
 }
 

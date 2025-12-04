@@ -1,0 +1,15 @@
+spring:
+  ai:
+    openai:
+      api-key: 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
+
+
+app:
+  security:
+    admin:
+      username: admin
+      password: ${ADMIN_PASSWORD:changeme}
+
+# Override CORS to allow your demo frontend origin
+# Update this with your actual demo frontend URL
+# Example: allowedOriginPatterns: ["https://yourdomain.com"]
