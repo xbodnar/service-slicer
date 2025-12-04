@@ -2,7 +2,7 @@ package cz.bodnor.serviceslicer.adapter.`in`.web
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import org.springframework.context.annotation.Profile
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AuthenticationManager
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/auth")
-@Profile("!local")
+@ConditionalOnProperty("app.security.enabled", havingValue = "true", matchIfMissing = false)
 class AuthController(
     private val authenticationManager: AuthenticationManager,
 ) {

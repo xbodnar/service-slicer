@@ -1,8 +1,23 @@
 spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/serviceslicer
+    username: postgres
+    password: postgres
+  neo4j:
+    uri: bolt://neo4j:7687
+    authentication:
+      username: neo4j
+      password: password
   ai:
     openai:
       api-key: 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
 
+minio:
+  endpoint: http://minio:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket-name: serviceslicer
+  presigned-url-expiration: 3600
 
 app:
   security:

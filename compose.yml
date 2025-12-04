@@ -6,7 +6,7 @@ services:
       - 'POSTGRES_PASSWORD=postgres'
       - 'POSTGRES_USER=postgres'
     ports:
-      - '33771:5432'
+      - '5432:5432'
 
   neo4j:
     image: 'neo4j:5.26.13-community'
@@ -38,7 +38,7 @@ services:
     ports:
       - '9091:9090'
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./backend/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'

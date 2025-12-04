@@ -9,7 +9,6 @@ class BuildDependencyGraphCommandHandlerTest(
     @Autowired private val commandBus: CommandBus,
     @Autowired private val classNodeRepository: ClassNodeRepository,
 ) : IntegrationTest() {
-
 //    @Test
 //    fun `should save each node exactly once`() {
 //        // given

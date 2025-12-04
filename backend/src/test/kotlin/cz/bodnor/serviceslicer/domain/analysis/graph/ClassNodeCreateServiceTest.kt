@@ -10,7 +10,6 @@ class ClassNodeCreateServiceTest(
     @Autowired val classNodeWriteService: ClassNodeWriteService,
     @Autowired val classNodeRepository: ClassNodeRepository,
 ) : IntegrationTest() {
-
     @Test
     fun `Should save nodes with relationships`() {
         // Given
