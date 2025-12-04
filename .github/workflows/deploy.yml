@@ -54,7 +54,7 @@ jobs:
           ssh hetzner << 'EOF'
           set -e
 
-          cd /home/deploy/serviceslicer
+          cd /home/deploy/service-slicer
 
           # sync repo to latest main
           git fetch origin
