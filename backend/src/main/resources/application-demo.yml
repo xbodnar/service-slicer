@@ -27,4 +27,4 @@ app:
       password: ${ADMIN_PASSWORD:changeme}
     cors:
       allowed-origin-patterns:
-        - "https://serviceslicer.ddns.net/"
+        - "https://serviceslicer.ddns.net"
