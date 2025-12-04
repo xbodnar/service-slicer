@@ -21,6 +21,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# Generated API client
-src/api/generated
+opui
