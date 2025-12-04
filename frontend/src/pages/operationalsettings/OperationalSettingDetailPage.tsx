@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useGetOperationalSetting, useDeleteOperationalSetting } from '@/api/generated/operational-setting-controller/operational-setting-controller'
 import type { BehaviorModel, ApiRequest } from '@/api/generated/openAPIDefinition.schemas'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +16,11 @@ export function OperationalSettingDetailPage() {
   const { data: config, isLoading } = useGetOperationalSetting(configId!)
   const deleteOperationalSetting = useDeleteOperationalSetting()
   const { toast } = useToast()
+  const { user, authRequired } = useAuth()
   const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({})
+
+  // Show delete button only if auth is not required OR user is authenticated
+  const canDelete = !authRequired || user
 
   const handleDelete = async () => {
     if (!config || !confirm(`Are you sure you want to delete the operational setting "${config.name}"?`)) {
@@ -92,10 +97,12 @@ export function OperationalSettingDetailPage() {
             <p className="text-muted-foreground">{config.description || 'No description'}</p>
           </div>
         </div>
-        <Button variant="destructive" onClick={handleDelete} disabled={deleteOperationalSetting.isPending}>
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete
-        </Button>
+        {canDelete && (
+          <Button variant="destructive" onClick={handleDelete} disabled={deleteOperationalSetting.isPending}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
+        )}
       </div>
 
       {/* Overview Card */}

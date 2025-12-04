@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -7,6 +7,7 @@ import { useBenchmark, useUpdateBenchmark, useValidateOperationalSetting } from 
 import { useGenerateBehaviorModels, useRunBenchmark } from '@/api/generated/benchmarks-controller/benchmarks-controller'
 import { type UploadedFile } from '@/hooks/useFileUpload'
 import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -278,8 +279,10 @@ function formatFileSize(bytes: number): string {
 
 export function BenchmarkDetailPage() {
   const { benchmarkId } = useParams<{ benchmarkId: string }>()
+  const navigate = useNavigate()
   const { data, isLoading, error, refetch } = useBenchmark(benchmarkId!)
   const { toast } = useToast()
+  const { user, authRequired } = useAuth()
   const updateBenchmark = useUpdateBenchmark()
   const generateBehaviorModels = useGenerateBehaviorModels()
   const runBenchmark = useRunBenchmark()
@@ -291,6 +294,16 @@ export function BenchmarkDetailPage() {
   const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
   const [showRunModal, setShowRunModal] = useState(false)
   const [testDuration, setTestDuration] = useState('')
+
+  // Helper to check authentication and redirect to login if needed
+  const requireAuth = (): boolean => {
+    if (authRequired && !user) {
+      sessionStorage.setItem('redirectAfterLogin', window.location.pathname)
+      navigate('/login')
+      return false
+    }
+    return true
+  }
 
   // Poll for validation results when any validation is PENDING
   useEffect(() => {
@@ -347,6 +360,7 @@ export function BenchmarkDetailPage() {
 
   // Populate form when entering edit mode
   const handleStartEdit = () => {
+    if (!requireAuth()) return
     if (!data) return
 
     const behaviorModels = data.operationalSetting.usageProfile.map((model: any) => ({
@@ -485,6 +499,7 @@ export function BenchmarkDetailPage() {
   }
 
   const handleGenerateBehaviorModels = async () => {
+    if (!requireAuth()) return
     try {
       await generateBehaviorModels.mutateAsync({ benchmarkId: benchmarkId! })
       toast({
@@ -502,10 +517,12 @@ export function BenchmarkDetailPage() {
   }
 
   const handleRunBenchmark = () => {
+    if (!requireAuth()) return
     setShowRunModal(true)
   }
 
   const confirmRunBenchmark = async () => {
+    if (!requireAuth()) return
     const duration = testDuration.trim()
 
     try {
@@ -530,6 +547,7 @@ export function BenchmarkDetailPage() {
   }
 
   const handleValidateConfig = async (systemUnderTestId: string) => {
+    if (!requireAuth()) return
     try {
       await validateConfig.mutateAsync({ benchmarkId: benchmarkId!, systemUnderTestId })
       toast({

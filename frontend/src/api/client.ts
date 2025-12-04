@@ -22,6 +22,8 @@ axiosInstance.interceptors.response.use(
       const isLoginPage = window.location.pathname === '/login'
 
       if (!isAuthEndpoint && !isLoginPage) {
+        // Save the current location to redirect back after login
+        sessionStorage.setItem('redirectAfterLogin', window.location.pathname)
         window.location.href = '/login'
       }
     }

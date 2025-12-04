@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -30,24 +31,24 @@ function App() {
 
           {/* Projects */}
           <Route path="projects" element={<ProjectListPage />} />
-          <Route path="projects/new" element={<ProjectCreatePage />} />
+          <Route path="projects/new" element={<ProtectedRoute><ProjectCreatePage /></ProtectedRoute>} />
           <Route path="projects/:projectId" element={<ProjectDetailPage />} />
 
           {/* Benchmarks */}
           <Route path="benchmarks" element={<BenchmarkListPage />} />
-          <Route path="benchmarks/new" element={<BenchmarkCreatePage />} />
+          <Route path="benchmarks/new" element={<ProtectedRoute><BenchmarkCreatePage /></ProtectedRoute>} />
           <Route path="benchmarks/:benchmarkId" element={<BenchmarkDetailPage />} />
           <Route path="benchmarks/:benchmarkId/runs" element={<BenchmarkRunListPage />} />
           <Route path="benchmarks/:benchmarkId/runs/:runId" element={<BenchmarkRunDetailPage />} />
 
           {/* Operational Settings */}
           <Route path="operational-settings" element={<OperationalSettingListPage />} />
-          <Route path="operational-settings/new" element={<OperationalSettingCreatePage />} />
+          <Route path="operational-settings/new" element={<ProtectedRoute><OperationalSettingCreatePage /></ProtectedRoute>} />
           <Route path="operational-settings/:configId" element={<OperationalSettingDetailPage />} />
 
           {/* Systems Under Test */}
           <Route path="systems-under-test" element={<SystemUnderTestListPage />} />
-          <Route path="systems-under-test/new" element={<SystemUnderTestCreatePage />} />
+          <Route path="systems-under-test/new" element={<ProtectedRoute><SystemUnderTestCreatePage /></ProtectedRoute>} />
           <Route path="systems-under-test/:sutId" element={<SystemUnderTestDetailPage />} />
 
           {/* Files */}

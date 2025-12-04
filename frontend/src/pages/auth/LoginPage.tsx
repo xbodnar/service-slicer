@@ -17,7 +17,10 @@ export function LoginPage() {
   const location = useLocation()
   const { toast } = useToast()
 
-  const from = (location.state as { from?: string })?.from || '/'
+  // Get redirect location from route state or sessionStorage
+  const stateFrom = (location.state as { from?: string })?.from
+  const sessionFrom = sessionStorage.getItem('redirectAfterLogin')
+  const from = stateFrom || sessionFrom || '/'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,6 +28,8 @@ export function LoginPage() {
 
     try {
       await login(username, password)
+      // Clear the redirect location from sessionStorage after successful login
+      sessionStorage.removeItem('redirectAfterLogin')
       toast({
         title: 'Login successful',
         description: 'Welcome back!',

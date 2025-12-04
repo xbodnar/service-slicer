@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useListOperationalSettings, useDeleteOperationalSetting } from '@/api/generated/operational-setting-controller/operational-setting-controller'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +12,10 @@ export function OperationalSettingListPage() {
   const { data, isLoading, refetch } = useListOperationalSettings()
   const deleteOperationalSetting = useDeleteOperationalSetting()
   const { toast } = useToast()
+  const { user, authRequired } = useAuth()
+
+  // Show delete buttons only if auth is not required OR user is authenticated
+  const canDelete = !authRequired || user
 
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete the operational setting "${name}"?`)) {
@@ -115,14 +120,16 @@ export function OperationalSettingListPage() {
                       View Details
                     </Button>
                   </Link>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(config.id, config.name)}
-                    disabled={deleteOperationalSetting.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canDelete && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(config.id, config.name)}
+                      disabled={deleteOperationalSetting.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

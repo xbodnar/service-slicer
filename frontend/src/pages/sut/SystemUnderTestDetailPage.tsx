@@ -5,6 +5,7 @@ import {
 } from '@/api/generated/system-under-test-controller/system-under-test-controller'
 import type { DatabaseSeedConfigDto } from '@/api/generated/openAPIDefinition.schemas'
 import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -30,7 +31,11 @@ export function SystemUnderTestDetailPage() {
   const navigate = useNavigate()
   const { data, isLoading, error } = useGetSystemUnderTest(sutId!)
   const { toast } = useToast()
+  const { user, authRequired } = useAuth()
   const deleteSystemUnderTest = useDeleteSystemUnderTest()
+
+  // Show delete button only if auth is not required OR user is authenticated
+  const canDelete = !authRequired || user
 
   const handleDelete = async () => {
     if (!data) return
@@ -90,18 +95,20 @@ export function SystemUnderTestDetailPage() {
             {data.description && <p className="text-muted-foreground mt-1">{data.description}</p>}
           </div>
         </div>
-        <Button
-          variant="destructive"
-          onClick={handleDelete}
-          disabled={deleteSystemUnderTest.isPending}
-        >
-          {deleteSystemUnderTest.isPending ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Trash2 className="h-4 w-4 mr-2" />
-          )}
-          Delete
-        </Button>
+        {canDelete && (
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleteSystemUnderTest.isPending}
+          >
+            {deleteSystemUnderTest.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            Delete
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6">

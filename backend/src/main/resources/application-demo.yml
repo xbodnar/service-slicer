@@ -10,7 +10,7 @@ spring:
       password: password
   ai:
     openai:
-      api-key: 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
+      api-key: ${OPEN_API_KEY}
 
 minio:
   endpoint: http://minio:9000
@@ -24,7 +24,7 @@ app:
     enabled: true
     admin:
       username: admin
-      password: ${ADMIN_PASSWORD:changeme}
+      password: ${ADMIN_PASSWORD}
     cors:
       allowed-origin-patterns:
-        - "https://serviceslicer.ddns.net"
+        - ${DEMO_ORIGIN}
