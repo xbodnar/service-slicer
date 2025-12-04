@@ -1,0 +1,73 @@
+name: Deploy to VM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (for version info, not strictly needed)
+        uses: actions/checkout@v4
+
+        # --- Build frontend in CI ---
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      # --- Setup SSH for talking to VM ---
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${SSH_KEY}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf "Host hetzner\n  HostName %s\n  User %s\n  Port %s\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking no\n" \
+            "${SSH_HOST}" "${SSH_USER}" "${SSH_PORT:-22}" > ~/.ssh/config
+        env:
+          SSH_KEY: ${{ secrets.CONTROL_SSH_KEY }}
+          SSH_HOST: ${{ secrets.CONTROL_HOST }}
+          SSH_USER: ${{ secrets.CONTROL_USER }}
+          SSH_PORT: 22
+
+      # --- Upload frontend build to VM ---
+      - name: Upload frontend build
+        run: |
+          rsync -az --delete \
+            frontend/dist/ \
+            hetzner:/home/deploy/www/serviceslicer-fe/
+
+      # --- Redeploy backend only via docker compose on VM ---
+      - name: Deploy backend on server
+        run: |
+          ssh hetzner << 'EOF'
+          set -e
+
+          cd /home/deploy/serviceslicer
+
+          # sync repo to latest main
+          git fetch origin
+          git reset --hard origin/main
+
+          # rebuild and restart only backend service
+          docker compose build backend
+          docker compose up -d backend
+
+          # optional cleanup
+          docker image prune -f
+
+          # reload Caddy so it picks any config changes (static files don't need reload,
+          # but this is useful if we changed Caddyfile)
+          sudo caddy reload --config /etc/caddy/Caddyfile || true
+          EOF
