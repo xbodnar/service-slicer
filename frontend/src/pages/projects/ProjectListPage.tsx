@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useProjectsList } from '@/hooks/useProjects'
+import type { ProjectSummary } from '@/api/generated/openAPIDefinition.schemas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Loader2, FolderKanban, ArrowRight, Calendar, Package2 } from 'lucide-react'
@@ -61,7 +62,7 @@ export function ProjectListPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {data?.projects.map((project) => (
+          {data?.projects.map((project: ProjectSummary) => (
             <Link key={project.projectId} to={`/projects/${project.projectId}`}>
               <Card className="group border-2 hover:border-primary/50 hover:shadow-lg transition-all h-full cursor-pointer">
                 <CardHeader>

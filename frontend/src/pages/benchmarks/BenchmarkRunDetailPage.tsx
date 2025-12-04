@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useGetBenchmarkRun, useGetBenchmark } from '@/api/generated/benchmarks-controller/benchmarks-controller'
+import type { TargetTestCaseDto } from '@/api/generated/openAPIDefinition.schemas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -86,7 +87,7 @@ export function BenchmarkRunDetailPage() {
     // Create chart data points
     return loads.map(load => {
       const baselineRDM = data.baselineTestCase.relativeDomainMetrics[load]
-      const targetTestCase = data.targetTestCases.find(tc => tc.load === load)
+      const targetTestCase = data.targetTestCases.find((tc: TargetTestCaseDto) => tc.load === load)
 
       return {
         load,
@@ -300,8 +301,8 @@ export function BenchmarkRunDetailPage() {
 
   // Calculate key metrics for dashboard
   const totalTestCases = data.targetTestCases?.length || 0
-  const completedTestCases = data.targetTestCases?.filter(tc => tc.status === 'COMPLETED').length || 0
-  const failedTestCases = data.targetTestCases?.filter(tc => tc.status === 'FAILED').length || 0
+  const completedTestCases = data.targetTestCases?.filter((tc: TargetTestCaseDto) => tc.status === 'COMPLETED').length || 0
+  const failedTestCases = data.targetTestCases?.filter((tc: TargetTestCaseDto) => tc.status === 'FAILED').length || 0
 
   return (
     <div className="space-y-6">
@@ -838,7 +839,7 @@ export function BenchmarkRunDetailPage() {
             {data.experimentResults.operationExperimentResults && Object.keys(data.experimentResults.operationExperimentResults).length > 0 && (() => {
               // Calculate max load from target test cases
               const maxLoad = data.targetTestCases && data.targetTestCases.length > 0
-                ? Math.max(...data.targetTestCases.map(tc => tc.load))
+                ? Math.max(...data.targetTestCases.map((tc: TargetTestCaseDto) => tc.load))
                 : null
 
               return (
@@ -989,7 +990,7 @@ export function BenchmarkRunDetailPage() {
 
             {/* Target Info */}
             {data.targetTestCases && data.targetTestCases.length > 0 && (() => {
-              const testCase = data.targetTestCases.find(tc => tc.load.toString() === selectedLoad)
+              const testCase = data.targetTestCases.find((tc: TargetTestCaseDto) => tc.load.toString() === selectedLoad)
               if (!testCase) return null
 
               return (
@@ -1033,7 +1034,7 @@ export function BenchmarkRunDetailPage() {
 
           {/* Combined Operation Metrics Table */}
           {data.baselineTestCase?.operationMetrics && data.targetTestCases && data.targetTestCases.length > 0 && (() => {
-            const testCase = data.targetTestCases.find(tc => tc.load.toString() === selectedLoad)
+            const testCase = data.targetTestCases.find((tc: TargetTestCaseDto) => tc.load.toString() === selectedLoad)
             if (!testCase?.operationMetrics) return null
 
             // Get all unique operation IDs
@@ -1196,10 +1197,10 @@ export function BenchmarkRunDetailPage() {
 
             {/* Target K6 Output */}
             {data.targetTestCases && data.targetTestCases.length > 0 && (() => {
-              const testCase = data.targetTestCases.find(tc => tc.load.toString() === selectedLoad)
+              const testCase = data.targetTestCases.find((tc: TargetTestCaseDto) => tc.load.toString() === selectedLoad)
               if (!testCase?.k6Output) return null
 
-              const testCaseIndex = data.targetTestCases.findIndex(tc => tc.id === testCase.id)
+              const testCaseIndex = data.targetTestCases.findIndex((tc: TargetTestCaseDto) => tc.id === testCase.id)
 
               return (
                 <div className="space-y-2">

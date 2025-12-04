@@ -3,6 +3,7 @@ import {
   useGetSystemUnderTest,
   useDeleteSystemUnderTest,
 } from '@/api/generated/system-under-test-controller/system-under-test-controller'
+import type { DatabaseSeedConfigDto } from '@/api/generated/openAPIDefinition.schemas'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -159,7 +160,7 @@ export function SystemUnderTestDetailPage() {
           <CardContent>
             {data.databaseSeedConfigs && data.databaseSeedConfigs.length > 0 ? (
               <div className="space-y-4">
-                {data.databaseSeedConfigs.map((dbConfig, index) => (
+                {data.databaseSeedConfigs.map((dbConfig: DatabaseSeedConfigDto, index: number) => (
                   <div key={index} className="p-4 rounded-lg bg-muted/50 border space-y-3">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-xs">

@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useListBenchmarkRuns } from '@/api/generated/benchmarks-controller/benchmarks-controller'
+import type { BenchmarkRunSummary } from '@/api/generated/openAPIDefinition.schemas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -88,7 +89,7 @@ export function BenchmarkRunListPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {data.benchmarkRuns.map((run) => (
+              {data.benchmarkRuns.map((run: BenchmarkRunSummary) => (
                 <Link
                   key={run.benchmarkRunId}
                   to={`/benchmarks/${benchmarkId}/runs/${run.benchmarkRunId}`}

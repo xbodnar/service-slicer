@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Loader2, FlaskConical, ArrowRight, Calendar } from 'lucide-react'
 import { formatDistance } from 'date-fns'
+import type { BenchmarkSummary } from '@/api/generated/openAPIDefinition.schemas'
 
 export function BenchmarkListPage() {
   const { data, isLoading, error } = useBenchmarksList()
@@ -61,7 +62,7 @@ export function BenchmarkListPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {data?.benchmarks.map((benchmark) => (
+          {data?.benchmarks.map((benchmark: BenchmarkSummary) => (
             <Link key={benchmark.benchmarkId} to={`/benchmarks/${benchmark.benchmarkId}`}>
               <Card className="group border-2 hover:border-primary/50 hover:shadow-lg transition-all h-full cursor-pointer">
                 <CardHeader>

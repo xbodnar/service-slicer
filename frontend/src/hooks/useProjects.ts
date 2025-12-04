@@ -71,7 +71,7 @@ export function useRebuildProjectGraph() {
 
   return useRebuildGraphGenerated({
     mutation: {
-      onSuccess: (_, { projectId }) => {
+      onSuccess: (_: unknown, { projectId }: { projectId: string }) => {
         queryClient.invalidateQueries({ queryKey: ['/projects', projectId] })
       },
     },

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useGetOperationalSetting, useDeleteOperationalSetting } from '@/api/generated/operational-setting-controller/operational-setting-controller'
+import type { BehaviorModel, ApiRequest } from '@/api/generated/openAPIDefinition.schemas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -149,7 +150,7 @@ export function OperationalSettingDetailPage() {
             <p className="text-sm text-muted-foreground italic">No behavior models defined (will be auto-generated)</p>
           ) : (
             <div className="space-y-4">
-              {config.usageProfile.map((model, idx) => (
+              {config.usageProfile.map((model: BehaviorModel, idx: number) => (
                 <Card key={idx} className="bg-muted/30">
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -168,7 +169,7 @@ export function OperationalSettingDetailPage() {
                     {model.steps && model.steps.length > 0 && (
                       <div className="space-y-2 pt-2 border-t">
                         <p className="text-sm font-medium">Request Steps:</p>
-                        {model.steps.map((step, stepIdx) => {
+                        {model.steps.map((step: ApiRequest, stepIdx: number) => {
                           const expanded = isStepExpanded(idx, stepIdx)
                           const hasHeaders = step.headers && Object.keys(step.headers).length > 0
                           const hasParams = step.params && Object.keys(step.params).length > 0

@@ -56,7 +56,7 @@ export function useUpdateBenchmark() {
 
   return useUpdateBenchmarkGenerated({
     mutation: {
-      onSuccess: (_data, variables) => {
+      onSuccess: (_data: unknown, variables: { benchmarkId: string }) => {
         // Invalidate benchmark list
         queryClient.invalidateQueries({ queryKey: ['/benchmarks'] })
         // Invalidate specific benchmark
@@ -77,7 +77,7 @@ export function useValidateOperationalSetting() {
 
   return useValidateOperationalSettingGenerated({
     mutation: {
-      onSuccess: (_data, variables) => {
+      onSuccess: (_data: unknown, variables: { benchmarkId: string }) => {
         // Invalidate specific benchmark to refresh validation status
         queryClient.invalidateQueries({
           queryKey: getGetBenchmarkQueryKey(variables.benchmarkId),
