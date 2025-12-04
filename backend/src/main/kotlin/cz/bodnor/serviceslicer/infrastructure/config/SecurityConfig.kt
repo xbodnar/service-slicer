@@ -30,6 +30,9 @@ class SecurityConfig {
     @Value("\${app.security.admin.password}")
     private lateinit var adminPassword: String
 
+    @Value("\${app.security.cors.allowed-origin-patterns:http://localhost:*,http://127.0.0.1:*}")
+    private lateinit var allowedOriginPatterns: List<String>
+
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
@@ -66,7 +69,7 @@ class SecurityConfig {
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration =
             CorsConfiguration().apply {
-                allowedOriginPatterns = listOf("http://localhost:*", "http://127.0.0.1:*")
+                allowedOriginPatterns = this@SecurityConfig.allowedOriginPatterns
                 allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                 allowedHeaders = listOf("*")
                 allowCredentials = true
