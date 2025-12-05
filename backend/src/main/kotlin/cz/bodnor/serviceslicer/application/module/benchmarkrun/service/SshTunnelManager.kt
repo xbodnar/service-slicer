@@ -73,6 +73,19 @@ class SshTunnelManager(
         )
     }
 
+    fun <T> withOptionalTunnel(
+        remotePort: Int,
+        block: (Int) -> T,
+    ): T {
+        if (remoteExecutionProperties.enabled) {
+            openTunnel(remotePort).use { tunnel ->
+                return block(tunnel.localPort)
+            }
+        } else {
+            return block(remotePort)
+        }
+    }
+
     private fun findAvailablePort(): Int {
         ServerSocket(0).use { socket ->
             return socket.localPort

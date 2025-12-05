@@ -38,3 +38,8 @@ loadtest:
     username: ${LOADTEST_USER}
     ssh-key-path: ${LOADTEST_SSH_KEY_PATH}
     work-dir: ${LOADTEST_WORK_DIR}
+
+k6:
+  docker-network-config:
+    network-name: ${DOCKER_NETWORK_NAME}
+    container-name: ${DOCKER_CONTAINER_NAME}

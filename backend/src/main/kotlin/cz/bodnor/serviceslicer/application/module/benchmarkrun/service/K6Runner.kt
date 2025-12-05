@@ -13,11 +13,7 @@ import java.util.UUID
 
 @Service
 class K6Runner(
-    private val k6Properties: K6Properties,
     private val k6CommandExecutor: K6CommandExecutor,
-    private val prometheusProperties: PrometheusProperties,
-    private val objectMapper: ObjectMapper,
-    private val remoteExecutionProperties: RemoteExecutionProperties,
     private val sshTunnelManager: SshTunnelManager,
 ) {
 
@@ -36,37 +32,16 @@ class K6Runner(
     ): K6Result {
         logger.info { "Executing k6 validation run..." }
 
-        if (remoteExecutionProperties.enabled) {
-            sshTunnelManager.openTunnel(appPort).use { tunnel ->
-                logger.info {
-                    "Using SSH tunnel for validation: localhost:${tunnel.localPort} -> ${remoteExecutionProperties.host}:$appPort"
-                }
-
-                val startTime = Instant.now()
-                val result = k6CommandExecutor.executeValidation(operationalSettingId, appPort, tunnel.localPort)
-                val endTime = Instant.now()
-
-                if (result.exitCode != 0) {
-                    error("k6 validation failed with exit code ${result.exitCode}, output:\n${result.output}")
-                }
-
-                return K6Result(
-                    startTime = startTime,
-                    endTime = endTime,
-                    output = result.output,
-                    summaryJson = null,
-                )
-            }
-        } else {
+        return sshTunnelManager.withOptionalTunnel(appPort) { port ->
             val startTime = Instant.now()
-            val result = k6CommandExecutor.executeValidation(operationalSettingId, appPort)
+            val result = k6CommandExecutor.executeValidation(operationalSettingId, port)
             val endTime = Instant.now()
 
             if (result.exitCode != 0) {
                 error("k6 validation failed with exit code ${result.exitCode}, output:\n${result.output}")
             }
 
-            return K6Result(
+            K6Result(
                 startTime = startTime,
                 endTime = endTime,
                 output = result.output,
@@ -84,52 +59,27 @@ class K6Runner(
     ): K6Result {
         logger.info { "Executing k6 test run..." }
 
-        if (remoteExecutionProperties.enabled) {
-            sshTunnelManager.openTunnel(appPort).use { tunnel ->
-                logger.info {
-                    "Using SSH tunnel for test: localhost:${tunnel.localPort} -> ${remoteExecutionProperties.host}:$appPort"
-                }
+        return sshTunnelManager.withOptionalTunnel(appPort) { port ->
 
-                // Warmup run
-                k6CommandExecutor.runK6WarmUp(operationalSettingId, testCaseId, appPort, load, tunnel.localPort)
-
-                // Main run
-                val startTime = Instant.now()
-                val result = k6CommandExecutor.runK6Test(
-                    operationalSettingId,
-                    testCaseId,
-                    appPort,
-                    load,
-                    testDuration,
-                    tunnel.localPort,
-                )
-                val endTime = Instant.now()
-
-                if (result.exitCode != 0) {
-                    error("k6 test failed with exit code ${result.exitCode}, output:\n${result.output}")
-                }
-
-                return K6Result(
-                    startTime = startTime,
-                    endTime = endTime,
-                    output = result.output,
-                    summaryJson = null,
-                )
-            }
-        } else {
             // Warmup run
-            k6CommandExecutor.runK6WarmUp(operationalSettingId, testCaseId, appPort, load)
+            k6CommandExecutor.runK6WarmUp(operationalSettingId, testCaseId, port, load)
 
             // Main run
             val startTime = Instant.now()
-            val result = k6CommandExecutor.runK6Test(operationalSettingId, testCaseId, appPort, load, testDuration)
+            val result = k6CommandExecutor.runK6Test(
+                operationalSettingId,
+                testCaseId,
+                port,
+                load,
+                testDuration,
+            )
             val endTime = Instant.now()
 
             if (result.exitCode != 0) {
                 error("k6 test failed with exit code ${result.exitCode}, output:\n${result.output}")
             }
 
-            return K6Result(
+            K6Result(
                 startTime = startTime,
                 endTime = endTime,
                 output = result.output,
