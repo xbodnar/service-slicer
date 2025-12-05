@@ -206,9 +206,6 @@ export function BenchmarkCreatePage() {
                           <div className="flex items-center gap-2">
                             <Server className="h-4 w-4" />
                             {system.name}
-                            {system.description && (
-                              <span className="text-xs text-muted-foreground">- {system.description}</span>
-                            )}
                           </div>
                         </SelectItem>
                       ))}
@@ -236,9 +233,6 @@ export function BenchmarkCreatePage() {
                           <div className="flex items-center gap-2">
                             <Server className="h-4 w-4" />
                             {system.name}
-                            {system.description && (
-                              <span className="text-xs text-muted-foreground">- {system.description}</span>
-                            )}
                           </div>
                         </SelectItem>
                       ))}
