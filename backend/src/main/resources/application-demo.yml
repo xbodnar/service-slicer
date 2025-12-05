@@ -28,3 +28,12 @@ app:
     cors:
       allowed-origin-patterns:
         - ${DEMO_ORIGIN}
+
+loadtest:
+  remote:
+    enabled: true
+    host: ${LOADTEST_HOST}
+    port: ${LOADTEST_PORT}
+    username: ${LOADTEST_USER}
+    ssh-key-path: ${LOADTEST_SSH_KEY_PATH}
+    work-dir: ${LOADTEST_WORK_DIR}
