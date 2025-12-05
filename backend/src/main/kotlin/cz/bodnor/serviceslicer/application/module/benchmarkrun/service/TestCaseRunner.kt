@@ -65,7 +65,7 @@ class TestCaseRunner(
 
         var k6WorkDir: Path? = null
         try {
-            // Prepare work directory
+            // Prepare work directory in the shared k6 scripts location
             k6WorkDir = Files.createTempDirectory("k6-run-")
             val k6ScriptPath = copyK6ScriptToWorkDir(k6WorkDir)
             val configJsonPath = prepareOperationalSettingFile(benchmark.operationalSetting, k6WorkDir)

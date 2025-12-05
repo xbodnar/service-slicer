@@ -7,9 +7,7 @@ import java.nio.file.Path
 import java.util.spi.ToolProvider
 
 @Service
-class JdepsService(
-    @Value("\${app.workdir}") private val workDir: Path,
-) {
+class JdepsService {
 
     private val jdeps = ToolProvider.findFirst("jdeps").orElseThrow { IllegalStateException("jdeps not found") }
 
@@ -51,13 +49,13 @@ class JdepsService(
             "-filter:none",
             "-include", includeRegex,
             "-e", edgeRegex,
-            "--dot-output", workDir.toString(),
+            "--dot-output", jarFile.parent.toString(),
             jarFile.toString(),
         )
 
         require(result == 0) { "jdeps failed with exit code $result" }
 
-        return workDir.resolve(jarFile.fileName.toString() + ".dot")
+        return jarFile.parent.resolve(jarFile.fileName.toString() + ".dot")
     }
 
     private fun escapePkg(pkg: String): String = pkg.replace(".", "\\.")

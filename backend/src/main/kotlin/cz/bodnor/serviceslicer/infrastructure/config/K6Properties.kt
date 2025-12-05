@@ -10,11 +10,6 @@ data class K6Properties(
     val dockerImage: String = "grafana/k6:latest",
 
     /**
-     * Directory where k6 test scripts are stored.
-     */
-    val scriptsDir: String = "data/k6-scripts",
-
-    /**
      * Default test duration for k6 tests.
      */
     val testDuration: String = "1m",

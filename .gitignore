@@ -35,5 +35,9 @@ build/
 ### Local Properties ###
 **/application-local.**
 
+### Environment Files ###
+.env
+env/
+
 ### Project Data
 data/

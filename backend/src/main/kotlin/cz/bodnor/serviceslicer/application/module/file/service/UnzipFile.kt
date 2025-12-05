@@ -6,18 +6,20 @@ import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipInputStream
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.deleteRecursively
 import kotlin.io.path.extension
 
 @Component
-class UnzipFile(
-    @Value("\${app.workdir}") private val projectWorkingDir: String,
-) {
+class UnzipFile {
 
+    @OptIn(ExperimentalPathApi::class)
     operator fun invoke(
         source: Path,
         destination: Path,
     ): Path {
-        val unzippedFolderPath = Path.of(projectWorkingDir).resolve(destination)
+        val workDir = Files.createTempDirectory("unzip-")
+        val unzippedFolderPath = workDir.resolve(destination)
 
         require(source.extension == "zip") { "Invalid file format - must end with .zip" }
 
@@ -26,33 +28,37 @@ class UnzipFile(
             Files.createDirectories(destination)
         }
 
-        // Open the zip file
-        ZipInputStream(FileInputStream(source.toFile())).use { zipInputStream ->
-            var zipEntry = zipInputStream.nextEntry
+        try {
+            // Open the zip file
+            ZipInputStream(FileInputStream(source.toFile())).use { zipInputStream ->
+                var zipEntry = zipInputStream.nextEntry
 
-            // Iterate through each entry in the zip file
-            while (zipEntry != null) {
-                val entryPath = destination.resolve(zipEntry.name)
+                // Iterate through each entry in the zip file
+                while (zipEntry != null) {
+                    val entryPath = destination.resolve(zipEntry.name)
 
-                // Create directories if needed
-                if (zipEntry.isDirectory) {
-                    Files.createDirectories(entryPath)
-                } else {
-                    // Create parent directories if needed
-                    Files.createDirectories(entryPath.parent)
+                    // Create directories if needed
+                    if (zipEntry.isDirectory) {
+                        Files.createDirectories(entryPath)
+                    } else {
+                        // Create parent directories if needed
+                        Files.createDirectories(entryPath.parent)
 
-                    // Extract the file
-                    Files.newOutputStream(entryPath).use { outputStream ->
-                        zipInputStream.copyTo(outputStream)
+                        // Extract the file
+                        Files.newOutputStream(entryPath).use { outputStream ->
+                            zipInputStream.copyTo(outputStream)
+                        }
                     }
+
+                    // Close the current entry and move to the next one
+                    zipInputStream.closeEntry()
+                    zipEntry = zipInputStream.nextEntry
                 }
-
-                // Close the current entry and move to the next one
-                zipInputStream.closeEntry()
-                zipEntry = zipInputStream.nextEntry
             }
-        }
 
-        return unzippedFolderPath.resolve(source.fileName)
+            return unzippedFolderPath.resolve(source.fileName)
+        } finally {
+            workDir.deleteRecursively()
+        }
     }
 }

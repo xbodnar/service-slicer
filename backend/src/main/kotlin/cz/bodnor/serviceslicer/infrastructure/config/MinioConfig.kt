@@ -22,6 +22,7 @@ class MinioConfig(
 @ConfigurationProperties(prefix = "minio")
 data class MinioProperties(
     val endpoint: String,
+    val externalEndpoint: String,
     val accessKey: String,
     val secretKey: String,
     val bucketName: String,

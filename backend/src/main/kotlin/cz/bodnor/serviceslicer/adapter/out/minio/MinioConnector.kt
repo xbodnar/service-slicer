@@ -12,12 +12,26 @@ import io.minio.StatObjectResponse
 import io.minio.http.Method
 import io.minio.messages.Item
 import org.springframework.stereotype.Component
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
+import software.amazon.awssdk.auth.credentials.AwsCredentials
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.s3.S3Configuration
+import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import software.amazon.awssdk.services.s3.presigner.S3Presigner
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest
 import java.io.InputStream
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.fileSize
 import kotlin.text.toInt
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 @Component
 class MinioConnector(
@@ -29,25 +43,46 @@ class MinioConnector(
         .credentials(minioProperties.accessKey, minioProperties.secretKey)
         .build()
 
-    fun getPresignedObjectUrl(storageKey: String): String = minioClient.getPresignedObjectUrl(
-        GetPresignedObjectUrlArgs.builder()
-            .method(Method.PUT)
+    // used only for presigning; does NOT need to be reachable from inside Docker
+    private val s3Presigner = S3Presigner.builder()
+        .endpointOverride(URI.create(minioProperties.externalEndpoint))
+        .credentialsProvider(
+            StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(minioProperties.accessKey, minioProperties.secretKey),
+            ),
+        )
+        .region(Region.EU_CENTRAL_1)
+        .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+        .build()
+
+    fun getPresignedObjectUrl(storageKey: String): String {
+        val putObjectRequest = PutObjectRequest.builder()
             .bucket(minioProperties.bucketName)
-            .`object`(storageKey)
-            .expiry(minioProperties.presignedUrlExpiration.toInt(), TimeUnit.SECONDS)
-            .build(),
-    )
+            .key(storageKey)
+            .build()
+
+        val presignRequest = PutObjectPresignRequest.builder()
+            .signatureDuration(minioProperties.presignedUrlExpiration.seconds.toJavaDuration())
+            .putObjectRequest(putObjectRequest)
+            .build()
+
+        return s3Presigner.presignPutObject(presignRequest).url().toString()
+    }
 
     fun getPresignedDownloadUrl(storageKey: String): String {
         require(!storageKey.contains("..")) { "Invalid storage key" }
-        return minioClient.getPresignedObjectUrl(
-            GetPresignedObjectUrlArgs.builder()
-                .method(Method.GET)
-                .bucket(minioProperties.bucketName)
-                .`object`(storageKey)
-                .expiry(minioProperties.presignedUrlExpiration.toInt(), TimeUnit.SECONDS)
-                .build(),
-        )
+
+        val getObjectRequest = GetObjectRequest.builder()
+            .bucket(minioProperties.bucketName)
+            .key(storageKey)
+            .build()
+
+        val presignRequest = GetObjectPresignRequest.builder()
+            .signatureDuration(Duration.ofSeconds(minioProperties.presignedUrlExpiration.toLong()))
+            .getObjectRequest(getObjectRequest)
+            .build()
+
+        return s3Presigner.presignGetObject(presignRequest).url().toString()
     }
 
     fun getObjectMetadata(storageKey: String): StatObjectResponse = minioClient.statObject(

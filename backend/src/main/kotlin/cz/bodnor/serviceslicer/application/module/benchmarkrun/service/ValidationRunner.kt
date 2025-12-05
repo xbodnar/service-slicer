@@ -6,6 +6,7 @@ import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
 import cz.bodnor.serviceslicer.domain.benchmark.ValidationState
 import cz.bodnor.serviceslicer.domain.operationalsetting.OperationalSetting
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
+import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
 import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.core.io.ResourceLoader
@@ -22,6 +23,7 @@ class ValidationRunner(
     private val sutReadService: SystemUnderTestReadService,
     private val sutRunner: SystemUnderTestRunner,
     private val k6Runner: K6Runner,
+    private val k6Properties: K6Properties,
     private val objectMapper: ObjectMapper,
     private val resourceLoader: ResourceLoader,
     private val remoteExecutionProperties: RemoteExecutionProperties,
@@ -43,7 +45,7 @@ class ValidationRunner(
             // Start the SUT (blocking call - waits until SUT is healthy and ready)
             sutRunner.startSUT(sut)
 
-            // Prepare work directory
+            // Prepare work directory in the shared k6 scripts location
             k6WorkDir = Files.createTempDirectory("k6-validation-")
             val k6ScriptPath = copyValidationScriptToWorkDir(k6WorkDir)
             val configJsonPath = prepareLoadTestConfigFile(benchmark.operationalSetting, k6WorkDir)

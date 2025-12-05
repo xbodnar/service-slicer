@@ -42,16 +42,13 @@ management:
     tags:
       application: ${spring.application.name}
 
-app:
-  workdir: data
-
 k6:
   docker-image: grafana/k6:latest
-  scripts-dir: ${app.workdir}/k6-scripts
   test-duration: 1m
 
 minio:
   endpoint: http://localhost:9000
+  external-endpoint: http://localhost:9000
   access-key: minioadmin
   secret-key: minioadmin
   bucket-name: serviceslicer
