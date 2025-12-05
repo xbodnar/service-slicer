@@ -3,30 +3,11 @@ import {check, sleep} from 'k6';
 
 // --- CONFIG FROM ORCHESTRATOR / GENERATED ---
 const BASE_URL = __ENV.BASE_URL;
+const CONFIG_URL = __ENV.CONFIG_URL;
+
 const TARGET_VUS = parseInt(__ENV.TARGET_VUS);
 const DURATION = __ENV.DURATION;
-const OPERATIONAL_SETTING_FILE = __ENV.OPERATIONAL_SETTING_FILE;
 const TEST_CASE_ID = __ENV.TEST_CASE_ID;
-
-// Validate required environment variables
-const requiredEnvVars = {
-    BASE_URL,
-    TARGET_VUS, // load
-    DURATION,
-    OPERATIONAL_SETTING_FILE,
-    TEST_CASE_ID,
-};
-
-const missingVars = Object.entries(requiredEnvVars)
-    .filter(([name, value]) => !value)
-    .map(([name]) => name);
-
-if (missingVars.length > 0) {
-    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
-}
-
-const operationalSetting = JSON.parse(open(OPERATIONAL_SETTING_FILE));
-const usageProfile = operationalSetting.usageProfile;
 
 export const options = {
     vus: TARGET_VUS,
@@ -59,7 +40,8 @@ function randomThinkTime(thinkFromMs, thinkToMs) {
     return ms / 1000.0; // seconds
 }
 
-function pickBehaviorModel() {
+function pickBehaviorModel(operationalSetting) {
+    const usageProfile = operationalSetting.usageProfile;
     const r = Math.random();
     let cumulative = 0.0;
     for (const bm of usageProfile) {
@@ -221,8 +203,29 @@ function executeStep(step, ctx) {
     return ok;
 }
 
-export default function () {
-    const bm = pickBehaviorModel();
+// Setup function - fetch configuration from CONFIG_URL
+export function setup() {
+    if (TEST_CASE_ID === undefined) {
+        throw new Error('TEST_CASE_ID is not defined');
+    }
+
+    console.log(`Fetching configuration from: ${CONFIG_URL}`);
+
+    const res = http.get(CONFIG_URL);
+
+    if (res.status !== 200) {
+        throw new Error(`Failed to fetch config from ${CONFIG_URL}: status ${res.status}, body: ${res.body}`);
+    }
+
+    const operationalSetting = res.json();
+    console.log(`Configuration loaded successfully`);
+
+    return operationalSetting;
+}
+
+export default function (operationalSetting) {
+    const bm = pickBehaviorModel(operationalSetting);
+
     const context = {
         behaviorId: bm.id,
         actor: bm.actor,

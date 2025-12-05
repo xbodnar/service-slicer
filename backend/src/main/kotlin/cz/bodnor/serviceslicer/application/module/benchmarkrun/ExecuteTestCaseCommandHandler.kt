@@ -49,6 +49,10 @@ class ExecuteTestCaseCommandHandler(
 
         self.afterTestCaseRun(benchmarkRun.id, testCaseToRun.id, result)
 
+        if (result.isFailure) {
+            throw result.exceptionOrNull() ?: UnknownError("Unknown error")
+        }
+
         return ExecuteTestCaseCommand.Result(true)
     }
 

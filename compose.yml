@@ -6,7 +6,9 @@ services:
       - 'POSTGRES_PASSWORD=postgres'
       - 'POSTGRES_USER=postgres'
     ports:
-      - '5432:5432'
+      - '33781:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
 
   neo4j:
     image: 'neo4j:5.26.13-community'
@@ -20,6 +22,8 @@ services:
     ports:
       - '7474:7474'
       - '7687:7687'
+    volumes:
+      - neo4j-data:/data
 
   minio:
     image: 'minio/minio:latest'
@@ -76,6 +80,8 @@ networks:
     name: ${NETWORK_NAME}
 
 volumes:
+  postgres-data:
+  neo4j-data:
   minio-data:
   grafana-data:
   prometheus-data:

@@ -39,6 +39,10 @@ loadtest:
     ssh-key-path: ${LOADTEST_SSH_KEY_PATH}
     work-dir: ${LOADTEST_WORK_DIR}
 
+prometheus:
+  remote-write-url: http://prometheus:9090/api/v1/write
+  query-url: http://prometheus:9090
+
 k6:
   docker-network-config:
     network-name: ${DOCKER_NETWORK_NAME}

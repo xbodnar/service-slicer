@@ -11,6 +11,7 @@ import java.util.UUID
 class K6CommandExecutor(
     private val k6Properties: K6Properties,
     private val localCommandExecutor: LocalCommandExecutor,
+    private val prometheusProperties: PrometheusProperties,
 ) {
 
     fun executeValidation(
@@ -97,8 +98,12 @@ class K6CommandExecutor(
             "-e", "TEST_CASE_ID=$testCaseId",
             "-e", "TARGET_VUS=$load",
             "-e", "DURATION=$duration",
+            "-e", "K6_PROMETHEUS_RW_SERVER_URL=${prometheusProperties.remoteWriteUrl}",
+            "-e", "K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true",
             k6Properties.dockerImage,
             "run",
+            "--out", "experimental-prometheus-rw",
+            "--summary-export", "/scripts/summary.json",
             ScriptFile.EXPERIMENT.file.toString(),
         )
 
