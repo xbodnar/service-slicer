@@ -64,6 +64,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /usr/bin/docker:/usr/bin/docker:ro
       - /usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins:ro
+      - /home/deploy/.ssh/id_ed25519:/home/deploy/.ssh/id_ed25519:ro
 
 volumes:
   minio-data:
