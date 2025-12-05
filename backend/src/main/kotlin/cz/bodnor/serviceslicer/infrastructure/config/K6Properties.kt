@@ -4,11 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "k6")
 data class K6Properties(
-    /**
-     * Docker image to use for k6 load tests.
-     */
-    val dockerImage: String = "grafana/k6:latest",
-
+    val dockerImage: String = "ghcr.io/xbodnar/k6:latest",
     /**
      * Default test duration for k6 tests.
      */

@@ -3,10 +3,10 @@ import {check, sleep} from 'k6';
 
 // --- CONFIG FROM ORCHESTRATOR / GENERATED ---
 const BASE_URL = __ENV.BASE_URL;
-const TARGET_VUS = parseInt(__ENV.TARGET_VUS);
-const DURATION = __ENV.DURATION;
 const OPERATIONAL_SETTING_FILE = __ENV.OPERATIONAL_SETTING_FILE;
 const TEST_CASE_ID = __ENV.TEST_CASE_ID;
+const TARGET_VUS = parseInt(__ENV.TARGET_VUS);
+const DURATION = __ENV.DURATION;
 
 // Validate required environment variables
 const requiredEnvVars = {

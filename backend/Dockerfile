@@ -16,6 +16,19 @@ RUN mvn clean package -DskipTests -P docker-build
 FROM eclipse-temurin:21-jdk
 WORKDIR /app
 
+# Install docker CLI and k6
+RUN apt-get update && apt-get install -y \
+    curl \
+    && curl -fsSL https://get.docker.com -o get-docker.sh \
+    && sh get-docker.sh \
+    && K6_VERSION=v1.4.2 \
+    && ARCH=$(dpkg --print-architecture) \
+    && curl -L "https://github.com/grafana/k6/releases/download/${K6_VERSION}/k6-${K6_VERSION}-linux-${ARCH}.tar.gz" -o k6.tar.gz \
+    && tar -xzf k6.tar.gz --strip-components=1 -C /usr/local/bin \
+    && rm k6.tar.gz \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* get-docker.sh
+
 # Copy the built JAR from build stage
 COPY --from=build /app/target/ServiceSlicer-*.jar app.jar
 

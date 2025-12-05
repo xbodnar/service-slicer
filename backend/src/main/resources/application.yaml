@@ -43,7 +43,7 @@ management:
       application: ${spring.application.name}
 
 k6:
-  docker-image: grafana/k6:latest
+  docker-image: ghcr.io/xbodnar/ss-k6:latest
   test-duration: 1m
 
 minio:

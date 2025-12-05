@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRun
-import cz.bodnor.serviceslicer.domain.operationalsetting.OperationalSetting
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
 import cz.bodnor.serviceslicer.domain.testcase.TestCase
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
@@ -13,12 +12,7 @@ import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.core.io.ResourceLoader
 import org.springframework.stereotype.Service
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.time.Instant
-import java.util.UUID
-import kotlin.io.path.writeText
 
 @Service
 class TestCaseRunner(
@@ -63,35 +57,13 @@ class TestCaseRunner(
         // Start the SUT (blocking call - waits until SUT is healthy and ready)
         sutRunner.startSUT(sut)
 
-        var k6WorkDir: Path? = null
         try {
-            // Prepare work directory in the shared k6 scripts location
-            k6WorkDir = Files.createTempDirectory("k6-run-")
-            val k6ScriptPath = copyK6ScriptToWorkDir(k6WorkDir)
-            val configJsonPath = prepareOperationalSettingFile(benchmark.operationalSetting, k6WorkDir)
-
-            // Build environment variables for k6
-            val envVars =
-                buildEnvVars(
-                    appPort = sut.dockerConfig.appPort,
-                    load = load,
-                    testCaseId = testCase.id,
-                    testDuration = benchmarkRun.testDuration.toString(),
-                )
-
-            // Run WARMUP k6 tests (no metrics)
-            k6Runner.runTest(
-                scriptPath = k6ScriptPath,
-                operationalSettingPath = configJsonPath,
-                environmentVariables = envVars + mapOf("DURATION" to "30s"),
-                ignoreMetrics = true,
-            )
-
-            // Run k6 test and record start/end times
             val k6Result = k6Runner.runTest(
-                scriptPath = k6ScriptPath,
-                operationalSettingPath = configJsonPath,
-                environmentVariables = envVars,
+                operationalSettingId = benchmark.operationalSetting.id,
+                testCaseId = testCase.id,
+                appPort = sut.dockerConfig.appPort,
+                load = load,
+                testDuration = benchmarkRun.testDuration.toString(),
             )
 
             val performanceMetrics = queryLoadTestMetrics(
@@ -110,59 +82,6 @@ class TestCaseRunner(
         } finally {
             logger.info { "Test Case execution finished, cleaning up..." }
             sutRunner.stopSUT()
-            k6WorkDir?.toFile()?.deleteRecursively()
         }
-    }
-
-    private fun buildEnvVars(
-        appPort: Int,
-        load: Int,
-        testCaseId: UUID,
-        testDuration: String,
-    ): Map<String, String> {
-        val sutHost = getSutHost()
-        val baseUrl = "http://$sutHost:$appPort"
-
-        return mapOf(
-            "BASE_URL" to baseUrl,
-            "TARGET_VUS" to load.toString(),
-            "DURATION" to testDuration,
-            "TEST_CASE_ID" to testCaseId.toString(),
-        )
-    }
-
-    // K6 runs in a Docker container:
-    // - If SUT is deployed locally, use host.docker.internal to reach host
-    // - If SUT is deployed remotely, use the remote host's IP directly
-    private fun getSutHost(): String = if (remoteExecutionProperties.enabled) {
-        sutRunner.commandExecutor.getTargetHost()
-    } else {
-        "host.docker.internal"
-    }
-
-    private fun prepareOperationalSettingFile(
-        operationalSetting: OperationalSetting,
-        workDir: Path,
-    ): Path {
-        val configFile = workDir.resolve("operational-setting.json")
-        configFile.writeText(objectMapper.writeValueAsString(operationalSetting))
-
-        return configFile
-    }
-
-    private fun copyK6ScriptToWorkDir(workDir: Path): Path {
-        // Get the k6 test script from resources
-        val resource = resourceLoader.getResource("classpath:k6/experiment-template.js")
-        if (!resource.exists()) {
-            throw IllegalStateException("k6 test script not found: k6/experiment-template.js")
-        }
-
-        // Copy script to the work directory
-        val scriptFile = workDir.resolve("experiment-template.js")
-        resource.inputStream.use { input ->
-            Files.copy(input, scriptFile, StandardCopyOption.REPLACE_EXISTING)
-        }
-
-        return scriptFile
     }
 }

@@ -1,13 +1,9 @@
 import http from 'k6/http';
 import {check, sleep} from 'k6';
 
+// --- CONFIG FROM ORCHESTRATOR / GENERATED ---
 const BASE_URL = __ENV.BASE_URL;
 const CONFIG_URL = __ENV.CONFIG_URL;
-
-// TODO: Fetch config from CONFIG_URL
-// const operationalSetting = ...
-
-const usageProfile = operationalSetting.usageProfile;
 
 // Use per-vu-iterations executor to run all behavior models once
 export const options = {
@@ -135,6 +131,14 @@ function executeStep(step, ctx) {
     const reqParams = {
         headers: headers,
         params: params,
+        tags: {
+            behavior_id: ctx.behaviorId,
+            actor: ctx.actor,
+            component: step.component || 'unknown',
+            operation: step.operationId,
+            method: step.method,
+            path: step.path,
+        },
     };
 
     let res;
@@ -207,8 +211,25 @@ function executeBehaviorModel(bm) {
     }
 }
 
+// Setup function - fetch configuration from CONFIG_URL
+export function setup() {
+    console.log(`Fetching configuration from: ${CONFIG_URL}`);
+
+    const res = http.get(CONFIG_URL);
+
+    if (res.status !== 200) {
+        throw new Error(`Failed to fetch config from ${CONFIG_URL}: status ${res.status}, body: ${res.body}`);
+    }
+
+    const operationalSetting = res.json();
+    console.log(`Configuration loaded successfully`);
+
+    return operationalSetting;
+}
+
 // Main test function - run all behavior models sequentially
-export default function () {
+export default function (operationalSetting) {
+    const usageProfile = operationalSetting.usageProfile;
     console.log(`Starting validation run for ${usageProfile.length} behavior models`);
 
     for (const bm of usageProfile) {

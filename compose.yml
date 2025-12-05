@@ -63,8 +63,6 @@ services:
       - '8080:8080'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${DOCKER_BIN_PATH:-/usr/bin/docker}:/usr/bin/docker:ro
-      - ${DOCKER_PLUGINS_PATH:-/usr/libexec/docker/cli-plugins}:/usr/libexec/docker/cli-plugins:ro
       - ${SSH_KEY_PATH}:/app/.ssh/id_key:ro
 
 volumes:

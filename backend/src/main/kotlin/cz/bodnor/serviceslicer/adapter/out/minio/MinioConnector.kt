@@ -2,18 +2,15 @@ package cz.bodnor.serviceslicer.adapter.out.minio
 
 import cz.bodnor.serviceslicer.infrastructure.config.MinioProperties
 import io.minio.GetObjectArgs
-import io.minio.GetPresignedObjectUrlArgs
 import io.minio.ListObjectsArgs
 import io.minio.MinioClient
 import io.minio.PutObjectArgs
 import io.minio.RemoveObjectArgs
 import io.minio.StatObjectArgs
 import io.minio.StatObjectResponse
-import io.minio.http.Method
 import io.minio.messages.Item
 import org.springframework.stereotype.Component
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
-import software.amazon.awssdk.auth.credentials.AwsCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Configuration
@@ -27,9 +24,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
-import java.util.concurrent.TimeUnit
 import kotlin.io.path.fileSize
-import kotlin.text.toInt
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 

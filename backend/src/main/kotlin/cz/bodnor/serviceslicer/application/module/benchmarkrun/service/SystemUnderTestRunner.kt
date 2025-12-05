@@ -10,8 +10,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PreDestroy
 import org.springframework.stereotype.Service
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
@@ -378,27 +376,24 @@ class SystemUnderTestRunner(
 
     private fun waitHealthy(dockerConfig: DockerConfig) {
         val deadline = System.currentTimeMillis() + dockerConfig.startupTimeoutSeconds * 1000
-        val targetHost = commandExecutor.getTargetHost()
-        val url = URL("http://$targetHost:${dockerConfig.appPort}${dockerConfig.healthCheckPath}")
+        val healthUrl = "http://localhost:${dockerConfig.appPort}${dockerConfig.healthCheckPath}"
 
         while (System.currentTimeMillis() < deadline) {
             try {
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.connectTimeout = 2000
-                connection.readTimeout = 2000
-
-                val responseCode = connection.responseCode
-                if (responseCode == 200) {
-                    logger.debug { "SUT is healthy at $url" }
+                val result = commandExecutor.execute(
+                    listOf("curl", "-f", "-s", "-o", "/dev/null", "-w", "%{http_code}", healthUrl),
+                    null,
+                )
+                if (result.exitCode == 0 && result.output.trim() == "200") {
+                    logger.debug { "SUT is healthy at $healthUrl" }
                     return
                 }
-                logger.debug { "Health check returned $responseCode, retrying..." }
+                logger.debug { "Health check returned: ${result.output}, retrying..." }
             } catch (e: Exception) {
                 logger.debug { "Health check failed: ${e.message}, retrying..." }
             }
             Thread.sleep(1500)
         }
-        throw IllegalStateException("Timed out waiting for SUT health at $url")
+        throw IllegalStateException("Timed out waiting for SUT health at $healthUrl")
     }
 }

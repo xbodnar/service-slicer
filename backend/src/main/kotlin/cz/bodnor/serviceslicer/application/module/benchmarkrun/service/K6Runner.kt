@@ -4,17 +4,21 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
 import cz.bodnor.serviceslicer.infrastructure.config.PrometheusProperties
+import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.nio.file.Path
 import java.time.Instant
+import java.util.UUID
 
 @Service
 class K6Runner(
-    private val localCommandExecutor: LocalCommandExecutor,
     private val k6Properties: K6Properties,
+    private val k6CommandExecutor: K6CommandExecutor,
     private val prometheusProperties: PrometheusProperties,
     private val objectMapper: ObjectMapper,
+    private val remoteExecutionProperties: RemoteExecutionProperties,
+    private val sshTunnelManager: SshTunnelManager,
 ) {
 
     private val logger = KotlinLogging.logger {}
@@ -26,103 +30,112 @@ class K6Runner(
         val summaryJson: JsonNode? = null,
     )
 
-    fun runTest(
-        scriptPath: Path,
-        operationalSettingPath: Path,
-        environmentVariables: Map<String, String> = emptyMap(),
-        ignoreMetrics: Boolean = false,
+    fun runValidation(
+        operationalSettingId: UUID,
+        appPort: Int,
     ): K6Result {
-        logger.info { "Executing k6 ${if (ignoreMetrics) "warmup run..." else "test run..."}" }
-        val command = buildK6Command(scriptPath, operationalSettingPath, environmentVariables, ignoreMetrics)
+        logger.info { "Executing k6 validation run..." }
 
-        logger.debug { "Executing k6 command: ${command.joinToString(" ")}" }
+        if (remoteExecutionProperties.enabled) {
+            sshTunnelManager.openTunnel(appPort).use { tunnel ->
+                logger.info {
+                    "Using SSH tunnel for validation: localhost:${tunnel.localPort} -> ${remoteExecutionProperties.host}:$appPort"
+                }
 
-        val startTime = Instant.now()
-        val result = localCommandExecutor.execute(command, null)
-        val endTime = Instant.now()
+                val startTime = Instant.now()
+                val result = k6CommandExecutor.executeValidation(operationalSettingId, appPort, tunnel.localPort)
+                val endTime = Instant.now()
 
-        logger.info { "k6 test completed with exit code: ${result.exitCode}" }
-        if (result.exitCode != 0) {
-            error("k6 test failed with exit code ${result.exitCode}, output:\n${result.output}")
+                if (result.exitCode != 0) {
+                    error("k6 validation failed with exit code ${result.exitCode}, output:\n${result.output}")
+                }
+
+                return K6Result(
+                    startTime = startTime,
+                    endTime = endTime,
+                    output = result.output,
+                    summaryJson = null,
+                )
+            }
+        } else {
+            val startTime = Instant.now()
+            val result = k6CommandExecutor.executeValidation(operationalSettingId, appPort)
+            val endTime = Instant.now()
+
+            if (result.exitCode != 0) {
+                error("k6 validation failed with exit code ${result.exitCode}, output:\n${result.output}")
+            }
+
+            return K6Result(
+                startTime = startTime,
+                endTime = endTime,
+                output = result.output,
+                summaryJson = null,
+            )
         }
-
-        // Read the summary JSON file that k6 wrote
-        val summaryJsonContent = readSummaryJson(scriptPath)
-
-        return K6Result(
-            startTime = startTime,
-            endTime = endTime,
-            output = result.output,
-            summaryJson = objectMapper.readTree(summaryJsonContent),
-        )
     }
 
-    private fun buildK6Command(
-        scriptPath: Path,
-        operationalSettingPath: Path,
-        environmentVariables: Map<String, String>,
-        ignoreMetrics: Boolean,
-    ): List<String> {
-        val command = mutableListOf(
-            "docker",
-            "run",
-            "--rm",
-            // Add host.docker.internal mapping for Mac/Windows to reach host services
-            "--add-host",
-            "host.docker.internal:host-gateway",
-        )
+    fun runTest(
+        operationalSettingId: UUID,
+        testCaseId: UUID,
+        appPort: Int,
+        load: Int,
+        testDuration: String,
+    ): K6Result {
+        logger.info { "Executing k6 test run..." }
 
-        // Mount script directory (read-write so k6 can write summary.json)
-        val scriptDir = scriptPath.parent.toFile().absolutePath
-        command.addAll(
-            listOf(
-                "-v",
-                "$scriptDir:$CONTAINER_WORKDIR",
-            ),
-        )
+        if (remoteExecutionProperties.enabled) {
+            sshTunnelManager.openTunnel(appPort).use { tunnel ->
+                logger.info {
+                    "Using SSH tunnel for test: localhost:${tunnel.localPort} -> ${remoteExecutionProperties.host}:$appPort"
+                }
 
-        command.addAll(listOf("-e", "OPERATIONAL_SETTING_FILE=$CONTAINER_WORKDIR/${operationalSettingPath.fileName}"))
+                // Warmup run
+                k6CommandExecutor.runK6WarmUp(operationalSettingId, testCaseId, appPort, load, tunnel.localPort)
 
-        // Add environment variables
-        environmentVariables.forEach { (key, value) ->
-            command.addAll(listOf("-e", "$key=$value"))
-        }
+                // Main run
+                val startTime = Instant.now()
+                val result = k6CommandExecutor.runK6Test(
+                    operationalSettingId,
+                    testCaseId,
+                    appPort,
+                    load,
+                    testDuration,
+                    tunnel.localPort,
+                )
+                val endTime = Instant.now()
 
-        // Configure Prometheus remote write if enabled
-        if (!ignoreMetrics && !prometheusProperties.remoteWriteUrl.isNullOrBlank()) {
-            command.addAll(
-                listOf(
-                    "-e",
-                    "K6_PROMETHEUS_RW_SERVER_URL=${prometheusProperties.remoteWriteUrl}",
-                    "-e",
-                    "K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true",
-                ),
+                if (result.exitCode != 0) {
+                    error("k6 test failed with exit code ${result.exitCode}, output:\n${result.output}")
+                }
+
+                return K6Result(
+                    startTime = startTime,
+                    endTime = endTime,
+                    output = result.output,
+                    summaryJson = null,
+                )
+            }
+        } else {
+            // Warmup run
+            k6CommandExecutor.runK6WarmUp(operationalSettingId, testCaseId, appPort, load)
+
+            // Main run
+            val startTime = Instant.now()
+            val result = k6CommandExecutor.runK6Test(operationalSettingId, testCaseId, appPort, load, testDuration)
+            val endTime = Instant.now()
+
+            if (result.exitCode != 0) {
+                error("k6 test failed with exit code ${result.exitCode}, output:\n${result.output}")
+            }
+
+            return K6Result(
+                startTime = startTime,
+                endTime = endTime,
+                output = result.output,
+                summaryJson = null,
             )
-            logger.debug { "Configured Prometheus remote write to: ${prometheusProperties.remoteWriteUrl}" }
         }
-
-        // Add k6 image and command
-        command.addAll(
-            listOf(
-                k6Properties.dockerImage,
-                "run",
-            ),
-        )
-
-        // Add Prometheus output if configured
-        if (!ignoreMetrics && !prometheusProperties.remoteWriteUrl.isNullOrBlank()) {
-            command.add("--out")
-            command.add("experimental-prometheus-rw")
-        }
-
-        // Add JSON summary export for structured results
-        command.add("--summary-export")
-        command.add("$CONTAINER_WORKDIR/$SUMMARY_FILENAME")
-
-        // Add script path (inside container)
-        command.add("$CONTAINER_WORKDIR/${scriptPath.fileName}")
-
-        return command
     }
 
     private fun readSummaryJson(scriptPath: Path): String? {

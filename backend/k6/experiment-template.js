@@ -1,24 +1,36 @@
 import http from 'k6/http';
 import {check, sleep} from 'k6';
 
+// --- CONFIG FROM ORCHESTRATOR / GENERATED ---
 const BASE_URL = __ENV.BASE_URL;
-const CONFIG_URL = __ENV.CONFIG_URL;
+const TARGET_VUS = parseInt(__ENV.TARGET_VUS);
+const DURATION = __ENV.DURATION;
+const OPERATIONAL_SETTING_FILE = __ENV.OPERATIONAL_SETTING_FILE;
+const TEST_CASE_ID = __ENV.TEST_CASE_ID;
 
-// TODO: Fetch config from CONFIG_URL
-// const operationalSetting = ...
+// Validate required environment variables
+const requiredEnvVars = {
+    BASE_URL,
+    TARGET_VUS, // load
+    DURATION,
+    OPERATIONAL_SETTING_FILE,
+    TEST_CASE_ID,
+};
 
+const missingVars = Object.entries(requiredEnvVars)
+    .filter(([name, value]) => !value)
+    .map(([name]) => name);
+
+if (missingVars.length > 0) {
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+}
+
+const operationalSetting = JSON.parse(open(OPERATIONAL_SETTING_FILE));
 const usageProfile = operationalSetting.usageProfile;
 
-// Use per-vu-iterations executor to run all behavior models once
 export const options = {
-    scenarios: {
-        validation: {
-            executor: 'shared-iterations',
-            vus: 1,
-            iterations: 1,
-            maxDuration: '5m',
-        }
-    }
+    vus: TARGET_VUS,
+    duration: DURATION,
 };
 
 // Random value generators for creating unique test data
@@ -41,6 +53,23 @@ const randomGenerators = {
     'timestamp': () => Date.now(),
     'timestampSeconds': () => Math.floor(Date.now() / 1000)
 };
+
+function randomThinkTime(thinkFromMs, thinkToMs) {
+    const ms = thinkFromMs + Math.random() * (thinkToMs - thinkFromMs);
+    return ms / 1000.0; // seconds
+}
+
+function pickBehaviorModel() {
+    const r = Math.random();
+    let cumulative = 0.0;
+    for (const bm of usageProfile) {
+        const weight = bm.frequency || 0;
+        cumulative += weight;
+        if (r <= cumulative) return bm;
+    }
+    // Fallback: first model
+    return usageProfile[0];
+}
 
 function applyTemplateToString(str, ctx) {
     if (!str || typeof str !== 'string') return str;
@@ -115,9 +144,12 @@ function getFromJsonPath(json, path) {
 }
 
 function executeStep(step, ctx) {
-    console.log(`[DEBUG] Executing step ${step.operationId} with context:`, JSON.stringify(ctx));
-    const url = BASE_URL + applyTemplate(step.path, ctx);
-    console.log(`[DEBUG] Templated URL: ${url}`);
+    // Normalize URL to avoid double slashes
+    const path = applyTemplate(step.path, ctx);
+    const normalizedPath = path.startsWith('/') ? path : '/' + path;
+    const baseUrl = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
+    const url = baseUrl + normalizedPath;
+
     const headers = applyTemplate(step.headers || {}, ctx);
     const params = applyTemplate(step.params || {}, ctx);
     const body = applyTemplate(step.body || null, ctx);
@@ -127,14 +159,18 @@ function executeStep(step, ctx) {
         headers['Content-Type'] = 'application/json';
     }
 
-    console.log(`[DEBUG] Final headers:`, JSON.stringify(headers));
-    if (body) {
-        console.log(`[DEBUG] Templated body:`, JSON.stringify(body));
-    }
-
     const reqParams = {
         headers: headers,
         params: params,
+        tags: {
+            test_case_id: TEST_CASE_ID,
+            behavior_id: ctx.behaviorId,
+            actor: ctx.actor,
+            component: step.component || 'unknown',
+            operation: step.operationId,
+            method: step.method,
+            path: step.path,
+        },
     };
 
     let res;
@@ -169,51 +205,35 @@ function executeStep(step, ctx) {
 
     // Save response fields into context
     if (step.save) {
-        console.log(`[DEBUG] Save configuration found for step ${step.operationId}:`, JSON.stringify(step.save));
-        console.log(`[DEBUG] Response status: ${res.status}`);
-        console.log(`[DEBUG] Response body (raw): ${res.body}`);
-
         let jsonBody;
         try {
             jsonBody = res.json();
-            console.log(`[DEBUG] Parsed JSON body:`, JSON.stringify(jsonBody));
-        } catch (e) {
-            console.log(`[DEBUG] Failed to parse response as JSON:`, e);
+        } catch (_) {
             jsonBody = null;
         }
 
         for (const [varName, selector] of Object.entries(step.save)) {
-            const value = jsonBody ? getFromJsonPath(jsonBody, selector) : null;
-            console.log(`[DEBUG] Extracting '${varName}' using selector '${selector}': ${value}`);
-            ctx[varName] = value;
+            // Simple version: assume selector is JSON path in body
+            ctx[varName] = jsonBody ? getFromJsonPath(jsonBody, selector) : null;
         }
-
-        console.log(`[DEBUG] Updated context:`, JSON.stringify(ctx));
     }
+
+    return ok;
 }
 
-function executeBehaviorModel(bm) {
-    console.log(`Executing behavior model: ${bm.id} (${bm.actor})`);
-
+export default function () {
+    const bm = pickBehaviorModel();
     const context = {
         behaviorId: bm.id,
         actor: bm.actor,
     };
 
     for (const step of bm.steps) {
-        executeStep(step, context);
-        // Small sleep between steps to avoid overwhelming the system
-        sleep(0.1);
+        const success = executeStep(step, context);
+        if (!success) {
+            // Stop executing remaining steps and move to next iteration
+            return;
+        }
+        sleep(randomThinkTime(step.waitMsFrom, step.waitMsTo));
     }
-}
-
-// Main test function - run all behavior models sequentially
-export default function () {
-    console.log(`Starting validation run for ${usageProfile.length} behavior models`);
-
-    for (const bm of usageProfile) {
-        executeBehaviorModel(bm);
-    }
-
-    console.log('Validation run completed for all behavior models');
 }
