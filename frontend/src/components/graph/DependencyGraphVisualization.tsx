@@ -5,6 +5,8 @@ import {ClassNodeDto} from "@/api/generated/openAPIDefinition.schemas.ts";
 
 interface DependencyGraphVisualizationProps {
   nodes: ClassNodeDto[]
+  clusterMapping?: Record<string, string> // className -> clusterId
+  clusters?: Record<string, string[]> // clusterId -> classNames
   onNodeClick?: (node: ClassNodeDto) => void
 }
 
@@ -35,8 +37,37 @@ const getColorForPackage = (packageName: string): string => {
   return colors[Math.abs(hash) % colors.length]
 }
 
+const getColorForCluster = (clusterId: string): string => {
+  const colors = [
+    '#3b82f6', // blue
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#ef4444', // red
+    '#8b5cf6', // purple
+    '#ec4899', // pink
+    '#06b6d4', // cyan
+    '#84cc16', // lime
+    '#f97316', // orange
+    '#14b8a6', // teal
+    '#a855f7', // violet
+    '#f43f5e', // rose
+    '#6366f1', // indigo
+    '#22c55e', // green-500
+    '#eab308', // yellow
+    '#64748b', // slate
+  ]
+
+  const hash = clusterId.split('').reduce((acc, char) => {
+    return char.charCodeAt(0) + ((acc << 5) - acc)
+  }, 0)
+
+  return colors[Math.abs(hash) % colors.length]
+}
+
 export function DependencyGraphVisualization({
   nodes: classNodes,
+  clusterMapping,
+  clusters,
   onNodeClick,
 }: DependencyGraphVisualizationProps) {
   const nvlRef = useRef<NVL | null>(null)
@@ -71,8 +102,17 @@ export function DependencyGraphVisualization({
 
     // Transform to NVL nodes
     const nvlNodes: Node[] = classNodes.map((classNode) => {
-      const packageName = getPackageName(classNode.fullyQualifiedClassName)
-      const color = getColorForPackage(packageName)
+      let color: string
+
+      // Use cluster coloring if cluster mapping is provided
+      if (clusterMapping) {
+        const clusterId = clusterMapping[classNode.fullyQualifiedClassName]
+        color = clusterId ? getColorForCluster(clusterId) : '#64748b' // gray for unassigned
+      } else {
+        // Fall back to package-based coloring
+        const packageName = getPackageName(classNode.fullyQualifiedClassName)
+        color = getColorForPackage(packageName)
+      }
 
       return {
         id: classNode.fullyQualifiedClassName,
@@ -101,7 +141,7 @@ export function DependencyGraphVisualization({
     })
 
     return { nvlNodes, nvlRelationships, classNodeMap }
-  }, [classNodes])
+  }, [classNodes, clusterMapping])
 
   // Setup interaction handlers
   useEffect(() => {
@@ -202,6 +242,28 @@ export function DependencyGraphVisualization({
       <div className="absolute top-2 left-2 bg-slate-800 text-white px-2 py-1 rounded text-xs z-50 pointer-events-none">
         Nodes: {nvlNodes.length} | Edges: {nvlRelationships.length}
       </div>
+
+      {/* Legend */}
+      {clusters && Object.keys(clusters).length > 0 && (
+        <div className="absolute top-2 right-2 bg-slate-800 text-white px-3 py-2 rounded text-xs z-50 max-h-[300px] overflow-y-auto">
+          <div className="font-semibold mb-2">Clusters</div>
+          <div className="space-y-1">
+            {Object.entries(clusters)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([clusterId, classNames]) => (
+                <div key={clusterId} className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: getColorForCluster(clusterId) }}
+                  />
+                  <span className="text-xs">
+                    {clusterId} ({classNames.length})
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Zoom controls */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-50">

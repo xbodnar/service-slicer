@@ -1,16 +1,21 @@
 import { useParams, Link } from 'react-router-dom'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { DependencyGraphVisualization } from '@/components/graph/DependencyGraphVisualization'
 import {useDecompositionJob} from "@/hooks/useDecompositionJobs.ts";
 
+type DecompositionMethod = 'labelPropagation' | 'louvain' | 'leiden' | 'domainDriven' | 'actorDriven'
+
 export function DecompositionJobDetailPage() {
     const { decompositionJobId } = useParams<{ decompositionJobId: string }>()
     const { data, isLoading, error } = useDecompositionJob(decompositionJobId!)
     const { toast } = useToast()
+    const [selectedMethod, setSelectedMethod] = useState<DecompositionMethod>('labelPropagation')
 
     if (isLoading) {
         return (
@@ -29,6 +34,22 @@ export function DecompositionJobDetailPage() {
     }
 
     const { decompositionJob, dependencyGraph, decompositionResults } = data
+
+    // Create cluster mapping for the selected decomposition method
+    const clusterMapping = useMemo(() => {
+        const mapping: Record<string, string> = {}
+        const results = decompositionResults[selectedMethod]
+
+        if (results) {
+            Object.entries(results).forEach(([clusterId, classNames]) => {
+                classNames.forEach((className) => {
+                    mapping[className] = clusterId
+                })
+            })
+        }
+
+        return mapping
+    }, [decompositionResults, selectedMethod])
 
     return (
         <div className="space-y-6">
@@ -49,7 +70,7 @@ export function DecompositionJobDetailPage() {
                     <CardDescription>Interactive visualization of class dependencies</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4 items-end">
                         <div>
                             <p className="text-sm text-muted-foreground">Nodes</p>
                             <p className="text-2xl font-bold">{dependencyGraph.nodeCount}</p>
@@ -58,10 +79,27 @@ export function DecompositionJobDetailPage() {
                             <p className="text-sm text-muted-foreground">Edges</p>
                             <p className="text-2xl font-bold">{dependencyGraph.edgeCount}</p>
                         </div>
+                        <div>
+                            <p className="text-sm text-muted-foreground mb-2">Color by Decomposition Method</p>
+                            <Select value={selectedMethod} onValueChange={(value) => setSelectedMethod(value as DecompositionMethod)}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select method" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="labelPropagation">Label Propagation</SelectItem>
+                                    <SelectItem value="louvain">Louvain</SelectItem>
+                                    <SelectItem value="leiden">Leiden</SelectItem>
+                                    <SelectItem value="domainDriven">Domain-Driven</SelectItem>
+                                    <SelectItem value="actorDriven">Actor-Driven</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
                     <DependencyGraphVisualization
                         nodes={dependencyGraph.nodes}
+                        clusterMapping={clusterMapping}
+                        clusters={decompositionResults[selectedMethod]}
                         onNodeClick={(node) => {
                             toast({
                                 title: node.simpleClassName,
@@ -92,13 +130,13 @@ export function DecompositionJobDetailPage() {
                     <CardDescription>Community detection algorithms</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Tabs defaultValue="labelPropagation">
+                    <Tabs value={selectedMethod} onValueChange={(value) => setSelectedMethod(value as DecompositionMethod)}>
                         <TabsList className="grid w-full grid-cols-5">
                             <TabsTrigger value="labelPropagation">Label Propagation</TabsTrigger>
                             <TabsTrigger value="louvain">Louvain</TabsTrigger>
                             <TabsTrigger value="leiden">Leiden</TabsTrigger>
-                            <TabsTrigger value="domain">Domain-Driven</TabsTrigger>
-                            <TabsTrigger value="actor">Actor-Driven</TabsTrigger>
+                            <TabsTrigger value="domainDriven">Domain-Driven</TabsTrigger>
+                            <TabsTrigger value="actorDriven">Actor-Driven</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="labelPropagation">
@@ -110,10 +148,10 @@ export function DecompositionJobDetailPage() {
                         <TabsContent value="leiden">
                             <DecompositionView results={decompositionResults.leiden} />
                         </TabsContent>
-                        <TabsContent value="domain">
+                        <TabsContent value="domainDriven">
                             <DecompositionView results={decompositionResults.domainDriven} />
                         </TabsContent>
-                        <TabsContent value="actor">
+                        <TabsContent value="actorDriven">
                             <DecompositionView results={decompositionResults.actorDriven} />
                         </TabsContent>
                     </Tabs>
