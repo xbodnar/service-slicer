@@ -17,6 +17,25 @@ export function DecompositionJobDetailPage() {
     const { toast } = useToast()
     const [selectedMethod, setSelectedMethod] = useState<DecompositionMethod>('labelPropagation')
 
+    // Create cluster mapping for the selected decomposition method
+    // Must be called before early returns to satisfy Rules of Hooks
+    const clusterMapping = useMemo(() => {
+        if (!data?.decompositionResults) return {}
+
+        const mapping: Record<string, string> = {}
+        const results = data.decompositionResults[selectedMethod]
+
+        if (results) {
+            Object.entries(results).forEach(([clusterId, classNames]) => {
+                classNames.forEach((className) => {
+                    mapping[className] = clusterId
+                })
+            })
+        }
+
+        return mapping
+    }, [data?.decompositionResults, selectedMethod])
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -34,22 +53,6 @@ export function DecompositionJobDetailPage() {
     }
 
     const { decompositionJob, dependencyGraph, decompositionResults } = data
-
-    // Create cluster mapping for the selected decomposition method
-    const clusterMapping = useMemo(() => {
-        const mapping: Record<string, string> = {}
-        const results = decompositionResults[selectedMethod]
-
-        if (results) {
-            Object.entries(results).forEach(([clusterId, classNames]) => {
-                classNames.forEach((className) => {
-                    mapping[className] = clusterId
-                })
-            })
-        }
-
-        return mapping
-    }, [decompositionResults, selectedMethod])
 
     return (
         <div className="space-y-6">
