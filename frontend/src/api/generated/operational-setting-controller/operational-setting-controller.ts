@@ -25,8 +25,9 @@ import type {
 
 import type {
   CreateOperationalSettingRequest,
-  OperationalSetting,
-  Result
+  ListOperationalSettingsParams,
+  ListOperationalSettingsResponse,
+  OperationalSettingDto
 } from '../openAPIDefinition.schemas';
 
 import { apiClient } from '../../client';
@@ -37,13 +38,14 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 export const listOperationalSettings = (
-    
+    params?: ListOperationalSettingsParams,
  options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
 ) => {
       
       
-      return apiClient<Result>(
-      {url: `/operational-settings`, method: 'GET', signal
+      return apiClient<ListOperationalSettingsResponse>(
+      {url: `/operational-settings`, method: 'GET',
+        params, signal
     },
       options);
     }
@@ -51,23 +53,23 @@ export const listOperationalSettings = (
 
 
 
-export const getListOperationalSettingsQueryKey = () => {
+export const getListOperationalSettingsQueryKey = (params?: ListOperationalSettingsParams,) => {
     return [
-    `/operational-settings`
+    `/operational-settings`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getListOperationalSettingsQueryOptions = <TData = Awaited<ReturnType<typeof listOperationalSettings>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOperationalSettings>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+export const getListOperationalSettingsQueryOptions = <TData = Awaited<ReturnType<typeof listOperationalSettings>>, TError = unknown>(params?: ListOperationalSettingsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOperationalSettings>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListOperationalSettingsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListOperationalSettingsQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOperationalSettings>>> = ({ signal }) => listOperationalSettings(requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOperationalSettings>>> = ({ signal }) => listOperationalSettings(params, requestOptions, signal);
 
       
 
@@ -81,7 +83,7 @@ export type ListOperationalSettingsQueryError = unknown
 
 
 export function useListOperationalSettings<TData = Awaited<ReturnType<typeof listOperationalSettings>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOperationalSettings>>, TError, TData>> & Pick<
+ params: undefined |  ListOperationalSettingsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOperationalSettings>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listOperationalSettings>>,
           TError,
@@ -91,7 +93,7 @@ export function useListOperationalSettings<TData = Awaited<ReturnType<typeof lis
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListOperationalSettings<TData = Awaited<ReturnType<typeof listOperationalSettings>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOperationalSettings>>, TError, TData>> & Pick<
+ params?: ListOperationalSettingsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOperationalSettings>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listOperationalSettings>>,
           TError,
@@ -101,16 +103,16 @@ export function useListOperationalSettings<TData = Awaited<ReturnType<typeof lis
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListOperationalSettings<TData = Awaited<ReturnType<typeof listOperationalSettings>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOperationalSettings>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ params?: ListOperationalSettingsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOperationalSettings>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useListOperationalSettings<TData = Awaited<ReturnType<typeof listOperationalSettings>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOperationalSettings>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ params?: ListOperationalSettingsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOperationalSettings>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListOperationalSettingsQueryOptions(options)
+  const queryOptions = getListOperationalSettingsQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -128,7 +130,7 @@ export const createOperationalSetting = (
 ) => {
       
       
-      return apiClient<Result>(
+      return apiClient<OperationalSettingDto>(
       {url: `/operational-settings`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: createOperationalSettingRequest, signal
@@ -186,7 +188,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 ) => {
       
       
-      return apiClient<OperationalSetting>(
+      return apiClient<OperationalSettingDto>(
       {url: `/operational-settings/${operationalSettingId}`, method: 'GET', signal
     },
       options);

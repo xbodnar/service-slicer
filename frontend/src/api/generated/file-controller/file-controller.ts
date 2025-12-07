@@ -24,14 +24,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ExtractZipFileResult,
-  FetchGitRepositoryRequest,
-  FetchGitRepositoryResult,
-  GetFileDownloadUrlResult,
+  FileDto,
+  GetDownloadUrlResponse,
   InitiateFileUploadRequest,
-  InitiateFileUploadResult,
+  InitiateFileUploadResponse,
   ListFilesParams,
-  ListFilesResult
+  ListFilesResponse
 } from '../openAPIDefinition.schemas';
 
 import { apiClient } from '../../client';
@@ -47,7 +45,7 @@ export const listFiles = (
 ) => {
       
       
-      return apiClient<ListFilesResult>(
+      return apiClient<ListFilesResponse>(
       {url: `/files`, method: 'GET',
         params, signal
     },
@@ -134,7 +132,7 @@ export const initiateUpload = (
 ) => {
       
       
-      return apiClient<InitiateFileUploadResult>(
+      return apiClient<InitiateFileUploadResponse>(
       {url: `/files`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: initiateFileUploadRequest, signal
@@ -186,69 +184,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const extractZipFile = (
-    fileId: string,
- options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
-) => {
-      
-      
-      return apiClient<ExtractZipFileResult>(
-      {url: `/files/${fileId}/extract`, method: 'POST', signal
-    },
-      options);
-    }
-  
-
-
-export const getExtractZipFileMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof extractZipFile>>, TError,{fileId: string}, TContext>, request?: SecondParameter<typeof apiClient>}
-): UseMutationOptions<Awaited<ReturnType<typeof extractZipFile>>, TError,{fileId: string}, TContext> => {
-
-const mutationKey = ['extractZipFile'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof extractZipFile>>, {fileId: string}> = (props) => {
-          const {fileId} = props ?? {};
-
-          return  extractZipFile(fileId,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ExtractZipFileMutationResult = NonNullable<Awaited<ReturnType<typeof extractZipFile>>>
-    
-    export type ExtractZipFileMutationError = unknown
-
-    export const useExtractZipFile = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof extractZipFile>>, TError,{fileId: string}, TContext>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof extractZipFile>>,
-        TError,
-        {fileId: string},
-        TContext
-      > => {
-
-      const mutationOptions = getExtractZipFileMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
     export const completeUpload = (
     fileId: string,
  options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
 ) => {
       
       
-      return apiClient<void>(
+      return apiClient<FileDto>(
       {url: `/files/${fileId}/complete`, method: 'POST', signal
     },
       options);
@@ -298,71 +240,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const fetchGitRepository = (
-    fetchGitRepositoryRequest: FetchGitRepositoryRequest,
- options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
-) => {
-      
-      
-      return apiClient<FetchGitRepositoryResult>(
-      {url: `/files/git`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: fetchGitRepositoryRequest, signal
-    },
-      options);
-    }
-  
-
-
-export const getFetchGitRepositoryMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof fetchGitRepository>>, TError,{data: FetchGitRepositoryRequest}, TContext>, request?: SecondParameter<typeof apiClient>}
-): UseMutationOptions<Awaited<ReturnType<typeof fetchGitRepository>>, TError,{data: FetchGitRepositoryRequest}, TContext> => {
-
-const mutationKey = ['fetchGitRepository'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof fetchGitRepository>>, {data: FetchGitRepositoryRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  fetchGitRepository(data,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type FetchGitRepositoryMutationResult = NonNullable<Awaited<ReturnType<typeof fetchGitRepository>>>
-    export type FetchGitRepositoryMutationBody = FetchGitRepositoryRequest
-    export type FetchGitRepositoryMutationError = unknown
-
-    export const useFetchGitRepository = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof fetchGitRepository>>, TError,{data: FetchGitRepositoryRequest}, TContext>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof fetchGitRepository>>,
-        TError,
-        {data: FetchGitRepositoryRequest},
-        TContext
-      > => {
-
-      const mutationOptions = getFetchGitRepositoryMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
     export const getDownloadUrl = (
     fileId: string,
  options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
 ) => {
       
       
-      return apiClient<GetFileDownloadUrlResult>(
+      return apiClient<GetDownloadUrlResponse>(
       {url: `/files/${fileId}/download`, method: 'GET', signal
     },
       options);

@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useBenchmark, useUpdateBenchmark, useValidateOperationalSetting } from '@/hooks/useBenchmarks'
-import { useGenerateBehaviorModels, useRunBenchmark } from '@/api/generated/benchmarks-controller/benchmarks-controller'
-import { type UploadedFile } from '@/hooks/useFileUpload'
+import { useGenerateBehaviorModels } from '@/api/generated/benchmark-controller/benchmark-controller'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -14,8 +13,6 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { FileSelector } from '@/components/ui/file-selector'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Loader2,
   ArrowLeft,
@@ -24,8 +21,6 @@ import {
   Activity,
   Users,
   X,
-  Plus,
-  Trash2,
   Play,
   CheckCircle2,
   XCircle,
@@ -36,238 +31,15 @@ import {
   Database,
   Container,
 } from 'lucide-react'
+import {useCreateBenchmarkRun} from "@/api/generated/benchmark-run-controller/benchmark-run-controller.ts";
 
-// Form schema matching API structure
-const keyValuePairSchema = z.object({
-  key: z.string(),
-  value: z.string(),
-})
-
-// Schema for editing
+// Schema for editing - only name and description are editable
 const editBenchmarkSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
-  behaviorModels: z.array(
-    z.object({
-      id: z.string().min(1, 'ID is required'),
-      actor: z.string().min(1, 'Actor name is required'),
-      usageProfile: z.coerce.number().min(0).max(1),
-      steps: z.array(
-        z.object({
-          method: z.string().min(1, 'Method is required'),
-          path: z.string().min(1, 'Path is required'),
-          operationId: z.string().min(1, 'Operation ID is required'),
-          headers: z.array(keyValuePairSchema).default([]),
-          params: z.array(keyValuePairSchema).default([]),
-          body: z.string().default('{}'),
-          save: z.array(keyValuePairSchema).default([]),
-        })
-      ).min(1, 'At least one step is required'),
-    })
-  ).optional(),
-  operationalProfile: z.array(
-    z.object({
-      load: z.coerce.number().min(1, 'Load must be at least 1'),
-      frequency: z.coerce.number().min(0).max(1, 'Frequency must be between 0 and 1'),
-    })
-  ).min(1, 'At least one operational load is required'),
 })
 
 type EditBenchmarkFormData = z.infer<typeof editBenchmarkSchema>
-
-interface KeyValuePairListProps {
-  name: string
-  control: any
-  label: string
-  keyPlaceholder?: string
-  valuePlaceholder?: string
-}
-
-function KeyValuePairList({ name, control, label, keyPlaceholder = 'Key', valuePlaceholder = 'Value' }: KeyValuePairListProps) {
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name,
-  })
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <Label className="text-xs">{label}</Label>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2"
-          onClick={() => append({ key: '', value: '' })}
-        >
-          <Plus className="h-3 w-3" />
-        </Button>
-      </div>
-
-      <div className="space-y-1.5">
-        {fields.map((field, index) => (
-          <div key={field.id} className="flex items-center gap-1.5">
-            <Input
-              {...control.register(`${name}.${index}.key`)}
-              placeholder={keyPlaceholder}
-              className="h-7 text-xs flex-1"
-            />
-            <Input
-              {...control.register(`${name}.${index}.value`)}
-              placeholder={valuePlaceholder}
-              className="h-7 text-xs flex-1"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              onClick={() => remove(index)}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
-        {fields.length === 0 && (
-          <p className="text-xs text-muted-foreground italic">No {label.toLowerCase()} defined</p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-interface BehaviorModelStepsProps {
-  behaviorIndex: number
-  control: any
-  register: any
-  errors: any
-}
-
-function BehaviorModelSteps({ behaviorIndex, control, register, errors }: BehaviorModelStepsProps) {
-  const { fields: stepFields, append: appendStep, remove: removeStep } = useFieldArray({
-    control,
-    name: `behaviorModels.${behaviorIndex}.steps`,
-  })
-
-  return (
-    <div className="space-y-3">
-      <Label>API Request Steps</Label>
-
-      {stepFields.map((field: any, stepIndex) => (
-        <Card key={field.id} className="p-3 bg-muted/30">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Step {stepIndex + 1}</span>
-              <Button type="button" variant="ghost" size="sm" onClick={() => removeStep(stepIndex)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-2">
-                <Label>Operation ID</Label>
-                <Input
-                  {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.operationId`)}
-                  placeholder="getUser"
-                />
-                {errors?.behaviorModels?.[behaviorIndex]?.steps?.[stepIndex]?.operationId && (
-                  <p className="text-sm text-destructive">
-                    {errors.behaviorModels[behaviorIndex].steps[stepIndex].operationId.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Method</Label>
-                <Select
-                  defaultValue={field.method}
-                  onValueChange={(value) => {
-                    const input = document.getElementById(`edit-behavior-${behaviorIndex}-step-${stepIndex}-method-hidden`) as HTMLInputElement
-                    if (input) input.value = value
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GET">GET</SelectItem>
-                    <SelectItem value="POST">POST</SelectItem>
-                    <SelectItem value="PUT">PUT</SelectItem>
-                    <SelectItem value="PATCH">PATCH</SelectItem>
-                    <SelectItem value="DELETE">DELETE</SelectItem>
-                  </SelectContent>
-                </Select>
-                <input
-                  type="hidden"
-                  id={`edit-behavior-${behaviorIndex}-step-${stepIndex}-method-hidden`}
-                  {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.method`)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Path</Label>
-                <Input
-                  {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.path`)}
-                  placeholder="/api/resource"
-                />
-              </div>
-            </div>
-
-            {/* Headers, Query Params, and Save Fields side by side */}
-            <div className="grid grid-cols-3 gap-3">
-              <KeyValuePairList
-                name={`behaviorModels.${behaviorIndex}.steps.${stepIndex}.headers`}
-                control={control}
-                label="Headers"
-                keyPlaceholder="Header name"
-                valuePlaceholder="Header value"
-              />
-              <KeyValuePairList
-                name={`behaviorModels.${behaviorIndex}.steps.${stepIndex}.params`}
-                control={control}
-                label="Query Params"
-                keyPlaceholder="Param name"
-                valuePlaceholder="Param value"
-              />
-              <KeyValuePairList
-                name={`behaviorModels.${behaviorIndex}.steps.${stepIndex}.save`}
-                control={control}
-                label="Save Fields"
-                keyPlaceholder="Variable name"
-                valuePlaceholder="JSONPath ($.id)"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Body (JSON)</Label>
-              <Textarea
-                {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.body`)}
-                placeholder='{"key": "value"}'
-                rows={3}
-                className="font-mono text-xs"
-              />
-              {errors?.behaviorModels?.[behaviorIndex]?.steps?.[stepIndex]?.body && (
-                <p className="text-sm text-destructive">
-                  {errors.behaviorModels[behaviorIndex].steps[stepIndex].body.message}
-                </p>
-              )}
-            </div>
-          </div>
-        </Card>
-      ))}
-
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => appendStep({ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] })}
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Add Step
-      </Button>
-    </div>
-  )
-}
 
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -285,11 +57,10 @@ export function BenchmarkDetailPage() {
   const { user, authRequired } = useAuth()
   const updateBenchmark = useUpdateBenchmark()
   const generateBehaviorModels = useGenerateBehaviorModels()
-  const runBenchmark = useRunBenchmark()
+  const runBenchmark = useCreateBenchmarkRun()
   const validateConfig = useValidateOperationalSetting()
 
   const [isEditing, setIsEditing] = useState(false)
-  const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
   const [expandedModels, setExpandedModels] = useState<Set<string>>(new Set())
   const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
   const [showRunModal, setShowRunModal] = useState(false)
@@ -327,157 +98,36 @@ export function BenchmarkDetailPage() {
     defaultValues: {
       name: '',
       description: '',
-      behaviorModels: [],
-      operationalProfile: [],
     },
   })
-
-  const { fields: behaviorFields, append: appendBehavior, remove: removeBehavior } = useFieldArray({
-    control: form.control,
-    name: 'behaviorModels',
-  })
-
-  const { fields: operationalProfileFields, append: appendOperationalProfile, remove: removeOperationalProfile } = useFieldArray({
-    control: form.control,
-    name: 'operationalProfile',
-  })
-
-  // Helper to convert object to key-value pairs array
-  const objectToKeyValuePairs = (obj: Record<string, string> | undefined): { key: string; value: string }[] => {
-    if (!obj) return []
-    return Object.entries(obj).map(([key, value]) => ({ key, value: String(value) }))
-  }
-
-  // Helper to convert key-value pairs array to object
-  const keyValuePairsToObject = (pairs: { key: string; value: string }[]): Record<string, string> => {
-    return pairs.reduce((acc, { key, value }) => {
-      if (key.trim()) {
-        acc[key] = value
-      }
-      return acc
-    }, {} as Record<string, string>)
-  }
 
   // Populate form when entering edit mode
   const handleStartEdit = () => {
     if (!requireAuth()) return
     if (!data) return
 
-    const behaviorModels = data.operationalSetting.usageProfile.map((model: any) => ({
-      id: model.id,
-      actor: model.actor,
-      usageProfile: model.frequency ?? model.usageProfile ?? 0,  // Map API 'frequency' to form 'usageProfile'
-      steps: (model.steps || []).map((step: any) => ({
-        method: step.method,
-        path: step.path,
-        operationId: step.operationId,
-        headers: objectToKeyValuePairs(step.headers),
-        params: objectToKeyValuePairs(step.params),
-        body: JSON.stringify(step.body || {}),
-        save: objectToKeyValuePairs(step.save),
-      })),
-    }))
-
-    // Convert operationalProfile from object to array format for form
-    const operationalProfileArray = Object.entries(data.operationalSetting.operationalProfile || {}).map(([load, frequency]) => ({
-      load: Number(load),
-      frequency: Number(frequency),
-    }))
-
     form.reset({
       name: data.name,
       description: data.description || '',
-      behaviorModels,
-      operationalProfile: operationalProfileArray,
     })
 
-    setOpenApiFile(null)
     setIsEditing(true)
   }
 
   const handleCancelEdit = () => {
     setIsEditing(false)
-    setOpenApiFile(null)
     form.reset()
-  }
-
-  const handleAddBehaviorModel = () => {
-    appendBehavior({
-      id: '',
-      actor: '',
-      usageProfile: 0.5,
-      steps: [{ method: 'GET', path: '/', operationId: '', headers: [], params: [], body: '{}', save: [] }],
-    })
-  }
-
-  const handleAddOperationalProfile = () => {
-    appendOperationalProfile({ load: 25, frequency: 0.2 })
   }
 
   const onSubmit = async (formData: EditBenchmarkFormData) => {
     if (!data) return
 
     try {
-      // Process behavioral models
-      const behaviorModels = (formData.behaviorModels || []).map((model) => {
-        const steps = model.steps.map((step) => {
-          const headers = keyValuePairsToObject(step.headers || [])
-          const params = keyValuePairsToObject(step.params || [])
-          const save = keyValuePairsToObject(step.save || [])
-          let body
-          try {
-            body = step.body && step.body.trim() !== '' ? JSON.parse(step.body) : {}
-          } catch (e) {
-            throw new Error(`Invalid JSON in step "${step.path}": ${e}`)
-          }
-          return {
-            method: step.method,
-            path: step.path,
-            operationId: step.operationId,
-            headers,
-            params,
-            body,
-            save,
-            waitMsFrom: 0,
-            waitMsTo: 0,
-          }
-        })
-        return {
-          id: model.id,
-          actor: model.actor,
-          frequency: model.usageProfile,  // Map form 'usageProfile' to API 'frequency'
-          steps,
-        }
-      })
-
-      // Validate operational profile
-      const freqSum = formData.operationalProfile.reduce((sum, p) => sum + Number(p.frequency), 0)
-      if (Math.abs(freqSum - 1.0) > 0.001) {
-        toast({
-          variant: 'destructive',
-          title: 'Invalid operational profile',
-          description: `Frequencies must sum to 1.0 (current sum: ${freqSum.toFixed(3)})`,
-        })
-        return
-      }
-
-      // Transform operationalProfile from array to object
-      const operationalProfile = formData.operationalProfile.reduce((acc: Record<string, number>, p: any) => {
-        acc[p.load.toString()] = Number(p.frequency)
-        return acc
-      }, {})
-
       await updateBenchmark.mutateAsync({
         benchmarkId: benchmarkId!,
         data: {
           name: formData.name,
           description: formData.description || undefined,
-          operationalSetting: {
-            ...data.operationalSetting,
-            usageProfile: behaviorModels,
-            operationalProfile,
-            openApiFile: openApiFile ? { ...data.operationalSetting.openApiFile, id: openApiFile.fileId } : data.operationalSetting.openApiFile,
-          },
         },
       })
 
@@ -487,7 +137,6 @@ export function BenchmarkDetailPage() {
       })
 
       setIsEditing(false)
-      setOpenApiFile(null)
       refetch()
     } catch (error) {
       toast({
@@ -527,12 +176,11 @@ export function BenchmarkDetailPage() {
 
     try {
       const result = await runBenchmark.mutateAsync({
-        benchmarkId: benchmarkId!,
-        params: duration ? { testDuration: duration } : undefined,
+        data: { benchmarkId: benchmarkId!, testDuration: duration },
       })
       toast({
         title: 'Benchmark started',
-        description: `Benchmark run ${result.benchmarkRunId} has been started${duration ? ` (duration: ${duration})` : ''}`,
+        description: `Benchmark run ${result.id} has been started${duration ? ` (duration: ${duration})` : ''}`,
         className: 'border-green-500 bg-green-50 text-green-900',
       })
       setShowRunModal(false)
@@ -638,108 +286,6 @@ export function BenchmarkDetailPage() {
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea id="description" {...form.register('description')} rows={3} />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Operational Setting */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Operational Setting</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* OpenAPI File */}
-              <div className="space-y-2">
-                <FileSelector
-                  id="edit-openapi-file"
-                  label="OpenAPI Specification File (leave empty to keep current)"
-                  accept=".json,.yaml,.yml"
-                  onFileSelected={setOpenApiFile}
-                  selectedFile={openApiFile}
-                  mimeTypeFilter="json"
-                />
-                {!openApiFile && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
-                    <FileCode className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Current: {data.operationalSetting.openApiFile.filename}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Behavior Models */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Behavior Models</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={handleAddBehaviorModel}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Model
-                  </Button>
-                </div>
-
-                {behaviorFields.map((field, index) => (
-                  <Card key={field.id} className="p-4">
-                    <div className="space-y-3">
-                      <div className="flex items-end gap-2">
-                        <div className="flex-1 grid grid-cols-2 gap-3">
-                          <div className="space-y-2">
-                            <Label>ID</Label>
-                            <Input {...form.register(`behaviorModels.${index}.id`)} placeholder="checkout-flow" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Actor</Label>
-                            <Input {...form.register(`behaviorModels.${index}.actor`)} placeholder="Customer" />
-                          </div>
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeBehavior(index)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Usage Profile (0-1)</Label>
-                        <Input type="number" step="0.01" min="0" max="1" {...form.register(`behaviorModels.${index}.usageProfile`)} />
-                      </div>
-
-                      <BehaviorModelSteps
-                        behaviorIndex={index}
-                        control={form.control}
-                        register={form.register}
-                        errors={form.formState.errors}
-                      />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Operational Profile */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Operational Profile</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={handleAddOperationalProfile}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Load Level
-                  </Button>
-                </div>
-
-                {operationalProfileFields.map((field, index) => (
-                  <div key={field.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-                    <div className="flex-1 grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Load (users)</Label>
-                        <Input type="number" {...form.register(`operationalProfile.${index}.load`)} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Frequency (0-1)</Label>
-                        <Input type="number" step="0.001" min="0" max="1" {...form.register(`operationalProfile.${index}.frequency`)} />
-                      </div>
-                    </div>
-                    {operationalProfileFields.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeOperationalProfile(index)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
               </div>
             </CardContent>
           </Card>

@@ -1,10 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun.service
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
-import cz.bodnor.serviceslicer.infrastructure.config.PrometheusProperties
-import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import java.nio.file.Path

@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.domain.file
 
 import org.springframework.stereotype.Service
-import java.util.UUID
 
 @Service
 class FileWriteService(
@@ -14,7 +13,6 @@ class FileWriteService(
         expectedSize: Long,
     ): File = repository.save(
         File(
-            id = UUID.randomUUID(),
             filename = filename,
             mimeType = mimeType,
             fileSize = expectedSize,

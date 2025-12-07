@@ -8,9 +8,6 @@ spring:
     authentication:
       username: neo4j
       password: password
-  ai:
-    openai:
-      api-key: ${OPEN_API_KEY}
 
 minio:
   endpoint: ${MINIO_ENDPOINT}

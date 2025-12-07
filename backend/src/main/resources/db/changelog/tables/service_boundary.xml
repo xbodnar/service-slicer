@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="drop-service-boundary-table-if-exists" author="admin">
+        <preConditions onFail="MARK_RAN" onError="HALT">
+            <tableExists tableName="service_boundary"/>
+        </preConditions>
+        <dropTable tableName="service_boundary"/>
+    </changeSet>
+    <changeSet id="create-service-boundary-table" author="Norbert Bodnar">
+        <createTable tableName="service_boundary">
+            <!-- Updatable entity -->
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="version" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Entity -->
+            <column name="decomposition_candidate_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="size" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cohesion" type="double precision">
+                <constraints nullable="false"/>
+            </column>
+            <column name="coupling" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="internal_dependencies" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_dependencies" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type_names" type="jsonb">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

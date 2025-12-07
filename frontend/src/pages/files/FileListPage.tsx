@@ -1,5 +1,4 @@
 import { useListFiles } from '@/api/generated/file-controller/file-controller'
-import type { ListFilesResponse } from '@/api/types/file'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -11,9 +10,13 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/components/ui/use-toast'
 import { Download } from 'lucide-react'
+import {Pagination} from "@/components/ui/pagination.tsx";
+import {useState} from "react";
 
 export function FileListPage() {
-  const { data, isLoading } = useListFiles({ page: 0, size: 100 })
+  const [page, setPage] = useState(0)
+  const [size] = useState(20)
+  const { data, isLoading } = useListFiles({ page, size })
   const { toast } = useToast()
 
   const handleDownload = async (fileId: string, filename: string) => {
@@ -61,7 +64,7 @@ export function FileListPage() {
     return <div className="p-8">Loading files...</div>
   }
 
-  const files = (data as ListFilesResponse)?.files || []
+  const files = data?.items || []
 
   return (
     <div className="container mx-auto py-8">
@@ -93,9 +96,9 @@ export function FileListPage() {
               </TableRow>
             ) : (
               files.map((file) => (
-                <TableRow key={file.fileId}>
+                <TableRow key={file.id}>
                   <TableCell className="font-medium">{file.filename}</TableCell>
-                  <TableCell>{formatFileSize(file.expectedSize)}</TableCell>
+                  <TableCell>{formatFileSize(file.fileSize)}</TableCell>
                   <TableCell className="text-muted-foreground">{file.mimeType}</TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
@@ -115,7 +118,7 @@ export function FileListPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDownload(file.fileId, file.filename)}
+                      onClick={() => handleDownload(file.id, file.filename)}
                       disabled={file.status !== 'READY'}
                     >
                       <Download className="h-4 w-4" />
@@ -127,6 +130,16 @@ export function FileListPage() {
           </TableBody>
         </Table>
       </div>
+
+      {data && data.totalPages > 1 && (
+        <Pagination
+          currentPage={data.currentPage}
+          totalPages={data.totalPages}
+          pageSize={data.pageSize}
+          totalElements={data.totalElements}
+          onPageChange={setPage}
+        />
+      )}
     </div>
   )
 }

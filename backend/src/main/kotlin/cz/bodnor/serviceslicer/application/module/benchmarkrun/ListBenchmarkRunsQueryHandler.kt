@@ -1,29 +1,18 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun
 
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.query.ListBenchmarkRunsQuery
+import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRun
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRunRepository
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryHandler
+import org.springframework.data.domain.Page
 import org.springframework.stereotype.Component
 
 @Component
 class ListBenchmarkRunsQueryHandler(
     private val benchmarkRunRepository: BenchmarkRunRepository,
-) : QueryHandler<ListBenchmarkRunsQuery.Result, ListBenchmarkRunsQuery> {
+) : QueryHandler<Page<BenchmarkRun>, ListBenchmarkRunsQuery> {
     override val query = ListBenchmarkRunsQuery::class
 
-    override fun handle(query: ListBenchmarkRunsQuery): ListBenchmarkRunsQuery.Result {
-        val benchmarkRuns = benchmarkRunRepository.findAllByBenchmarkId(query.benchmarkId)
-
-        return ListBenchmarkRunsQuery.Result(
-            benchmarkRuns = benchmarkRuns.map { run ->
-                ListBenchmarkRunsQuery.BenchmarkRunSummary(
-                    benchmarkRunId = run.id,
-                    benchmarkId = run.benchmark.id,
-                    state = run.state,
-                    createdAt = run.createdAt,
-                    updatedAt = run.updatedAt,
-                )
-            },
-        )
-    }
+    override fun handle(query: ListBenchmarkRunsQuery): Page<BenchmarkRun> =
+        benchmarkRunRepository.findAllByBenchmarkId(query.benchmarkId, query.toPageable())
 }

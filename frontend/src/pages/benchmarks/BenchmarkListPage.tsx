@@ -4,10 +4,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Loader2, FlaskConical, ArrowRight, Calendar } from 'lucide-react'
 import { formatDistance } from 'date-fns'
-import type { BenchmarkSummary } from '@/api/generated/openAPIDefinition.schemas'
+import {BenchmarkDto} from "@/api/generated/openAPIDefinition.schemas.ts";
+import {Pagination} from "@/components/ui/pagination.tsx";
+import {useState} from "react";
 
 export function BenchmarkListPage() {
-  const { data, isLoading, error } = useBenchmarksList()
+  const [page, setPage] = useState(0)
+  const [size] = useState(12)
+  const { data, isLoading, error } = useBenchmarksList({ page, size })
 
   if (isLoading) {
     return (
@@ -42,7 +46,7 @@ export function BenchmarkListPage() {
         </Link>
       </div>
 
-      {data?.benchmarks.length === 0 ? (
+      {data?.items.length === 0 ? (
         <Card className="border-dashed border-2">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <div className="rounded-full bg-muted p-4 mb-4">
@@ -62,8 +66,8 @@ export function BenchmarkListPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {data?.benchmarks.map((benchmark: BenchmarkSummary) => (
-            <Link key={benchmark.benchmarkId} to={`/benchmarks/${benchmark.benchmarkId}`}>
+          {data?.items.map((benchmark: BenchmarkDto) => (
+            <Link key={benchmark.id} to={`/benchmarks/${benchmark.id}`}>
               <Card className="group border-2 hover:border-primary/50 hover:shadow-lg transition-all h-full cursor-pointer">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -93,6 +97,16 @@ export function BenchmarkListPage() {
             </Link>
           ))}
         </div>
+      )}
+
+      {data && data.totalPages > 1 && (
+        <Pagination
+          currentPage={data.currentPage}
+          totalPages={data.totalPages}
+          pageSize={data.pageSize}
+          totalElements={data.totalElements}
+          onPageChange={setPage}
+        />
       )}
     </div>
   )

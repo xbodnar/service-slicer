@@ -21,7 +21,7 @@
     <changeSet id="create-operational-setting-fk" author="Norbert Bodnar">
         <addForeignKeyConstraint
                 baseTableName="benchmark"
-                baseColumnNames="config_id"
+                baseColumnNames="operational_setting_id"
                 constraintName="fk_benchmark_operational_setting"
                 referencedTableName="operational_setting"
                 referencedColumnNames="id"/>

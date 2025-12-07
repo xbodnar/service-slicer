@@ -29,6 +29,9 @@ spring:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
 
 management:
   endpoints:
@@ -45,6 +48,10 @@ management:
 k6:
   docker-image: ghcr.io/xbodnar/ss-k6:latest
   test-duration: 1m
+
+prometheus:
+  remote-write-url: http://host.docker.internal:9091/api/v1/write
+  query-url: http://localhost:9091
 
 minio:
   endpoint: http://localhost:9000

@@ -1,6 +1,7 @@
 package cz.bodnor.serviceslicer.adapter.`in`.job.batch
 
-import cz.bodnor.serviceslicer.application.module.analysis.command.DetectGraphCommunitiesCommand
+import cz.bodnor.serviceslicer.application.module.decomposition.command.DetectGraphCommunitiesCommand
+import cz.bodnor.serviceslicer.domain.job.JobParameterLabel.DECOMPOSITION_JOB_ID
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.batch.core.StepContribution
 import org.springframework.batch.core.configuration.annotation.JobScope
@@ -15,14 +16,14 @@ import java.util.UUID
 @JobScope
 class DetectGraphCommunitiesTasklet(
     private val commandBus: CommandBus,
-    @Value("#{jobParameters['PROJECT_ID']}") private val projectId: UUID,
+    @Value("#{jobParameters['${DECOMPOSITION_JOB_ID}']}") private val decompositionJobId: UUID,
 ) : Tasklet {
 
     override fun execute(
         contribution: StepContribution,
         chunkContext: ChunkContext,
     ): RepeatStatus? {
-        commandBus(DetectGraphCommunitiesCommand(projectId))
+        commandBus(DetectGraphCommunitiesCommand(decompositionJobId))
 
         return RepeatStatus.FINISHED
     }

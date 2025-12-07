@@ -4,12 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.benchmark.Benchmark
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
+import cz.bodnor.serviceslicer.domain.job.JobStatus
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import cz.bodnor.serviceslicer.domain.testcase.BaselineTestCase
 import cz.bodnor.serviceslicer.domain.testcase.OperationId
 import cz.bodnor.serviceslicer.domain.testcase.TargetTestCase
 import cz.bodnor.serviceslicer.domain.testcase.TestCase
-import cz.bodnor.serviceslicer.domain.testcase.TestCaseStatus
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -20,6 +20,8 @@ import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.math.BigDecimal
@@ -39,7 +41,7 @@ class BenchmarkRun(
 ) : UpdatableEntity() {
 
     @Enumerated(EnumType.STRING)
-    var state: BenchmarkRunState = BenchmarkRunState.PENDING
+    var status: JobStatus = JobStatus.PENDING
         private set
 
     @OneToMany(cascade = [CascadeType.ALL], orphanRemoval = true, mappedBy = "benchmarkRun", fetch = FetchType.EAGER)
@@ -48,6 +50,8 @@ class BenchmarkRun(
     @JdbcTypeCode(SqlTypes.JSON)
     var experimentResults: ExperimentResults? = null
         private set
+
+    fun getTestDurationString() = testDuration.toString()
 
     fun addTargetTestCase(
         sut: SystemUnderTest,
@@ -82,14 +86,14 @@ class BenchmarkRun(
 
     private fun updateOverallStatus() {
         val allTestCases = listOf(baselineTestCase) + targetTestCases
-        this.state = when {
-            allTestCases.any { it.status == TestCaseStatus.FAILED } -> BenchmarkRunState.FAILED
-            allTestCases.all { it.status == TestCaseStatus.COMPLETED } -> BenchmarkRunState.COMPLETED
-            allTestCases.any { it.status == TestCaseStatus.RUNNING } -> BenchmarkRunState.PENDING
-            else -> BenchmarkRunState.PENDING
+        this.status = when {
+            allTestCases.any { it.status == JobStatus.FAILED } -> JobStatus.FAILED
+            allTestCases.all { it.status == JobStatus.COMPLETED } -> JobStatus.COMPLETED
+            allTestCases.any { it.status == JobStatus.RUNNING } -> JobStatus.RUNNING
+            else -> JobStatus.PENDING
         }
 
-        if (this.state == BenchmarkRunState.COMPLETED) {
+        if (this.status == JobStatus.COMPLETED) {
             this.experimentResults = computeExperimentResults()
         }
     }
@@ -172,21 +176,18 @@ class BenchmarkRun(
         ?: error("Test case with id $id not found")
 
     fun getNextTestCaseToRun(): TestCase? {
-        if (baselineTestCase.status == TestCaseStatus.PENDING) {
+        if (baselineTestCase.status == JobStatus.PENDING) {
             return baselineTestCase
         }
 
-        return targetTestCases.sortedBy { it.load }.firstOrNull { it.status == TestCaseStatus.PENDING }
+        return targetTestCases.sortedBy { it.load }.firstOrNull { it.status == JobStatus.PENDING }
     }
 }
 
 @Repository
 interface BenchmarkRunRepository : JpaRepository<BenchmarkRun, UUID> {
-    fun findAllByBenchmarkId(benchmarkId: UUID): List<BenchmarkRun>
-}
-
-enum class BenchmarkRunState {
-    PENDING,
-    COMPLETED,
-    FAILED,
+    fun findAllByBenchmarkId(
+        benchmarkId: UUID,
+        pageable: Pageable,
+    ): Page<BenchmarkRun>
 }

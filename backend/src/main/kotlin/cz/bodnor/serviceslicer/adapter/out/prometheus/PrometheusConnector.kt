@@ -33,7 +33,7 @@ class PrometheusConnector(
 
         // Use build(false) to skip strict URI validation since WebClient will properly encode query params
         val uri = UriComponentsBuilder
-            .fromHttpUrl(prometheusProperties.queryUrl)
+            .fromUriString(prometheusProperties.queryUrl)
             .path("/api/v1/query")
             .queryParam("query", query)
             .apply { if (time != null) queryParam("time", time.epochSecond) }
@@ -71,7 +71,7 @@ class PrometheusConnector(
 
         // Use build(false) to skip strict URI validation since WebClient will properly encode query params
         val uri = UriComponentsBuilder
-            .fromHttpUrl(prometheusProperties.queryUrl)
+            .fromUriString(prometheusProperties.queryUrl)
             .path("/api/v1/query_range")
             .queryParam("query", query)
             .queryParam("start", start.epochSecond)

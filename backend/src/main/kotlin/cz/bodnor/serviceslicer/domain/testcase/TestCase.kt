@@ -3,6 +3,7 @@ package cz.bodnor.serviceslicer.domain.testcase
 import com.fasterxml.jackson.databind.JsonNode
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
+import cz.bodnor.serviceslicer.domain.job.JobStatus
 import jakarta.persistence.Column
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -23,7 +24,7 @@ abstract class TestCase(
         protected set
 
     @Enumerated(EnumType.STRING)
-    var status: TestCaseStatus = TestCaseStatus.PENDING
+    var status: JobStatus = JobStatus.PENDING
         protected set
 
     @Column(name = "k6_output")
@@ -36,7 +37,7 @@ abstract class TestCase(
 
     fun started() {
         this.startTimestamp = Instant.now()
-        this.status = TestCaseStatus.RUNNING
+        this.status = JobStatus.RUNNING
     }
 
     abstract fun completed(
@@ -46,7 +47,7 @@ abstract class TestCase(
     )
 
     fun failed() {
-        this.status = TestCaseStatus.FAILED
+        this.status = JobStatus.FAILED
         this.endTimestamp = Instant.now()
     }
 }

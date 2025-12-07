@@ -3,7 +3,7 @@ import { defineConfig } from 'orval'
 export default defineConfig({
   serviceSlicerApi: {
     input: {
-      target: 'http://localhost:8080/v3/api-docs',
+      target: 'http://localhost:8080/api/v3/api-docs',
       // Alternatively, you can save the OpenAPI spec and use a local file:
       // target: './openapi.json',
     },

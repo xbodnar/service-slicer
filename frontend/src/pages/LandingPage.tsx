@@ -34,7 +34,7 @@ export function LandingPage() {
   const steps = [
     {
       number: '01',
-      title: 'Create a Project',
+      title: 'Create a Decomposition Job',
       description: 'Upload your Java application JAR file and source code',
       icon: FolderKanban,
     },
@@ -72,16 +72,16 @@ export function LandingPage() {
         </div>
 
         <div className="flex items-center justify-center gap-4 pt-4">
-          <Link to="/projects/new">
+          <Link to="/decomposition-jobs/new">
             <Button size="lg" className="gap-2 shadow-lg shadow-primary/25">
               <FolderKanban className="h-5 w-5" />
-              Create Project
+              Create a Decomposition Job
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
-          <Link to="/projects">
+          <Link to="/decomposition-jobs">
             <Button variant="outline" size="lg" className="gap-2">
-              View Projects
+              View Decomposition Jobs
             </Button>
           </Link>
         </div>
@@ -189,10 +189,10 @@ export function LandingPage() {
           </p>
         </div>
         <div className="flex items-center justify-center gap-4">
-          <Link to="/projects/new">
+          <Link to="/decomposition-jobs/new">
             <Button size="lg" className="gap-2 shadow-lg shadow-primary/25">
               <FolderKanban className="h-5 w-5" />
-              Create Your First Project
+              Create Your First Decomposition Job
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>

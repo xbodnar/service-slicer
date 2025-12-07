@@ -1,11 +1,13 @@
 import { Link, useParams } from 'react-router-dom'
-import { useListBenchmarkRuns } from '@/api/generated/benchmarks-controller/benchmarks-controller'
-import type { BenchmarkRunSummary } from '@/api/generated/openAPIDefinition.schemas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Loader2, PlayCircle, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { format } from 'date-fns'
+import {useListBenchmarkRuns} from "@/api/generated/benchmark-run-controller/benchmark-run-controller.ts";
+import {BenchmarkRunDto} from "@/api/generated/openAPIDefinition.schemas.ts";
+import {useState} from "react";
+import {Pagination} from "@/components/ui/pagination.tsx";
 
 const getStateColor = (state: string) => {
   switch (state) {
@@ -39,7 +41,9 @@ const getStateIcon = (state: string) => {
 
 export function BenchmarkRunListPage() {
   const { benchmarkId } = useParams<{ benchmarkId: string }>()
-  const { data, isLoading, error } = useListBenchmarkRuns(benchmarkId!)
+    const [page, setPage] = useState(0)
+    const [size] = useState(10)
+  const { data, isLoading, error } = useListBenchmarkRuns({ benchmarkId: benchmarkId!, page: page, size: size})
 
   if (isLoading) {
     return (
@@ -77,10 +81,10 @@ export function BenchmarkRunListPage() {
       {/* Runs List */}
       <Card>
         <CardHeader>
-          <CardTitle>All Runs ({data.benchmarkRuns.length})</CardTitle>
+          <CardTitle>All Runs ({data.totalElements})</CardTitle>
         </CardHeader>
         <CardContent>
-          {data.benchmarkRuns.length === 0 ? (
+          {data.items.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No benchmark runs yet</p>
               <p className="text-sm text-muted-foreground mt-1">
@@ -89,20 +93,20 @@ export function BenchmarkRunListPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {data.benchmarkRuns.map((run: BenchmarkRunSummary) => (
+              {data.items.map((run: BenchmarkRunDto) => (
                 <Link
-                  key={run.benchmarkRunId}
-                  to={`/benchmarks/${benchmarkId}/runs/${run.benchmarkRunId}`}
+                  key={run.id}
+                  to={`/benchmarks/${benchmarkId}/runs/${run.id}`}
                   className="block"
                 >
                   <div className="p-4 rounded-lg border bg-card hover:bg-accent transition-colors">
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm">{run.benchmarkRunId}</span>
-                          <Badge variant={getStateColor(run.state)} className={`flex items-center gap-1 ${getStateClassName(run.state)}`}>
-                            {getStateIcon(run.state)}
-                            {run.state}
+                          <span className="font-mono text-sm">{run.id}</span>
+                          <Badge variant={getStateColor(run.status)} className={`flex items-center gap-1 ${getStateClassName(run.status)}`}>
+                            {getStateIcon(run.status)}
+                            {run.status}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -120,6 +124,16 @@ export function BenchmarkRunListPage() {
           )}
         </CardContent>
       </Card>
+
+      {data && data.totalPages > 1 && (
+        <Pagination
+          currentPage={data.currentPage}
+          totalPages={data.totalPages}
+          pageSize={data.pageSize}
+          totalElements={data.totalElements}
+          onPageChange={setPage}
+        />
+      )}
     </div>
   )
 }

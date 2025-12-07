@@ -2,7 +2,6 @@ package cz.bodnor.serviceslicer.application.module.benchmarkrun.service
 
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
 import cz.bodnor.serviceslicer.infrastructure.config.PrometheusProperties
-import cz.bodnor.serviceslicer.infrastructure.config.RemoteExecutionProperties
 import org.springframework.stereotype.Component
 import java.nio.file.Path
 import java.util.UUID

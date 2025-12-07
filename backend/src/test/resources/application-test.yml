@@ -14,3 +14,7 @@ spring:
 #  level:
 #    org.springframework.data.neo4j: DEBUG
 #    org.springframework.data.neo4j.cypher: DEBUG
+
+prometheus:
+  query-url: dummy
+  remote-write-url: dummy

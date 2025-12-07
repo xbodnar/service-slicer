@@ -5,7 +5,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Badge } from '@/components/ui/badge'
 import { useListFiles } from '@/api/generated/file-controller/file-controller'
-import type { ListFilesResponse } from '@/api/types/file'
 import { useFileUpload, type UploadedFile } from '@/hooks/useFileUpload'
 import { Package, CheckCircle2, Loader2 } from 'lucide-react'
 
@@ -35,7 +34,7 @@ export function FileSelector({
   const { data: filesData } = useListFiles({ page: 0, size: 100 })
 
   // Filter files by READY status and optionally by MIME type
-  const availableFiles = ((filesData as ListFilesResponse)?.files || []).filter(
+  const availableFiles = (filesData?.items || []).filter(
     (file) => {
       if (file.status !== 'READY') return false
       if (mimeTypeFilter) {
@@ -72,12 +71,12 @@ export function FileSelector({
   }
 
   const handleExistingFileSelect = (fileId: string) => {
-    const selectedExistingFile = availableFiles.find((f) => f.fileId === fileId)
+    const selectedExistingFile = availableFiles.find((f) => f.id === fileId)
     if (selectedExistingFile) {
       onFileSelected({
-        fileId: selectedExistingFile.fileId,
+        fileId: selectedExistingFile.id,
         filename: selectedExistingFile.filename,
-        size: selectedExistingFile.expectedSize,
+        size: selectedExistingFile.fileSize,
       })
     }
   }
@@ -140,11 +139,11 @@ export function FileSelector({
               <div className="p-2 text-sm text-muted-foreground">No files available</div>
             ) : (
               availableFiles.map((file) => (
-                <SelectItem key={file.fileId} value={file.fileId}>
+                <SelectItem key={file.id} value={file.id}>
                   <div className="flex items-center gap-2">
                     <span className="truncate">{file.filename}</span>
                     <span className="text-xs text-muted-foreground">
-                      ({formatFileSize(file.expectedSize)})
+                      ({formatFileSize(file.fileSize)})
                     </span>
                   </div>
                 </SelectItem>

@@ -37,4 +37,7 @@
             </column>
         </createTable>
     </changeSet>
+    <changeSet id="rename-state" author="Norbert Bodnar">
+        <renameColumn tableName="benchmark_run" oldColumnName="state" newColumnName="status"/>
+    </changeSet>
 </databaseChangeLog>

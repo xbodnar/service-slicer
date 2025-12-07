@@ -25,7 +25,9 @@ import type {
 
 import type {
   CreateSystemUnderTestRequest,
-  Result,
+  ListSystemsUnderTestParams,
+  ListSystemsUnderTestResponse,
+  SystemUnderTestDetailDto,
   SystemUnderTestDto,
   UpdateSystemUnderTestRequest
 } from '../openAPIDefinition.schemas';
@@ -43,7 +45,7 @@ export const getSystemUnderTest = (
 ) => {
       
       
-      return apiClient<SystemUnderTestDto>(
+      return apiClient<SystemUnderTestDetailDto>(
       {url: `/systems-under-test/${sutId}`, method: 'GET', signal
     },
       options);
@@ -129,7 +131,7 @@ export const updateSystemUnderTest = (
  options?: SecondParameter<typeof apiClient>,) => {
       
       
-      return apiClient<Result>(
+      return apiClient<SystemUnderTestDto>(
       {url: `/systems-under-test/${sutId}`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: updateSystemUnderTestRequest
@@ -237,13 +239,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     export const listSystemsUnderTest = (
-    
+    params?: ListSystemsUnderTestParams,
  options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
 ) => {
       
       
-      return apiClient<Result>(
-      {url: `/systems-under-test`, method: 'GET', signal
+      return apiClient<ListSystemsUnderTestResponse>(
+      {url: `/systems-under-test`, method: 'GET',
+        params, signal
     },
       options);
     }
@@ -251,23 +254,23 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-export const getListSystemsUnderTestQueryKey = () => {
+export const getListSystemsUnderTestQueryKey = (params?: ListSystemsUnderTestParams,) => {
     return [
-    `/systems-under-test`
+    `/systems-under-test`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getListSystemsUnderTestQueryOptions = <TData = Awaited<ReturnType<typeof listSystemsUnderTest>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemsUnderTest>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+export const getListSystemsUnderTestQueryOptions = <TData = Awaited<ReturnType<typeof listSystemsUnderTest>>, TError = unknown>(params?: ListSystemsUnderTestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemsUnderTest>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListSystemsUnderTestQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListSystemsUnderTestQueryKey(params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSystemsUnderTest>>> = ({ signal }) => listSystemsUnderTest(requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSystemsUnderTest>>> = ({ signal }) => listSystemsUnderTest(params, requestOptions, signal);
 
       
 
@@ -281,7 +284,7 @@ export type ListSystemsUnderTestQueryError = unknown
 
 
 export function useListSystemsUnderTest<TData = Awaited<ReturnType<typeof listSystemsUnderTest>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemsUnderTest>>, TError, TData>> & Pick<
+ params: undefined |  ListSystemsUnderTestParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemsUnderTest>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listSystemsUnderTest>>,
           TError,
@@ -291,7 +294,7 @@ export function useListSystemsUnderTest<TData = Awaited<ReturnType<typeof listSy
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListSystemsUnderTest<TData = Awaited<ReturnType<typeof listSystemsUnderTest>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemsUnderTest>>, TError, TData>> & Pick<
+ params?: ListSystemsUnderTestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemsUnderTest>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listSystemsUnderTest>>,
           TError,
@@ -301,16 +304,16 @@ export function useListSystemsUnderTest<TData = Awaited<ReturnType<typeof listSy
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListSystemsUnderTest<TData = Awaited<ReturnType<typeof listSystemsUnderTest>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemsUnderTest>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ params?: ListSystemsUnderTestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemsUnderTest>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useListSystemsUnderTest<TData = Awaited<ReturnType<typeof listSystemsUnderTest>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemsUnderTest>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ params?: ListSystemsUnderTestParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemsUnderTest>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListSystemsUnderTestQueryOptions(options)
+  const queryOptions = getListSystemsUnderTestQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -328,7 +331,7 @@ export const createSystemUnderTest = (
 ) => {
       
       
-      return apiClient<Result>(
+      return apiClient<SystemUnderTestDto>(
       {url: `/systems-under-test`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: createSystemUnderTestRequest, signal

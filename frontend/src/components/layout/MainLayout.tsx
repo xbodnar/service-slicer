@@ -22,7 +22,7 @@ export function MainLayout() {
   }
 
   const navItems = [
-    { path: '/projects', label: 'Projects', icon: Layers },
+    { path: '/decomposition-jobs', label: 'Decomposition Jobs', icon: Layers },
     { path: '/benchmarks', label: 'Benchmarks', icon: FlaskConical },
     { path: '/operational-settings', label: 'Operational Settings', icon: Settings },
     { path: '/systems-under-test', label: 'Systems Under Test', icon: Server },

@@ -17,8 +17,6 @@ class GetFileDownloadUrlQueryHandler(
         val file = fileReadService.getById(query.fileId)
 
         return GetFileDownloadUrlQuery.Result(
-            fileId = file.id,
-            filename = file.filename,
             downloadUrl = generateFileDownloadUrl(file.storageKey),
         )
     }

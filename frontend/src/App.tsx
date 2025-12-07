@@ -5,9 +5,6 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
-import { ProjectListPage } from '@/pages/projects/ProjectListPage'
-import { ProjectDetailPage } from '@/pages/projects/ProjectDetailPage'
-import { ProjectCreatePage } from '@/pages/projects/ProjectCreatePage'
 import { BenchmarkListPage } from '@/pages/benchmarks/BenchmarkListPage'
 import { BenchmarkDetailPage } from '@/pages/benchmarks/BenchmarkDetailPage'
 import { BenchmarkCreatePage } from '@/pages/benchmarks/BenchmarkCreatePage'
@@ -20,6 +17,9 @@ import { FileListPage } from '@/pages/files/FileListPage'
 import { SystemUnderTestListPage } from '@/pages/sut/SystemUnderTestListPage'
 import { SystemUnderTestDetailPage } from '@/pages/sut/SystemUnderTestDetailPage'
 import { SystemUnderTestCreatePage } from '@/pages/sut/SystemUnderTestCreatePage'
+import {DecompositionJobListPage} from "@/pages/decompositionjobs/DecompositionJobListPage.tsx";
+import {DecompositionJobCreatePage} from "@/pages/decompositionjobs/DecompositionJobCreatePage.tsx";
+import {DecompositionJobDetailPage} from "@/pages/decompositionjobs/DecompositionJobDetailPage.tsx";
 
 function App() {
   return (
@@ -29,10 +29,10 @@ function App() {
         <Route path="/" element={<MainLayout />}>
           <Route index element={<LandingPage />} />
 
-          {/* Projects */}
-          <Route path="projects" element={<ProjectListPage />} />
-          <Route path="projects/new" element={<ProtectedRoute><ProjectCreatePage /></ProtectedRoute>} />
-          <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+          {/* Decomposition Jobs */}
+          <Route path="decomposition-jobs" element={<DecompositionJobListPage />} />
+          <Route path="decomposition-jobs/new" element={<ProtectedRoute><DecompositionJobCreatePage /></ProtectedRoute>} />
+          <Route path="decomposition-jobs/:decompositionJobId" element={<DecompositionJobDetailPage />} />
 
           {/* Benchmarks */}
           <Route path="benchmarks" element={<BenchmarkListPage />} />

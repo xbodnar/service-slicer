@@ -28,7 +28,6 @@ class InitiateFileUploadCommandHandler(
         return InitiateFileUploadCommand.Result(
             fileId = file.id,
             uploadUrl = uploadUrl,
-            storageKey = file.storageKey,
         )
     }
 }

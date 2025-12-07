@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useGetBenchmarkRun, useGetBenchmark } from '@/api/generated/benchmarks-controller/benchmarks-controller'
 import type { TargetTestCaseDto } from '@/api/generated/openAPIDefinition.schemas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Loader2, CheckCircle, XCircle, Clock, PlayCircle, Activity, ChevronDown, ChevronUp, Info } from 'lucide-react'
 import { format } from 'date-fns'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ComposedChart, Scatter, ReferenceLine } from 'recharts'
+import {useGetBenchmarkRun} from "@/api/generated/benchmark-run-controller/benchmark-run-controller.ts";
+import {useGetBenchmark} from "@/api/generated/benchmark-controller/benchmark-controller.ts";
 
 const getStateColor = (state: string) => {
   switch (state) {
@@ -48,7 +49,7 @@ const getStateIcon = (state: string) => {
 
 export function BenchmarkRunDetailPage() {
   const { benchmarkId, runId } = useParams<{ benchmarkId: string; runId: string }>()
-  const { data, isLoading, error } = useGetBenchmarkRun(benchmarkId!, runId!)
+  const { data, isLoading, error } = useGetBenchmarkRun(runId!)
   const { data: benchmarkData, isLoading: isBenchmarkLoading } = useGetBenchmark(benchmarkId!)
   const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
   const [selectedLoad, setSelectedLoad] = useState<string>('')
@@ -317,9 +318,9 @@ export function BenchmarkRunDetailPage() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">Benchmark Run Dashboard</h1>
-              <Badge variant={getStateColor(data.state)} className={`flex items-center gap-1 ${getStateClassName(data.state)}`}>
-                {getStateIcon(data.state)}
-                {data.state}
+              <Badge variant={getStateColor(data.status)} className={`flex items-center gap-1 ${getStateClassName(data.status)}`}>
+                {getStateIcon(data.status)}
+                {data.status}
               </Badge>
             </div>
             <p className="text-muted-foreground mt-1 font-mono text-sm">{data.id}</p>
@@ -390,9 +391,9 @@ export function BenchmarkRunDetailPage() {
               </div>
               <div className="space-y-1">
                 <p className="text-muted-foreground">Status</p>
-                <Badge variant={getStateColor(data.state)} className={`flex items-center gap-1 w-fit ${getStateClassName(data.state)}`}>
-                  {getStateIcon(data.state)}
-                  {data.state}
+                <Badge variant={getStateColor(data.status)} className={`flex items-center gap-1 w-fit ${getStateClassName(data.status)}`}>
+                  {getStateIcon(data.status)}
+                  {data.status}
                 </Badge>
               </div>
               <div className="space-y-1 sm:col-span-2">
@@ -428,7 +429,7 @@ export function BenchmarkRunDetailPage() {
               </div>
             </CardContent>
           </Card>
-        ) : data.state === 'FAILED' ? (
+        ) : data.status === 'FAILED' ? (
           <Card className="border-2 border-destructive/50">
             <CardContent className="pt-6">
               <div className="p-6 rounded-lg bg-destructive/10 border border-destructive/30 flex flex-col items-center gap-3 text-center">

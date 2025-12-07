@@ -17,11 +17,11 @@ class CreateOperationalSettingCommandHandler(
     private val operationalSettingWriteService: OperationalSettingWriteService,
     private val fileReadService: FileReadService,
     private val openApiParsingService: OpenApiParsingService,
-) : CommandHandler<CreateOperationalSettingCommand.Result, CreateOperationalSettingCommand> {
+) : CommandHandler<OperationalSetting, CreateOperationalSettingCommand> {
     override val command = CreateOperationalSettingCommand::class
 
     @Transactional
-    override fun handle(command: CreateOperationalSettingCommand): CreateOperationalSettingCommand.Result {
+    override fun handle(command: CreateOperationalSettingCommand): OperationalSetting {
         val file = fileReadService.getById(command.openApiFileId)
         verify(file.status == FileStatus.READY) { "File is not uploaded yet" }
         val apiOperations = openApiParsingService.parse(file.id)
@@ -38,10 +38,7 @@ class CreateOperationalSettingCommandHandler(
             operationalSetting = operationalSetting,
             apiOperations = apiOperations,
         )
-        operationalSettingWriteService.save(operationalSetting)
 
-        return CreateOperationalSettingCommand.Result(
-            operationalSettingId = operationalSetting.id,
-        )
+        return operationalSettingWriteService.save(operationalSetting)
     }
 }

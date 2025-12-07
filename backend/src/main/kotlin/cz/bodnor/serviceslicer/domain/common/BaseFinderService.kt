@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.domain.common
 
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.repository.NoRepositoryBean
 import org.springframework.data.repository.findByIdOrNull
@@ -41,4 +42,7 @@ abstract class BaseFinderService<T : DomainEntity>(
 
     @Transactional(readOnly = true)
     open fun findAll(): List<T> = repository.findAll()
+
+    @Transactional(readOnly = true)
+    open fun findAll(pageable: Pageable) = repository.findAll(pageable)
 }

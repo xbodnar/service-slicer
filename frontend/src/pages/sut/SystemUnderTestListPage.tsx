@@ -3,10 +3,14 @@ import { useListSystemsUnderTest } from '@/api/generated/system-under-test-contr
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, Loader2, Server, ArrowRight, Calendar } from 'lucide-react'
-import type { SystemUnderTestDto } from '@/api/generated/openAPIDefinition.schemas'
+import {Pagination} from "@/components/ui/pagination.tsx";
+import {useState} from "react";
+import {formatDistance} from "date-fns";
 
 export function SystemUnderTestListPage() {
-  const { data, isLoading, error } = useListSystemsUnderTest()
+  const [page, setPage] = useState(0)
+  const [size] = useState(12)
+  const { data, isLoading, error } = useListSystemsUnderTest({ page, size })
 
   if (isLoading) {
     return (
@@ -23,9 +27,6 @@ export function SystemUnderTestListPage() {
       </div>
     )
   }
-
-  // Type assertion to handle the Result type properly
-  const systems = (data as any)?.systemsUnderTest as SystemUnderTestDto[] | undefined
 
   return (
     <div className="space-y-6">
@@ -44,7 +45,7 @@ export function SystemUnderTestListPage() {
         </Link>
       </div>
 
-      {!systems || systems.length === 0 ? (
+      {!data?.items || data.items.length === 0 ? (
         <Card className="border-dashed border-2">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <div className="rounded-full bg-muted p-4 mb-4">
@@ -64,7 +65,7 @@ export function SystemUnderTestListPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {systems.map((system) => (
+          {data.items.map((system) => (
             <Link key={system.id} to={`/systems-under-test/${system.id}`}>
               <Card className="group border-2 hover:border-primary/50 hover:shadow-lg transition-all h-full cursor-pointer">
                 <CardHeader>
@@ -86,13 +87,23 @@ export function SystemUnderTestListPage() {
                 <CardContent>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-3.5 w-3.5" />
-                    <span>Added recently</span>
+                    <span>{formatDistance(new Date(system.createdAt), new Date(), { addSuffix: true })}</span>
                   </div>
                 </CardContent>
               </Card>
             </Link>
           ))}
         </div>
+      )}
+
+      {data && data.totalPages > 1 && (
+        <Pagination
+          currentPage={data.currentPage}
+          totalPages={data.totalPages}
+          pageSize={data.pageSize}
+          totalElements={data.totalElements}
+          onPageChange={setPage}
+        />
       )}
     </div>
   )

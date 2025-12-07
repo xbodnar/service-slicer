@@ -14,12 +14,11 @@ import java.util.UUID
  */
 @Entity
 class File(
-    id: UUID = UUID.randomUUID(),
     // An empty string for directories
     val filename: String,
     val fileSize: Long,
     val mimeType: String,
-) : UpdatableEntity(id) {
+) : UpdatableEntity() {
 
     val storageKey: String = generateStorageKey(id, filename)
 

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useCallback, useEffect } from 'react'
 import { BasicNvlWrapper } from '@neo4j-nvl/react'
 import type { Node, Relationship, NVL } from '@neo4j-nvl/base'
-import { ClassNodeDto } from '@/types/api'
+import {ClassNodeDto} from "@/api/generated/openAPIDefinition.schemas.ts";
 
 interface DependencyGraphVisualizationProps {
   nodes: ClassNodeDto[]

@@ -10,14 +10,15 @@ import {
   useUpdateBenchmark as useUpdateBenchmarkGenerated,
   useValidateOperationalSetting as useValidateOperationalSettingGenerated,
   getGetBenchmarkQueryKey,
-} from '@/api/generated/benchmarks-controller/benchmarks-controller'
+} from '@/api/generated/benchmark-controller/benchmark-controller'
 import { useQueryClient } from '@tanstack/react-query'
+import type {ListBenchmarksParams} from "@/api/generated/openAPIDefinition.schemas.ts";
 
 /**
  * Query hook for listing all benchmarks
  */
-export function useBenchmarksList() {
-  return useListBenchmarksGenerated()
+export function useBenchmarksList(params?: ListBenchmarksParams) {
+  return useListBenchmarksGenerated(params)
 }
 
 /**

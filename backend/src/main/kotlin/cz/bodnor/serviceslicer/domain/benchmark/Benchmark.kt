@@ -19,15 +19,17 @@ import java.util.UUID
  */
 @Entity
 class Benchmark(
-    // Reference to the load test configuration
-    @ManyToOne
-    var operationalSetting: OperationalSetting,
     // Custom name to identify this benchmark
     var name: String,
     // Description of this benchmark
     var description: String? = null,
+    // Reference to the load test configuration
+    @ManyToOne
+    var operationalSetting: OperationalSetting,
+    // Baseline system under test
     @OneToOne
     val baselineSut: SystemUnderTest,
+    // Target system under test
     @OneToOne
     val targetSut: SystemUnderTest,
 ) : UpdatableEntity() {

@@ -1,7 +1,8 @@
 package cz.bodnor.serviceslicer.adapter.`in`.job.batch
 
-import cz.bodnor.serviceslicer.application.module.analysis.DomainDecompositionType
-import cz.bodnor.serviceslicer.application.module.analysis.command.DomainExpertDecompositionCommand
+import cz.bodnor.serviceslicer.application.module.decomposition.command.DomainExpertDecompositionCommand
+import cz.bodnor.serviceslicer.application.module.decomposition.command.DomainExpertDecompositionCommand.DomainDecompositionType.DOMAIN_DRIVEN
+import cz.bodnor.serviceslicer.domain.job.JobParameterLabel.DECOMPOSITION_JOB_ID
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.batch.core.StepContribution
 import org.springframework.batch.core.configuration.annotation.JobScope
@@ -16,14 +17,19 @@ import java.util.UUID
 @JobScope
 class DomainDrivenDecompositionTasklet(
     private val commandBus: CommandBus,
-    @Value("#{jobParameters['PROJECT_ID']}") private val projectId: UUID,
+    @Value("#{jobParameters['${DECOMPOSITION_JOB_ID}']}") private val decompositionJobId: UUID,
 ) : Tasklet {
 
     override fun execute(
         contribution: StepContribution,
         chunkContext: ChunkContext,
     ): RepeatStatus {
-        commandBus(DomainExpertDecompositionCommand(projectId, DomainDecompositionType.DOMAIN_DRIVEN))
+        commandBus(
+            DomainExpertDecompositionCommand(
+                decompositionJobId = decompositionJobId,
+                decompositionType = DOMAIN_DRIVEN,
+            ),
+        )
 
         return RepeatStatus.FINISHED
     }

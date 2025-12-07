@@ -1,8 +1,8 @@
 package cz.bodnor.serviceslicer.adapter.out.ai
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import cz.bodnor.serviceslicer.application.module.decomposition.port.out.SuggestServiceBoundaryNames
 import cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection.CommunityDetectionStrategy
-import cz.bodnor.serviceslicer.application.module.microservicesuggestion.port.out.SuggestServiceBoundaryNames
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.ai.converter.BeanOutputConverter

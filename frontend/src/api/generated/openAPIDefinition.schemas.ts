@@ -4,50 +4,19 @@
  * OpenAPI definition
  * OpenAPI spec version: v0
  */
-export interface DatabaseSeedConfigDto {
-  /** ID of the SQL seed file */
-  sqlSeedFile: File;
-  /** Database container name in docker-compose */
+export interface DatabaseSeedConfig {
+  sqlSeedFileId: string;
   dbContainerName: string;
-  /** Database port inside container */
   dbPort: number;
-  /** Database name */
   dbName: string;
-  /** Database username */
   dbUsername: string;
 }
 
-export interface DockerConfigDto {
-  /** ID of the Docker Compose file */
-  composeFile: File;
-  /** Health check endpoint path */
+export interface DockerConfig {
+  composeFileId: string;
   healthCheckPath: string;
-  /** Application port */
   appPort: number;
-  /** Startup timeout in seconds */
   startupTimeoutSeconds: number;
-}
-
-export type FileStatus = typeof FileStatus[keyof typeof FileStatus];
-
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const FileStatus = {
-  PENDING: 'PENDING',
-  READY: 'READY',
-  FAILED: 'FAILED',
-} as const;
-
-export interface File {
-  id: string;
-  filename: string;
-  fileSize: number;
-  mimeType: string;
-  version: number;
-  storageKey: string;
-  status: FileStatus;
-  updatedAt: string;
-  createdAt: string;
 }
 
 /**
@@ -59,13 +28,52 @@ export interface UpdateSystemUnderTestRequest {
   /** Description of the system under test */
   description?: string;
   /** Docker configuration */
-  dockerConfig: DockerConfigDto;
+  dockerConfig: DockerConfig;
   /** Database seed configurations (one per database) */
-  databaseSeedConfigs: DatabaseSeedConfigDto[];
+  databaseSeedConfigs: DatabaseSeedConfig[];
 }
 
-export interface Result {
-  systemUnderTestId: string;
+/**
+ * System under test
+ */
+export interface SystemUnderTestDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  description?: string;
+  dockerConfig: DockerConfig;
+  databaseSeedConfigs: DatabaseSeedConfig[];
+}
+
+/**
+ * Request to update a benchmark
+ */
+export interface UpdateBenchmarkRequest {
+  name: string;
+  description?: string;
+}
+
+export interface BenchmarkDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  description?: string;
+}
+
+/**
+ * Request to create a system under test
+ */
+export interface CreateSystemUnderTestRequest {
+  /** Name of the system under test */
+  name: string;
+  /** Description of the system under test */
+  description?: string;
+  /** Docker configuration */
+  dockerConfig: DockerConfig;
+  /** Database seed configurations (one per database) */
+  databaseSeedConfigs: DatabaseSeedConfig[];
 }
 
 export type ApiRequestHeaders = {[key: string]: string};
@@ -96,93 +104,6 @@ export interface BehaviorModel {
   steps: ApiRequest[];
 }
 
-export type OperationalSettingOperationalProfile = {[key: string]: number};
-
-export interface OperationalSetting {
-  name: string;
-  description?: string;
-  openApiFile: File;
-  usageProfile: BehaviorModel[];
-  operationalProfile: OperationalSettingOperationalProfile;
-  id: string;
-  version: number;
-  updatedAt: string;
-  createdAt: string;
-}
-
-/**
- * Request to update a benchmark
- */
-export interface UpdateBenchmarkRequest {
-  /** Name of the benchmark */
-  name: string;
-  /** Description of the benchmark */
-  description?: string;
-  /** Load test configuration */
-  operationalSetting: OperationalSetting;
-}
-
-/**
- * Result of updating a benchmark
- */
-export interface UpdateBenchmarkResult {
-  /** ID of the updated benchmark */
-  benchmarkId: string;
-}
-
-/**
- * Request to create a system under test
- */
-export interface CreateSystemUnderTestRequest {
-  /** Name of the system under test */
-  name: string;
-  /** Description of the system under test */
-  description?: string;
-  /** Docker configuration */
-  dockerConfig: DockerConfig;
-  /** Database seed configurations (one per database) */
-  databaseSeedConfigs: DatabaseSeedConfig[];
-}
-
-export interface DatabaseSeedConfig {
-  sqlSeedFileId: string;
-  dbContainerName: string;
-  dbPort: number;
-  dbName: string;
-  dbUsername: string;
-}
-
-export interface DockerConfig {
-  composeFileId: string;
-  healthCheckPath: string;
-  appPort: number;
-  startupTimeoutSeconds: number;
-}
-
-/**
- * Request to create a new project for analysis
- */
-export interface CreateProjectRequest {
-  /** Name of the project */
-  projectName: string;
-  /** Base package name to analyze */
-  basePackageName: string;
-  /** List of package names to exclude from analysis */
-  excludePackages: string[];
-  /** ID of the uploaded JAR file */
-  jarFileId: string;
-  /** ID of the uploaded project directory (optional) */
-  projectDirId?: string;
-}
-
-/**
- * Result of creating a project
- */
-export interface CreateProjectResult {
-  /** ID of the created project */
-  projectId: string;
-}
-
 export type CreateOperationalSettingRequestOperationalProfile = {[key: string]: number};
 
 export interface CreateOperationalSettingRequest {
@@ -191,6 +112,45 @@ export interface CreateOperationalSettingRequest {
   openApiFileId: string;
   usageProfile: BehaviorModel[];
   operationalProfile: CreateOperationalSettingRequestOperationalProfile;
+}
+
+export type FileDtoStatus = typeof FileDtoStatus[keyof typeof FileDtoStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const FileDtoStatus = {
+  PENDING: 'PENDING',
+  READY: 'READY',
+  FAILED: 'FAILED',
+} as const;
+
+/**
+ * File DTO
+ */
+export interface FileDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  filename: string;
+  fileSize: number;
+  mimeType: string;
+  status: FileDtoStatus;
+}
+
+export type OperationalSettingDtoOperationalProfile = {[key: string]: number};
+
+/**
+ * Operational setting
+ */
+export interface OperationalSettingDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  description?: string;
+  openApiFile: FileDto;
+  usageProfile: BehaviorModel[];
+  operationalProfile: OperationalSettingDtoOperationalProfile;
 }
 
 /**
@@ -208,63 +168,65 @@ export interface InitiateFileUploadRequest {
 /**
  * Result of initiating a file upload
  */
-export interface InitiateFileUploadResult {
+export interface InitiateFileUploadResponse {
   /** ID of the created file record */
   fileId: string;
   /** Presigned URL for uploading the file to object storage */
   uploadUrl: string;
-  /** Storage key for the file in object storage */
-  storageKey: string;
 }
 
 /**
- * Result of extracting a ZIP file
+ * Request to create a decomposition job
  */
-export interface ExtractZipFileResult {
-  /** ID of the created directory file record */
-  dirId: string;
+export interface CreateDecompositionJobRequest {
+  name: string;
+  basePackageName: string;
+  excludePackages: string[];
+  jarFileId: string;
 }
 
-/**
- * Request to fetch a Git repository
- */
-export interface FetchGitRepositoryRequest {
-  /** URL of the Git repository */
-  repositoryUrl: string;
-  /** Branch to fetch */
-  branch: string;
-}
+export type DecompositionJobDtoStatus = typeof DecompositionJobDtoStatus[keyof typeof DecompositionJobDtoStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const DecompositionJobDtoStatus = {
+  RUNNING: 'RUNNING',
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+} as const;
 
 /**
- * Result of fetching a Git repository
+ * Decomposition job
  */
-export interface FetchGitRepositoryResult {
-  /** ID of the created directory file record */
-  dirId: string;
+export interface DecompositionJobDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  monolithArtifact: MonolithArtifactDto;
+  status: DecompositionJobDtoStatus;
+  startTimestamp?: string;
+  endTimestamp?: string;
+}
+
+export interface MonolithArtifactDto {
+  id: string;
+  createdAt: string;
+  basePackageName: string;
+  excludePackages: string[];
+  jarFile: FileDto;
 }
 
 /**
  * Request to create a benchmark
  */
 export interface CreateBenchmarkRequest {
-  /** Name of the benchmark */
   name: string;
-  /** Description of the benchmark */
   description?: string;
-  /** Load test configuration */
-  operationalSetting: OperationalSetting;
-  /** ID of the baseline system under test */
+  operationalSettingId: string;
   baselineSutId: string;
-  /** ID of the target system under test */
   targetSutId: string;
-}
-
-/**
- * Result of creating a benchmark
- */
-export interface CreateBenchmarkResult {
-  /** ID of the created benchmark */
-  benchmarkId: string;
 }
 
 export type ValidationResultValidationState = typeof ValidationResultValidationState[keyof typeof ValidationResultValidationState];
@@ -285,14 +247,6 @@ export interface ValidationResult {
 }
 
 /**
- * Result of running a benchmark
- */
-export interface RunBenchmarkResult {
-  /** ID of the created benchmark run */
-  benchmarkRunId: string;
-}
-
-/**
  * Result of generating behavior models
  */
 export interface GenerateBehaviorModelsResult {
@@ -300,283 +254,11 @@ export interface GenerateBehaviorModelsResult {
   loadTestConfigId: string;
 }
 
-export interface PerformanceMetrics {
-  operationId: string;
-  totalRequests: number;
-  failedRequests: number;
-  meanResponseTimeMs: number;
-  stdDevResponseTimeMs: number;
-  p95DurationMs: number;
-  p99DurationMs: number;
-}
-
-/**
- * System under test
- */
-export interface SystemUnderTestDto {
-  /** ID of the system under test */
-  id: string;
-  /** Name of the system under test */
-  name: string;
-  /** Description of the system under test */
-  description?: string;
-  /** Docker configuration */
-  dockerConfig: DockerConfigDto;
-  /** Database seed configurations (one per database) */
-  databaseSeedConfigs: DatabaseSeedConfigDto[];
-}
-
-/**
- * List of projects
- */
-export interface ListProjectsResult {
-  /** List of project summaries */
-  projects: ProjectSummary[];
-}
-
-/**
- * Summary of a project
- */
-export interface ProjectSummary {
-  /** ID of the project */
-  projectId: string;
-  /** Name of the project */
-  name: string;
-  /** Base package name */
-  basePackageName: string;
-  /** Creation timestamp */
-  createdAt: string;
-}
-
-/**
- * Analysis job results
- */
-export interface AnalysisJobResult {
-  /** Static analysis results */
-  staticAnalysis: StaticAnalysisResult;
-}
-
-/**
- * Class node in the dependency graph
- */
-export interface ClassNodeDto {
-  /** Simple class name */
-  simpleClassName: string;
-  /** Fully qualified class name */
-  fullyQualifiedClassName: string;
-  /** List of fully qualified names this class depends on */
-  dependencies: string[];
-}
-
-/**
- * Map of community ID to list of class fully qualified names
- */
-export type DecompositionResultsCommunities = {[key: string]: string[]};
-
-/**
- * Decomposition results showing communities
- */
-export interface DecompositionResults {
-  /** Map of community ID to list of class fully qualified names */
-  communities: DecompositionResultsCommunities;
-}
-
-/**
- * Detailed project information with analysis results
- */
-export interface GetProjectResult {
-  /** ID of the project */
-  projectId: string;
-  /** Name of the project */
-  name: string;
-  /** Analysis job results */
-  analysisJobResult: AnalysisJobResult;
-}
-
-/**
- * Summary of the dependency graph
- */
-export interface GraphSummary {
-  /** Number of nodes in the graph */
-  nodeCount: number;
-  /** Number of edges in the graph */
-  edgeCount: number;
-  /** List of class nodes */
-  nodes: ClassNodeDto[];
-}
-
-/**
- * Static analysis results including graph and decompositions
- */
-export interface StaticAnalysisResult {
-  /** Dependency graph summary */
-  dependencyGraph: GraphSummary;
-  /** Label propagation algorithm results */
-  labelPropagationAlgorithm: DecompositionResults;
-  /** Louvain algorithm results */
-  louvainAlgorithm: DecompositionResults;
-  /** Leiden algorithm results */
-  leidenAlgorithm: DecompositionResults;
-  /** Domain-driven decomposition results */
-  domainDrivenDecomposition: DecompositionResults;
-  /** Actor-driven decomposition results */
-  actorDrivenDecomposition: DecompositionResults;
-}
-
-/**
- * Upload status
- */
-export type FileSummaryStatus = typeof FileSummaryStatus[keyof typeof FileSummaryStatus];
-
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const FileSummaryStatus = {
-  PENDING: 'PENDING',
-  READY: 'READY',
-  FAILED: 'FAILED',
-} as const;
-
-/**
- * Summary of a file
- */
-export interface FileSummary {
-  /** ID of the file */
-  fileId: string;
-  /** Name of the file */
-  filename: string;
-  /** Expected size in bytes */
-  expectedSize: number;
-  /** MIME type of the file */
-  mimeType: string;
-  /** Upload status */
-  status: FileSummaryStatus;
-  /** Creation timestamp */
-  createdAt: string;
-  /** Last update timestamp */
-  updatedAt: string;
-}
-
-/**
- * Paginated list of files
- */
-export interface ListFilesResult {
-  /** List of files in the current page */
-  files: FileSummary[];
-  /** Total number of files */
-  totalElements: number;
-  /** Total number of pages */
-  totalPages: number;
-  /** Current page number (0-indexed) */
-  currentPage: number;
-  /** Number of items per page */
-  pageSize: number;
-}
-
-/**
- * Presigned download URL for a file
- */
-export interface GetFileDownloadUrlResult {
-  /** ID of the file */
-  fileId: string;
-  /** Name of the file */
-  filename: string;
-  /** Presigned download URL */
-  downloadUrl: string;
-}
-
-/**
- * Summary of a benchmark
- */
-export interface BenchmarkSummary {
-  /** ID of the benchmark */
+export interface CreateBenchmarkRunRequest {
   benchmarkId: string;
-  /** Name of the benchmark */
-  name: string;
-  /** Description of the benchmark */
-  description?: string;
-  /** Creation timestamp */
-  createdAt: string;
+  testDuration?: string;
 }
 
-/**
- * List of benchmarks
- */
-export interface ListBenchmarksResult {
-  /** List of benchmark summaries */
-  benchmarks: BenchmarkSummary[];
-}
-
-/**
- * Detailed benchmark information
- */
-export interface GetBenchmarkResult {
-  /** ID of the benchmark */
-  id: string;
-  /** Name of the benchmark */
-  name: string;
-  /** Description of the benchmark */
-  description?: string;
-  /** Load test configuration */
-  operationalSetting: OperationalSetting;
-  /** Baseline system under test */
-  baselineSut: SystemUnderTestDto;
-  /** Target system under test */
-  targetSut: SystemUnderTestDto;
-  /** Validation result for baseline SUT */
-  baselineSutValidationResult?: ValidationResult;
-  /** Validation result for target SUT */
-  targetSutValidationResult?: ValidationResult;
-  /** Creation timestamp */
-  createdAt: string;
-  /** Last update timestamp */
-  updatedAt: string;
-}
-
-/**
- * State of the benchmark run
- */
-export type BenchmarkRunSummaryState = typeof BenchmarkRunSummaryState[keyof typeof BenchmarkRunSummaryState];
-
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const BenchmarkRunSummaryState = {
-  PENDING: 'PENDING',
-  COMPLETED: 'COMPLETED',
-  FAILED: 'FAILED',
-} as const;
-
-/**
- * Summary of a benchmark run
- */
-export interface BenchmarkRunSummary {
-  /** ID of the benchmark run */
-  benchmarkRunId: string;
-  /** ID of the benchmark */
-  benchmarkId: string;
-  /** State of the benchmark run */
-  state: BenchmarkRunSummaryState;
-  /** Creation timestamp */
-  createdAt: string;
-  /** Last update timestamp */
-  updatedAt: string;
-}
-
-/**
- * List of benchmark runs
- */
-export interface ListBenchmarkRunsResult {
-  /** List of benchmark run summaries */
-  benchmarkRuns: BenchmarkRunSummary[];
-}
-
-/**
- * Relative domain metrics by load level
- */
-export type BaselineTestCaseDtoRelativeDomainMetrics = {[key: string]: number};
-
-/**
- * Status of the test case
- */
 export type BaselineTestCaseDtoStatus = typeof BaselineTestCaseDtoStatus[keyof typeof BaselineTestCaseDtoStatus];
 
 
@@ -588,35 +270,26 @@ export const BaselineTestCaseDtoStatus = {
   FAILED: 'FAILED',
 } as const;
 
-/**
- * Operation metrics by operation ID
- */
 export type BaselineTestCaseDtoOperationMetrics = {[key: string]: BaselineTestCaseOperationMetrics};
+
+export type BaselineTestCaseDtoRelativeDomainMetrics = {[key: string]: number};
 
 /**
  * Baseline test case DTO
  */
 export interface BaselineTestCaseDto {
-  /** ID of the baseline test case */
   id: string;
-  /** ID of the baseline SUT */
-  baselineSutId: string;
-  /** Relative domain metrics by load level */
-  relativeDomainMetrics: BaselineTestCaseDtoRelativeDomainMetrics;
-  /** Load level */
+  createdAt: string;
+  updatedAt: string;
   load: number;
-  /** Status of the test case */
-  status: BaselineTestCaseDtoStatus;
-  /** Start timestamp */
   startTimestamp?: string;
-  /** End timestamp */
   endTimestamp?: string;
-  /** Operation metrics by operation ID */
-  operationMetrics: BaselineTestCaseDtoOperationMetrics;
-  /** K6 output */
+  status: BaselineTestCaseDtoStatus;
   k6Output?: string;
-  /** JSON summary of the K6 run */
   jsonSummary?: JsonNode;
+  baselineSutId: string;
+  operationMetrics: BaselineTestCaseDtoOperationMetrics;
+  relativeDomainMetrics: BaselineTestCaseDtoRelativeDomainMetrics;
 }
 
 export interface BaselineTestCaseOperationMetrics {
@@ -630,48 +303,37 @@ export interface BaselineTestCaseOperationMetrics {
   scalabilityThreshold: number;
 }
 
-export type ExperimentResultsOperationExperimentResults = {[key: string]: OperationExperimentResults};
-
-export interface ExperimentResults {
-  totalDomainMetric: number;
-  operationExperimentResults: ExperimentResultsOperationExperimentResults;
-}
-
-/**
- * State of the benchmark run
- */
-export type GetBenchmarkRunResultState = typeof GetBenchmarkRunResultState[keyof typeof GetBenchmarkRunResultState];
+export type BenchmarkRunDtoStatus = typeof BenchmarkRunDtoStatus[keyof typeof BenchmarkRunDtoStatus];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const GetBenchmarkRunResultState = {
+export const BenchmarkRunDtoStatus = {
+  RUNNING: 'RUNNING',
   PENDING: 'PENDING',
   COMPLETED: 'COMPLETED',
   FAILED: 'FAILED',
 } as const;
 
 /**
- * Detailed benchmark run information
+ * Benchmark run DTO
  */
-export interface GetBenchmarkRunResult {
-  /** ID of the benchmark run */
+export interface BenchmarkRunDto {
   id: string;
-  /** ID of the benchmark */
-  benchmarkId: string;
-  /** Baseline test case */
-  baselineTestCase: BaselineTestCaseDto;
-  /** List of target test cases */
-  targetTestCases: TargetTestCaseDto[];
-  /** Test duration */
-  testDuration: string;
-  /** State of the benchmark run */
-  state: GetBenchmarkRunResultState;
-  /** Experiment results */
-  experimentResults?: ExperimentResults;
-  /** Creation timestamp */
   createdAt: string;
-  /** Last update timestamp */
   updatedAt: string;
+  benchmarkId: string;
+  testDuration: string;
+  status: BenchmarkRunDtoStatus;
+  baselineTestCase: BaselineTestCaseDto;
+  targetTestCases: TargetTestCaseDto[];
+  experimentResults?: ExperimentResults;
+}
+
+export type ExperimentResultsOperationExperimentResults = {[key: string]: OperationExperimentResults};
+
+export interface ExperimentResults {
+  totalDomainMetric: number;
+  operationExperimentResults: ExperimentResultsOperationExperimentResults;
 }
 
 export interface JsonNode {}
@@ -685,9 +347,6 @@ export interface OperationExperimentResults {
   performanceOffset?: number;
 }
 
-/**
- * Status of the test case
- */
 export type TargetTestCaseDtoStatus = typeof TargetTestCaseDtoStatus[keyof typeof TargetTestCaseDtoStatus];
 
 
@@ -699,35 +358,25 @@ export const TargetTestCaseDtoStatus = {
   FAILED: 'FAILED',
 } as const;
 
-/**
- * Operation metrics by operation ID
- */
 export type TargetTestCaseDtoOperationMetrics = {[key: string]: TargetTestCaseOperationMetrics};
 
 /**
  * Target test case DTO
  */
 export interface TargetTestCaseDto {
-  /** ID of the test case */
   id: string;
-  /** Load level */
+  createdAt: string;
+  updatedAt: string;
   load: number;
-  /** Load frequency */
-  loadFrequency: number;
-  /** Status of the test case */
-  status: TargetTestCaseDtoStatus;
-  /** Start timestamp */
   startTimestamp?: string;
-  /** End timestamp */
   endTimestamp?: string;
-  /** Operation metrics by operation ID */
-  operationMetrics: TargetTestCaseDtoOperationMetrics;
-  /** Relative domain metric */
-  relativeDomainMetric?: number;
-  /** K6 output */
+  status: TargetTestCaseDtoStatus;
   k6Output?: string;
-  /** JSON summary of the K6 run */
   jsonSummary?: JsonNode;
+  targetSutId: string;
+  loadFrequency: number;
+  operationMetrics: TargetTestCaseDtoOperationMetrics;
+  relativeDomainMetric?: number;
 }
 
 export interface TargetTestCaseOperationMetrics {
@@ -743,12 +392,203 @@ export interface TargetTestCaseOperationMetrics {
   scalabilityShare: number;
 }
 
+export interface PerformanceMetrics {
+  operationId: string;
+  totalRequests: number;
+  failedRequests: number;
+  meanResponseTimeMs: number;
+  stdDevResponseTimeMs: number;
+  p95DurationMs: number;
+  p99DurationMs: number;
+}
+
+/**
+ * List of systems under test
+ */
+export interface ListSystemsUnderTestResponse {
+  items: SystemUnderTestDto[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+/**
+ * Database seed configuration
+ */
+export interface DatabaseSeedConfigDto {
+  sqlSeedFile: FileDto;
+  dbContainerName: string;
+  dbPort: number;
+  dbName: string;
+  dbUsername: string;
+}
+
+/**
+ * Docker configuration
+ */
+export interface DockerConfigDto {
+  composeFile: FileDto;
+  healthCheckPath: string;
+  appPort: number;
+  startupTimeoutSeconds: number;
+}
+
+/**
+ * System under test details
+ */
+export interface SystemUnderTestDetailDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  description?: string;
+  dockerConfig: DockerConfigDto;
+  databaseSeedConfigs: DatabaseSeedConfigDto[];
+}
+
+/**
+ * List of operational settings
+ */
+export interface ListOperationalSettingsResponse {
+  items: OperationalSettingDto[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+/**
+ * List of files
+ */
+export interface ListFilesResponse {
+  items: FileDto[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+/**
+ * Presigned download URL for a file
+ */
+export interface GetDownloadUrlResponse {
+  downloadUrl: string;
+}
+
+/**
+ * List of decomposition jobs
+ */
+export interface ListDecompositionJobsResponse {
+  items: DecompositionJobDto[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+export interface ClassNodeDto {
+  simpleClassName: string;
+  fullyQualifiedClassName: string;
+  dependencies: string[];
+}
+
+/**
+ * Decomposition job summary
+ */
+export interface DecompositionJobSummaryDto {
+  decompositionJob: DecompositionJobDto;
+  dependencyGraph: GraphSummary;
+  decompositionResults: DecompositionResults;
+}
+
+export type DecompositionResultsLabelPropagation = {[key: string]: string[]};
+
+export type DecompositionResultsLouvain = {[key: string]: string[]};
+
+export type DecompositionResultsLeiden = {[key: string]: string[]};
+
+export type DecompositionResultsDomainDriven = {[key: string]: string[]};
+
+export type DecompositionResultsActorDriven = {[key: string]: string[]};
+
+export interface DecompositionResults {
+  labelPropagation: DecompositionResultsLabelPropagation;
+  louvain: DecompositionResultsLouvain;
+  leiden: DecompositionResultsLeiden;
+  domainDriven: DecompositionResultsDomainDriven;
+  actorDriven: DecompositionResultsActorDriven;
+}
+
+export interface GraphSummary {
+  nodeCount: number;
+  edgeCount: number;
+  nodes: ClassNodeDto[];
+}
+
+/**
+ * List of benchmarks
+ */
+export interface ListBenchmarksResponse {
+  items: BenchmarkDto[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+export interface BenchmarkDetailDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  description?: string;
+  operationalSetting: OperationalSettingDto;
+  baselineSut: SystemUnderTestDetailDto;
+  targetSut: SystemUnderTestDetailDto;
+  baselineSutValidationResult?: ValidationResult;
+  targetSutValidationResult?: ValidationResult;
+}
+
+/**
+ * List of benchmark runs
+ */
+export interface ListBenchmarkRunsResponse {
+  items: BenchmarkRunDto[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+export type ListSystemsUnderTestParams = {
+page?: number;
+size?: number;
+};
+
+export type ListOperationalSettingsParams = {
+page?: number;
+size?: number;
+};
+
 export type ListFilesParams = {
 page?: number;
 size?: number;
 };
 
-export type RunBenchmarkParams = {
-testDuration?: string;
+export type ListDecompositionJobsParams = {
+page?: number;
+size?: number;
+};
+
+export type ListBenchmarksParams = {
+page?: number;
+size?: number;
+};
+
+export type ListBenchmarkRunsParams = {
+benchmarkId: string;
+page?: number;
+size?: number;
 };
 

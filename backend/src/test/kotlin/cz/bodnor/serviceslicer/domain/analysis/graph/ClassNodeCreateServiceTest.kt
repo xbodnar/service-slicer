@@ -1,6 +1,10 @@
 package cz.bodnor.serviceslicer.domain.analysis.graph
 
 import cz.bodnor.serviceslicer.IntegrationTest
+import cz.bodnor.serviceslicer.domain.graph.ClassNode
+import cz.bodnor.serviceslicer.domain.graph.ClassNodeRepository
+import cz.bodnor.serviceslicer.domain.graph.ClassNodeType
+import cz.bodnor.serviceslicer.domain.graph.ClassNodeWriteService
 import io.kotest.matchers.shouldBe
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.UUID
@@ -13,26 +17,26 @@ class ClassNodeCreateServiceTest(
     @Test
     fun `Should save nodes with relationships`() {
         // Given
-        val projectId = UUID.randomUUID()
+        val decompositionJobId = UUID.randomUUID()
         val a = ClassNode(
             type = ClassNodeType.CLASS,
             simpleClassName = "ClassA",
             fullyQualifiedClassName = "foo.bar.ClassA",
-            projectId = projectId,
+            decompositionJobId = decompositionJobId,
         )
 
         val b = ClassNode(
             type = ClassNodeType.CLASS,
             simpleClassName = "ClassB",
             fullyQualifiedClassName = "foo.bar.ClassB",
-            projectId = projectId,
+            decompositionJobId = decompositionJobId,
         )
 
         val c = ClassNode(
             type = ClassNodeType.CLASS,
             simpleClassName = "ClassC",
             fullyQualifiedClassName = "foo.bar.ClassC",
-            projectId = projectId,
+            decompositionJobId = decompositionJobId,
         )
 
         a.addDependency(target = b, weight = 1)
@@ -44,7 +48,7 @@ class ClassNodeCreateServiceTest(
         classNodeWriteService.create(listOf(a, b, c))
 
         // Then
-        val savedNodes = classNodeRepository.findAllByProjectId(projectId)
+        val savedNodes = classNodeRepository.findAllByDecompositionJobId(decompositionJobId)
         savedNodes.size shouldBe 3
         savedNodes.find { it.simpleClassName == "ClassA" }?.dependencies?.size shouldBe 2
         savedNodes.find { it.simpleClassName == "ClassB" }?.dependencies?.size shouldBe 1

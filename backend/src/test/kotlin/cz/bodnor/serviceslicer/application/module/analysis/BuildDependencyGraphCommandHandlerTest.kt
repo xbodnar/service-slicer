@@ -1,7 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.analysis
 
 import cz.bodnor.serviceslicer.IntegrationTest
-import cz.bodnor.serviceslicer.domain.analysis.graph.ClassNodeRepository
+import cz.bodnor.serviceslicer.domain.graph.ClassNodeRepository
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.beans.factory.annotation.Autowired
 

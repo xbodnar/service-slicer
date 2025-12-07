@@ -3,6 +3,7 @@ package cz.bodnor.serviceslicer.domain.testcase
 import com.fasterxml.jackson.databind.JsonNode
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRun
+import cz.bodnor.serviceslicer.domain.job.JobStatus
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import jakarta.persistence.Entity
 import jakarta.persistence.ManyToOne
@@ -37,10 +38,10 @@ class TargetTestCase(
         k6Output: String,
         jsonSummary: JsonNode?,
     ) {
-        require(benchmarkRun.baselineTestCase.status == TestCaseStatus.COMPLETED) {
+        require(benchmarkRun.baselineTestCase.status == JobStatus.COMPLETED) {
             "Baseline test case must be completed before target test case"
         }
-        this.status = TestCaseStatus.COMPLETED
+        this.status = JobStatus.COMPLETED
         this.endTimestamp = Instant.now()
 
         val totalRequests = performanceMetrics.sumOf { it.totalRequests }

@@ -2,6 +2,7 @@ package cz.bodnor.serviceslicer.application.module.file
 
 import cz.bodnor.serviceslicer.application.module.file.command.CompleteFileUploadCommand
 import cz.bodnor.serviceslicer.application.module.file.port.out.GetFileMetadataFromStorage
+import cz.bodnor.serviceslicer.domain.file.File
 import cz.bodnor.serviceslicer.domain.file.FileReadService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import jakarta.transaction.Transactional
@@ -11,12 +12,12 @@ import org.springframework.stereotype.Component
 class CompleteFileUploadCommandHandler(
     private val fileReadService: FileReadService,
     private val getFileMetadataFromStorage: GetFileMetadataFromStorage,
-) : CommandHandler<Unit, CompleteFileUploadCommand> {
+) : CommandHandler<File, CompleteFileUploadCommand> {
 
     override val command = CompleteFileUploadCommand::class
 
     @Transactional
-    override fun handle(command: CompleteFileUploadCommand) {
+    override fun handle(command: CompleteFileUploadCommand): File {
         val file = fileReadService.getById(command.fileId)
 
         // Verify file exists in storage
@@ -29,5 +30,7 @@ class CompleteFileUploadCommandHandler(
         }
 
         file.markAsReady()
+
+        return file
     }
 }

@@ -33,8 +33,8 @@ export function BenchmarkCreatePage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const createBenchmark = useCreateBenchmark()
-  const { data: sutsData, isLoading: sutsLoading } = useListSystemsUnderTest()
-  const { data: configsData, isLoading: configsLoading } = useListOperationalSettings()
+  const { data: systemsUnderTestList, isLoading: sutsLoading } = useListSystemsUnderTest()
+  const { data: operationalSettingsList, isLoading: configsLoading } = useListOperationalSettings()
 
   const form = useForm<BenchmarkFormData>({
     resolver: zodResolver(benchmarkSchema),
@@ -47,8 +47,8 @@ export function BenchmarkCreatePage() {
     },
   })
 
-  const systems = (sutsData as any)?.systemsUnderTest || []
-  const operationalSettings = (configsData as any)?.operationalSettings || []
+  const systems = systemsUnderTestList?.items || []
+  const operationalSettings = operationalSettingsList?.items || []
 
   const onSubmit = async (data: BenchmarkFormData) => {
     const selectedSetting = operationalSettings.find((setting: any) => setting.id === data.operationalSettingId)
@@ -67,7 +67,7 @@ export function BenchmarkCreatePage() {
         data: {
           name: data.name,
           description: data.description || undefined,
-          operationalSetting: selectedSetting,
+          operationalSettingId: selectedSetting.id,
           baselineSutId: data.baselineSutId,
           targetSutId: data.targetSutId,
         },
@@ -78,7 +78,7 @@ export function BenchmarkCreatePage() {
         description: 'Your benchmark has been created successfully',
       })
 
-      navigate(`/benchmarks/${result.benchmarkId}`)
+      navigate(`/benchmarks/${result.id}`)
     } catch (error) {
       toast({
         variant: 'destructive',

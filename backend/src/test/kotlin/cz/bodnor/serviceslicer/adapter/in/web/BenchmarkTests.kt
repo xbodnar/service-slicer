@@ -27,7 +27,6 @@ class BenchmarkTests(
     fun setupFiles() {
         // Create OpenAPI file
         val openApiFile = File(
-            id = 1.toUUID(),
             filename = "openapi.json",
             fileSize = 1024,
             mimeType = "application/json",
@@ -38,7 +37,6 @@ class BenchmarkTests(
 
         // Create JAR file
         val jarFile = File(
-            id = 2.toUUID(),
             filename = "blog-app.jar",
             fileSize = 2048,
             mimeType = "application/zip",
@@ -48,7 +46,6 @@ class BenchmarkTests(
 
         // Create compose file
         val composeFile = File(
-            id = 3.toUUID(),
             filename = "docker-compose.yml",
             fileSize = 3072,
             mimeType = "application/yaml",

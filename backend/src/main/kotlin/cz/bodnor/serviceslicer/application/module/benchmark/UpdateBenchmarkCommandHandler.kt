@@ -1,6 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.benchmark
 
 import cz.bodnor.serviceslicer.application.module.benchmark.command.UpdateBenchmarkCommand
+import cz.bodnor.serviceslicer.domain.benchmark.Benchmark
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkWriteService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
@@ -11,20 +12,19 @@ import org.springframework.transaction.annotation.Transactional
 class UpdateBenchmarkCommandHandler(
     private val benchmarkReadService: BenchmarkReadService,
     private val benchmarkWriteService: BenchmarkWriteService,
-) : CommandHandler<UpdateBenchmarkCommand.Result, UpdateBenchmarkCommand> {
+) : CommandHandler<Benchmark, UpdateBenchmarkCommand> {
 
     override val command = UpdateBenchmarkCommand::class
 
     @Transactional
-    override fun handle(command: UpdateBenchmarkCommand): UpdateBenchmarkCommand.Result {
+    override fun handle(command: UpdateBenchmarkCommand): Benchmark {
         val benchmark = benchmarkReadService.getById(command.benchmarkId)
 
         benchmark.name = command.name
         benchmark.description = command.description
-        benchmark.operationalSetting = command.operationalSetting
 
         benchmarkWriteService.save(benchmark)
 
-        return UpdateBenchmarkCommand.Result(benchmarkId = benchmark.id)
+        return benchmark
     }
 }

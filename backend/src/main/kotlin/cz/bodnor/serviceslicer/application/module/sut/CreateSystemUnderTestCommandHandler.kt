@@ -14,29 +14,25 @@ import java.util.UUID
 class CreateSystemUnderTestCommandHandler(
     private val fileReadService: FileReadService,
     private val sutWriteService: SystemUnderTestWriteService,
-) : CommandHandler<CreateSystemUnderTestCommand.Result, CreateSystemUnderTestCommand> {
+) : CommandHandler<SystemUnderTest, CreateSystemUnderTestCommand> {
 
     override val command = CreateSystemUnderTestCommand::class
 
     @Transactional
-    override fun handle(command: CreateSystemUnderTestCommand): CreateSystemUnderTestCommand.Result {
+    override fun handle(command: CreateSystemUnderTestCommand): SystemUnderTest {
         validateFileExists(command.dockerConfig.composeFileId)
 
         command.databaseSeedConfigs.forEach { config ->
             validateFileExists(config.sqlSeedFileId)
         }
 
-        val sut = sutWriteService.save(
+        return sutWriteService.save(
             SystemUnderTest(
                 name = command.name,
                 description = command.description,
                 dockerConfig = command.dockerConfig,
                 databaseSeedConfigs = command.databaseSeedConfigs,
             ),
-        )
-
-        return CreateSystemUnderTestCommand.Result(
-            systemUnderTestId = sut.id,
         )
     }
 

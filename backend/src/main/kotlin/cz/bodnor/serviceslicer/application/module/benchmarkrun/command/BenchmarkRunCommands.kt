@@ -1,10 +1,9 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun.command
 
 import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
+import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRun
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
-import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
-import kotlin.time.Duration
 
 data class ValidateSutOperationalSettingCommand(
     val benchmarkId: UUID,
@@ -18,14 +17,8 @@ data class RunSutValidationCommand(
 
 data class CreateBenchmarkRunCommand(
     val benchmarkId: UUID,
-    val testDuration: Duration?,
-) : Command<CreateBenchmarkRunCommand.Result> {
-    @Schema(name = "RunBenchmarkResult", description = "Result of running a benchmark")
-    data class Result(
-        @field:Schema(description = "ID of the created benchmark run")
-        val benchmarkRunId: UUID,
-    )
-}
+    val testDuration: String?,
+) : Command<BenchmarkRun>
 
 data class ExecuteTestCaseCommand(
     val benchmarkRunId: UUID,

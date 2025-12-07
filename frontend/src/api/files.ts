@@ -9,17 +9,9 @@
 import {
   initiateUpload,
   completeUpload,
-  extractZipFile as extractZipFileGenerated,
-  fetchGitRepository as fetchGitRepositoryGenerated,
 } from '@/api/generated/file-controller/file-controller'
-import type {
-  InitiateFileUploadRequest,
-  InitiateFileUploadResponse,
-  ExtractZipFileResponse,
-  FetchGitRepositoryRequest,
-  FetchGitRepositoryResponse,
-} from '@/types/api'
 import axios from 'axios'
+import {InitiateFileUploadRequest, InitiateFileUploadResponse} from "@/api/generated/openAPIDefinition.schemas.ts";
 
 /**
  * Initiate a file upload and get a presigned URL
@@ -51,24 +43,6 @@ export const uploadFileToUrl = async (
  */
 export const completeFileUpload = async (fileId: string): Promise<void> => {
   await completeUpload(fileId)
-}
-
-/**
- * Extract a ZIP file
- */
-export const extractZipFile = async (fileId: string): Promise<ExtractZipFileResponse> => {
-  const result = await extractZipFileGenerated(fileId)
-  return result as unknown as ExtractZipFileResponse
-}
-
-/**
- * Fetch a git repository
- */
-export const fetchGitRepository = async (
-  request: FetchGitRepositoryRequest
-): Promise<FetchGitRepositoryResponse> => {
-  const result = await fetchGitRepositoryGenerated(request)
-  return result as unknown as FetchGitRepositoryResponse
 }
 
 /**

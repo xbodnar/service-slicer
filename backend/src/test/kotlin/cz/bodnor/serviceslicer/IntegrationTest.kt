@@ -11,7 +11,7 @@ import org.testcontainers.containers.Container
 import org.testcontainers.containers.Neo4jContainer
 import org.testcontainers.utility.MountableFile
 
-@SpringBootTest
+@SpringBootTest(classes = [TestApplication::class])
 @ActiveProfiles("test")
 abstract class IntegrationTest {
 

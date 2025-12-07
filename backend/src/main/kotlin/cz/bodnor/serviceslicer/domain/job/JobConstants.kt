@@ -6,6 +6,6 @@ enum class JobType {
 }
 
 object JobParameterLabel {
-    const val PROJECT_ID = "PROJECT_ID"
+    const val DECOMPOSITION_JOB_ID = "DECOMPOSITION_JOB_ID"
     const val BENCHMARK_RUN_ID = "BENCHMARK_RUN_ID"
 }

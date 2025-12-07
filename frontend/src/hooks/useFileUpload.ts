@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { uploadFile, extractZipFile } from '@/api/files'
+import { uploadFile } from '@/api/files'
 import { useToast } from '@/components/ui/use-toast'
 
 export interface UploadedFile {
@@ -10,7 +10,6 @@ export interface UploadedFile {
 
 export interface UseFileUploadResult {
   uploadFile: (file: File) => Promise<UploadedFile | null>
-  extractZip: (fileId: string) => Promise<string | null>
   isUploading: boolean
   progress: number
 }
@@ -56,28 +55,8 @@ export function useFileUpload(): UseFileUploadResult {
     }
   }
 
-  const handleExtractZip = async (fileId: string): Promise<string | null> => {
-    try {
-      const { dirId } = await extractZipFile(fileId)
-      toast({
-        title: 'Extraction successful',
-        description: 'ZIP file has been extracted.',
-      })
-      return dirId
-    } catch (error) {
-      console.error('ZIP extraction failed:', error)
-      toast({
-        variant: 'destructive',
-        title: 'Extraction failed',
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-      })
-      return null
-    }
-  }
-
   return {
     uploadFile: handleUploadFile,
-    extractZip: handleExtractZip,
     isUploading,
     progress,
   }
