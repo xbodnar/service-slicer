@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.adapter.`in`.web.benchmarkrun
 
+import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.RestartBenchmarkRunCommand
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.query.GetBenchmarkRunQuery
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.query.ListBenchmarkRunsQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
@@ -24,6 +25,10 @@ class BenchmarkRunController(
     @PostMapping
     fun createBenchmarkRun(@RequestBody request: CreateBenchmarkRunRequest): BenchmarkRunDto =
         mapper.toDto(commandBus(mapper.toCommand(request)))
+
+    @PostMapping("/{benchmarkRunId}/restart")
+    fun restartBenchmarkRun(@PathVariable benchmarkRunId: UUID): BenchmarkRunDto =
+        mapper.toDto(commandBus(RestartBenchmarkRunCommand(benchmarkRunId)))
 
     @GetMapping
     fun listBenchmarkRuns(

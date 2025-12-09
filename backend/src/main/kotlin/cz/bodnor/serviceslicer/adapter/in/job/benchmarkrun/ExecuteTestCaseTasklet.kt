@@ -1,7 +1,7 @@
-package cz.bodnor.serviceslicer.adapter.`in`.job.batch
+package cz.bodnor.serviceslicer.adapter.`in`.job.benchmarkrun
 
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.ExecuteTestCaseCommand
-import cz.bodnor.serviceslicer.domain.job.JobParameterLabel.BENCHMARK_RUN_ID
+import cz.bodnor.serviceslicer.domain.job.JobParameterLabel
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.batch.core.ExitStatus
@@ -18,7 +18,7 @@ import java.util.UUID
 @JobScope
 class ExecuteTestCaseTasklet(
     private val commandBus: CommandBus,
-    @param:Value("#{jobParameters['${BENCHMARK_RUN_ID}']}") private val benchmarkRunId: UUID,
+    @param:Value("#{jobParameters['${JobParameterLabel.BENCHMARK_RUN_ID}']}") private val benchmarkRunId: UUID,
 ) : Tasklet {
 
     private val logger = logger()

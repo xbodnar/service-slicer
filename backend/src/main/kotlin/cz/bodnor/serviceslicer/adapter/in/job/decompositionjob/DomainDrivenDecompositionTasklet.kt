@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.adapter.`in`.job.batch
+package cz.bodnor.serviceslicer.adapter.`in`.job.decompositionjob
 
 import cz.bodnor.serviceslicer.application.module.decomposition.command.DomainExpertDecompositionCommand
 import cz.bodnor.serviceslicer.application.module.decomposition.command.DomainExpertDecompositionCommand.DomainDecompositionType.DOMAIN_DRIVEN

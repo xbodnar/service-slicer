@@ -183,6 +183,62 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const restartDecompositionJob = (
+    decompositionJobId: string,
+ options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<DecompositionJobDto>(
+      {url: `/decomposition-jobs/${decompositionJobId}/restart`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getRestartDecompositionJobMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restartDecompositionJob>>, TError,{decompositionJobId: string}, TContext>, request?: SecondParameter<typeof apiClient>}
+): UseMutationOptions<Awaited<ReturnType<typeof restartDecompositionJob>>, TError,{decompositionJobId: string}, TContext> => {
+
+const mutationKey = ['restartDecompositionJob'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restartDecompositionJob>>, {decompositionJobId: string}> = (props) => {
+          const {decompositionJobId} = props ?? {};
+
+          return  restartDecompositionJob(decompositionJobId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestartDecompositionJobMutationResult = NonNullable<Awaited<ReturnType<typeof restartDecompositionJob>>>
+    
+    export type RestartDecompositionJobMutationError = unknown
+
+    export const useRestartDecompositionJob = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restartDecompositionJob>>, TError,{decompositionJobId: string}, TContext>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof restartDecompositionJob>>,
+        TError,
+        {decompositionJobId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRestartDecompositionJobMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
     export const getDecompositionJobSummary = (
     decompositionJobId: string,
  options?: SecondParameter<typeof apiClient>,signal?: AbortSignal

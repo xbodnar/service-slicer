@@ -439,7 +439,7 @@ export function OperationalSettingCreatePage() {
         description: 'Your benchmark config has been created successfully',
       })
 
-      navigate(`/operational-settings/${(result as any).operationalSettingId}`)
+      navigate(`/operational-settings/${result.id}`)
     } catch (error) {
       toast({
         variant: 'destructive',

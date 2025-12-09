@@ -1,9 +1,5 @@
-package cz.bodnor.serviceslicer.adapter.`in`.job
+package cz.bodnor.serviceslicer.adapter.`in`.job.decompositionjob
 
-import cz.bodnor.serviceslicer.adapter.`in`.job.batch.ActorDrivenDecompositionTasklet
-import cz.bodnor.serviceslicer.adapter.`in`.job.batch.BuildDependencyGraphTasklet
-import cz.bodnor.serviceslicer.adapter.`in`.job.batch.DetectGraphCommunitiesTasklet
-import cz.bodnor.serviceslicer.adapter.`in`.job.batch.DomainDrivenDecompositionTasklet
 import cz.bodnor.serviceslicer.domain.job.JobType
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.job.builder.JobBuilder
@@ -18,9 +14,12 @@ class StaticCodeAnalysisJobConfig(
     private val jobRepository: JobRepository,
     private val txManager: PlatformTransactionManager,
     private val buildDependencyGraphTasklet: BuildDependencyGraphTasklet,
-    private val detectGraphCommunitiesTasklet: DetectGraphCommunitiesTasklet,
+    private val louvainCommunityDetectionTasklet: LouvainCommunityDetectionTasklet,
+    private val leidenCommunityDetectionTasklet: LeidenCommunityDetectionTasklet,
+    private val labelPropagationCommunityDetectionTasklet: LabelPropagationCommunityDetectionTasklet,
     private val domainDrivenDecompositionTasklet: DomainDrivenDecompositionTasklet,
     private val actorDrivenDecompositionTasklet: ActorDrivenDecompositionTasklet,
+    private val decompositionJobExecutionListener: DecompositionJobExecutionListener,
 ) {
 
     @Bean
@@ -29,9 +28,20 @@ class StaticCodeAnalysisJobConfig(
         .build()
 
     @Bean
-    fun detectGraphCommunitiesStep() = StepBuilder("DETECT_GRAPH_COMMUNITIES_STEP", jobRepository)
-        .tasklet(detectGraphCommunitiesTasklet, txManager)
+    fun louvainCommunityDetectionStep() = StepBuilder("LOUVAIN_COMMUNITY_DETECTION_STEP", jobRepository)
+        .tasklet(louvainCommunityDetectionTasklet, txManager)
         .build()
+
+    @Bean
+    fun leidenCommunityDetectionStep() = StepBuilder("LEIDEN_COMMUNITY_DETECTION_STEP", jobRepository)
+        .tasklet(leidenCommunityDetectionTasklet, txManager)
+        .build()
+
+    @Bean
+    fun labelPropagationCommunityDetectionStep() =
+        StepBuilder("LABEL_PROPAGATION_COMMUNITY_DETECTION_STEP", jobRepository)
+            .tasklet(labelPropagationCommunityDetectionTasklet, txManager)
+            .build()
 
     @Bean
     fun domainDrivenDecompositionStep() = StepBuilder("DOMAIN_DRIVEN_DECOMPOSITION_STEP", jobRepository)
@@ -45,8 +55,11 @@ class StaticCodeAnalysisJobConfig(
 
     @Bean
     fun staticCodeAnalysisJob(): Job = JobBuilder(JobType.STATIC_CODE_ANALYSIS.name, jobRepository)
+        .listener(decompositionJobExecutionListener)
         .start(buildDependencyGraphStep())
-        .next(detectGraphCommunitiesStep())
+        .next(louvainCommunityDetectionStep())
+        .next(leidenCommunityDetectionStep())
+        .next(labelPropagationCommunityDetectionStep())
         .next(domainDrivenDecompositionStep())
         .next(actorDrivenDecompositionStep())
         .build()

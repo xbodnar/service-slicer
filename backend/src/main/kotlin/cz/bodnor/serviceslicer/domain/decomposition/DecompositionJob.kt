@@ -38,6 +38,10 @@ class DecompositionJob(
         this.status = JobStatus.RUNNING
     }
 
+    fun queued() {
+        this.status = JobStatus.PENDING
+    }
+
     fun completed() {
         this.status = JobStatus.COMPLETED
         this.endTimestamp = Instant.now()

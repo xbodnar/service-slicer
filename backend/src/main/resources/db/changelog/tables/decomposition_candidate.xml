@@ -28,4 +28,11 @@
             </column>
         </createTable>
     </changeSet>
+    <changeSet id="add-modularity-column" author="Norbert Bodnar">
+        <addColumn tableName="decomposition_candidate">
+            <column name="modularity" type="numeric">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

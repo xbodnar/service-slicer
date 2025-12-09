@@ -1,9 +1,11 @@
-package cz.bodnor.serviceslicer.application.module.decomposition.service
+package cz.bodnor.serviceslicer.adapter.out.neo4j
 
+import cz.bodnor.serviceslicer.application.module.decomposition.service.CommunityDetectionAlgorithm
+import cz.bodnor.serviceslicer.application.module.decomposition.service.RunCommunityDetectionAlgorithm
 import cz.bodnor.serviceslicer.domain.graph.ClassNode
+import cz.bodnor.serviceslicer.domain.graph.ClassNodeReadService
 import org.springframework.data.neo4j.core.Neo4jClient
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 private const val ALGO_GDS_LEIDEN = "gds.leiden.write"
@@ -11,27 +13,52 @@ private const val ALGO_GDS_LOUVAIN = "gds.louvain.write"
 private const val ALGO_GDS_LABEL_PROPAGATION = "gds.labelPropagation.write"
 
 @Service
-class CommunityDetectionService(
+class RunCommunityDetectionAlgorithmNeo4j(
     private val neo4j: Neo4jClient,
-) {
+    private val classNodeReadService: ClassNodeReadService,
+) : RunCommunityDetectionAlgorithm {
     private val label = "ClassNode"
     private val relType = "DEPENDS_ON"
 
-    @Transactional
-    fun runLeiden(decompositionJobId: UUID): Map<String, Any?> = runCommunityAlgo(
+    override fun invoke(
+        decompositionJobId: UUID,
+        algorithm: CommunityDetectionAlgorithm,
+    ): RunCommunityDetectionAlgorithm.Result {
+        val result = when (algorithm) {
+            CommunityDetectionAlgorithm.LEIDEN -> runLeiden(decompositionJobId)
+            CommunityDetectionAlgorithm.LOUVAIN -> runLouvain(decompositionJobId)
+            CommunityDetectionAlgorithm.LABEL_PROPAGATION -> runLabelPropagation(decompositionJobId)
+        }
+
+        val modularity = result["modularity"] as? Double
+
+        val classNodes = classNodeReadService.findAllByDecompositionJobId(decompositionJobId)
+        val communities = when (algorithm) {
+            CommunityDetectionAlgorithm.LEIDEN -> classNodes.groupBy { it.communityLeiden }
+            CommunityDetectionAlgorithm.LOUVAIN -> classNodes.groupBy { it.communityLouvain }
+            CommunityDetectionAlgorithm.LABEL_PROPAGATION -> classNodes.groupBy { it.communityLabelPropagation }
+        }
+            .filterKeys { it != null }
+            .mapKeys { (k, _) -> k!!.toString() }
+
+        return RunCommunityDetectionAlgorithm.Result(
+            communities = communities,
+            modularity = modularity,
+        )
+    }
+
+    private fun runLeiden(decompositionJobId: UUID): Map<String, Any?> = runCommunityAlgo(
         decompositionJobId = decompositionJobId,
         algoQualifiedName = ALGO_GDS_LEIDEN,
         writeProperty = ClassNode::communityLeiden.name,
     )
 
-    @Transactional
-    fun runLouvain(decompositionJobId: UUID): Map<String, Any?> = runCommunityAlgo(
+    private fun runLouvain(decompositionJobId: UUID): Map<String, Any?> = runCommunityAlgo(
         decompositionJobId = decompositionJobId,
         algoQualifiedName = ALGO_GDS_LOUVAIN,
         writeProperty = ClassNode::communityLouvain.name,
     )
 
-    @Transactional
     fun runLabelPropagation(decompositionJobId: UUID): Map<String, Any?> = runCommunityAlgo(
         decompositionJobId = decompositionJobId,
         algoQualifiedName = ALGO_GDS_LABEL_PROPAGATION,

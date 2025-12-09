@@ -1,12 +1,47 @@
-import {ArrowRight, Calendar, FolderKanban, Loader2, Package2, Plus} from "lucide-react";
+import {ArrowRight, Calendar, FolderKanban, Loader2, Package2, Plus, CheckCircle, XCircle, Clock, Activity} from "lucide-react";
 import {Link} from "react-router-dom";
 import {Button} from "@/components/ui/button.tsx";
+import {Badge} from "@/components/ui/badge.tsx";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {formatDistance} from "date-fns";
 import {useDecompositionJobsList} from "@/hooks/useDecompositionJobs.ts";
 import {DecompositionJobDto} from "@/api/generated/openAPIDefinition.schemas.ts";
 import {Pagination} from "@/components/ui/pagination.tsx";
 import {useState} from "react";
+
+const getStateColor = (state: string) => {
+  switch (state) {
+    case 'COMPLETED':
+      return 'default'
+    case 'FAILED':
+      return 'destructive'
+    case 'PENDING':
+      return 'secondary'
+    case 'RUNNING':
+      return 'default'
+    default:
+      return 'outline'
+  }
+}
+
+const getStateClassName = (state: string) => {
+  return state === 'COMPLETED' ? 'bg-green-600 hover:bg-green-700' : ''
+}
+
+const getStateIcon = (state: string) => {
+  switch (state) {
+    case 'COMPLETED':
+      return <CheckCircle className="h-3 w-3" />
+    case 'FAILED':
+      return <XCircle className="h-3 w-3" />
+    case 'PENDING':
+      return <Clock className="h-3 w-3" />
+    case 'RUNNING':
+      return <Activity className="h-3 w-3 animate-pulse" />
+    default:
+      return null
+  }
+}
 
 export function DecompositionJobListPage() {
     const [page, setPage] = useState(0)
@@ -74,7 +109,10 @@ export function DecompositionJobListPage() {
                                         <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
                                             <FolderKanban className="h-5 w-5 text-primary" />
                                         </div>
-                                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                        <Badge variant={getStateColor(decompositionJob.status)} className={`flex items-center gap-1 ${getStateClassName(decompositionJob.status)}`}>
+                                            {getStateIcon(decompositionJob.status)}
+                                            {decompositionJob.status}
+                                        </Badge>
                                     </div>
                                     <CardTitle className="group-hover:text-primary transition-colors line-clamp-1">
                                         {decompositionJob.name}

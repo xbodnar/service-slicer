@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.adapter.`in`.web.decomposition
 
+import cz.bodnor.serviceslicer.application.module.decomposition.command.RestartDecompositionJobCommand
 import cz.bodnor.serviceslicer.application.module.decomposition.query.GetDecompositionJobSummaryQuery
 import cz.bodnor.serviceslicer.application.module.decomposition.query.ListDecompositionJobsQuery
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
@@ -34,4 +35,8 @@ class DecompositionJobController(
     @PostMapping
     fun createDecompositionJob(@RequestBody body: CreateDecompositionJobRequest): DecompositionJobDto =
         mapper.toDto(commandBus(mapper.toCommand(body)))
+
+    @PostMapping("/{decompositionJobId}/restart")
+    fun restartDecompositionJob(@PathVariable decompositionJobId: UUID): DecompositionJobDto =
+        mapper.toDto(commandBus(RestartDecompositionJobCommand(decompositionJobId = decompositionJobId)))
 }

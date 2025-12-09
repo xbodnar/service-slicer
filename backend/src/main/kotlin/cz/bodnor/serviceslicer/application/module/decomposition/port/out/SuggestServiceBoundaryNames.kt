@@ -1,18 +1,16 @@
 package cz.bodnor.serviceslicer.application.module.decomposition.port.out
 
-import cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection.CommunityDetectionStrategy
-import java.util.UUID
-
 interface SuggestServiceBoundaryNames {
 
-    data class Result(
-        val serviceNames: List<ServiceNameSuggestion>,
-    ) {
-        data class ServiceNameSuggestion(
-            val id: UUID,
-            val serviceName: String,
-        )
-    }
+    data class ServiceCluster(
+        val id: String,
+        val classes: List<String>,
+    )
 
-    operator fun invoke(serviceBoundaries: List<CommunityDetectionStrategy.Result.Community>): Result
+    data class Result(
+        // Map of service ID to suggested service name
+        val serviceNameSuggestions: Map<String, String>,
+    )
+
+    operator fun invoke(services: List<ServiceCluster>): Result
 }

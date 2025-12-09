@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
+import java.math.BigDecimal
 import java.util.UUID
 
 @Entity
@@ -21,6 +22,8 @@ class DecompositionCandidate(
 
     @Enumerated(EnumType.STRING)
     val method: DecompositionMethod,
+
+    val modularity: BigDecimal?,
 
 ) : UpdatableEntity() {
 

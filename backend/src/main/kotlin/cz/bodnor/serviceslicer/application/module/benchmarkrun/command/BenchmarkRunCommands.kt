@@ -27,3 +27,7 @@ data class ExecuteTestCaseCommand(
         val hasMoreTests: Boolean,
     )
 }
+
+data class RestartBenchmarkRunCommand(
+    val benchmarkRunId: UUID,
+) : Command<BenchmarkRun>

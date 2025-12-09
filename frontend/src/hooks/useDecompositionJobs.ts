@@ -20,10 +20,12 @@ export function useDecompositionJobsList(params?: ListDecompositionJobsParams) {
 /**
  * Query hook for getting a single decomposition job
  */
-export function useDecompositionJob(decompositionJobId: string) {
+export function useDecompositionJob(decompositionJobId: string, options?: { refetchInterval?: number | ((data: any) => number | false) }) {
     const result = useGetDecompositionJobSummary(decompositionJobId, {
         query: {
             enabled: !!decompositionJobId,
+            refetchInterval: options?.refetchInterval,
+            refetchIntervalInBackground: true, // Continue polling even when tab is not active
         },
     })
     return {

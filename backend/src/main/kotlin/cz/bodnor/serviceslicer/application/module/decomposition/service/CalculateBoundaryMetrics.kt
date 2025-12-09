@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.analysis.service
+package cz.bodnor.serviceslicer.application.module.decomposition.service
 
 import cz.bodnor.serviceslicer.domain.decompositioncandidate.BoundaryMetrics
 import cz.bodnor.serviceslicer.domain.graph.ClassNode

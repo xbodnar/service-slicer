@@ -182,6 +182,62 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const restartBenchmarkRun = (
+    benchmarkRunId: string,
+ options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<BenchmarkRunDto>(
+      {url: `/benchmark-runs/${benchmarkRunId}/restart`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getRestartBenchmarkRunMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restartBenchmarkRun>>, TError,{benchmarkRunId: string}, TContext>, request?: SecondParameter<typeof apiClient>}
+): UseMutationOptions<Awaited<ReturnType<typeof restartBenchmarkRun>>, TError,{benchmarkRunId: string}, TContext> => {
+
+const mutationKey = ['restartBenchmarkRun'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restartBenchmarkRun>>, {benchmarkRunId: string}> = (props) => {
+          const {benchmarkRunId} = props ?? {};
+
+          return  restartBenchmarkRun(benchmarkRunId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestartBenchmarkRunMutationResult = NonNullable<Awaited<ReturnType<typeof restartBenchmarkRun>>>
+    
+    export type RestartBenchmarkRunMutationError = unknown
+
+    export const useRestartBenchmarkRun = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restartBenchmarkRun>>, TError,{benchmarkRunId: string}, TContext>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof restartBenchmarkRun>>,
+        TError,
+        {benchmarkRunId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRestartBenchmarkRunMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
     export const getBenchmarkRun = (
     benchmarkRunId: string,
  options?: SecondParameter<typeof apiClient>,signal?: AbortSignal

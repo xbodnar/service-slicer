@@ -1,10 +1,10 @@
 package cz.bodnor.serviceslicer.application.module.decomposition
 
 import cz.bodnor.serviceslicer.application.module.analysis.port.out.ApplyDomainExpertDecomposition
-import cz.bodnor.serviceslicer.application.module.analysis.service.CalculateBoundaryMetrics
 import cz.bodnor.serviceslicer.application.module.decomposition.command.DomainExpertDecompositionCommand
 import cz.bodnor.serviceslicer.application.module.decomposition.command.DomainExpertDecompositionCommand.DomainDecompositionType.ACTOR_DRIVEN
 import cz.bodnor.serviceslicer.application.module.decomposition.command.DomainExpertDecompositionCommand.DomainDecompositionType.DOMAIN_DRIVEN
+import cz.bodnor.serviceslicer.application.module.decomposition.service.CalculateBoundaryMetrics
 import cz.bodnor.serviceslicer.domain.decomposition.DecompositionJobReadService
 import cz.bodnor.serviceslicer.domain.decompositioncandidate.DecompositionCandidate
 import cz.bodnor.serviceslicer.domain.decompositioncandidate.DecompositionCandidateWriteService
@@ -106,6 +106,7 @@ class DomainExpertDecompositionCommandHandler(
         val decompositionCandidate = DecompositionCandidate(
             decompositionJob = decompositionJob,
             method = decompositionMethod,
+            modularity = null,
         )
 
         decomposition.microservices.forEach { microservice ->

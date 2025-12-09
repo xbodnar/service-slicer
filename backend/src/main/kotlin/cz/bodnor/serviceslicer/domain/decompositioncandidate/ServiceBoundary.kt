@@ -28,7 +28,7 @@ class ServiceBoundary(
      * Suggested name for this microservice (derived from package or domain analysis), or an arbitrary name if no
      * suggestion is available
      */
-    val name: String,
+    var name: String,
 
     /**
      * Metrics for this service boundary

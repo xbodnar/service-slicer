@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.decomposition.command
 
+import cz.bodnor.serviceslicer.application.module.decomposition.service.CommunityDetectionAlgorithm
 import cz.bodnor.serviceslicer.domain.decomposition.DecompositionJob
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.Command
 import java.util.UUID
@@ -17,6 +18,7 @@ data class BuildDependencyGraphCommand(
 
 data class DetectGraphCommunitiesCommand(
     val decompositionJobId: UUID,
+    val algorithm: CommunityDetectionAlgorithm,
 ) : Command<Unit>
 
 data class DomainExpertDecompositionCommand(
@@ -29,3 +31,7 @@ data class DomainExpertDecompositionCommand(
         ACTOR_DRIVEN,
     }
 }
+
+data class RestartDecompositionJobCommand(
+    val decompositionJobId: UUID,
+) : Command<DecompositionJob>

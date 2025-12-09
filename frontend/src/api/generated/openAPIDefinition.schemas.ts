@@ -487,10 +487,40 @@ export interface ListDecompositionJobsResponse {
   pageSize: number;
 }
 
+export interface BoundaryMetrics {
+  size: number;
+  cohesion: number;
+  coupling: number;
+  internalDependencies: number;
+  externalDependencies: number;
+}
+
 export interface ClassNodeDto {
+  id: string;
   simpleClassName: string;
   fullyQualifiedClassName: string;
   dependencies: string[];
+}
+
+export type DecompositionCandidateDtoMethod = typeof DecompositionCandidateDtoMethod[keyof typeof DecompositionCandidateDtoMethod];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const DecompositionCandidateDtoMethod = {
+  COMMUNITY_DETECTION_LABEL_PROPAGATION: 'COMMUNITY_DETECTION_LABEL_PROPAGATION',
+  COMMUNITY_DETECTION_LOUVAIN: 'COMMUNITY_DETECTION_LOUVAIN',
+  COMMUNITY_DETECTION_LEIDEN: 'COMMUNITY_DETECTION_LEIDEN',
+  DOMAIN_DRIVEN_DECOMPOSITION: 'DOMAIN_DRIVEN_DECOMPOSITION',
+  ACTOR_DRIVEN_DECOMPOSITION: 'ACTOR_DRIVEN_DECOMPOSITION',
+} as const;
+
+export interface DecompositionCandidateDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  method: DecompositionCandidateDtoMethod;
+  modularity?: number;
+  serviceBoundaries: ServiceBoundaryDto[];
 }
 
 /**
@@ -498,32 +528,17 @@ export interface ClassNodeDto {
  */
 export interface DecompositionJobSummaryDto {
   decompositionJob: DecompositionJobDto;
-  dependencyGraph: GraphSummary;
-  decompositionResults: DecompositionResults;
+  dependencyGraph: ClassNodeDto[];
+  decompositionCandidates: DecompositionCandidateDto[];
 }
 
-export type DecompositionResultsLabelPropagation = {[key: string]: string[]};
-
-export type DecompositionResultsLouvain = {[key: string]: string[]};
-
-export type DecompositionResultsLeiden = {[key: string]: string[]};
-
-export type DecompositionResultsDomainDriven = {[key: string]: string[]};
-
-export type DecompositionResultsActorDriven = {[key: string]: string[]};
-
-export interface DecompositionResults {
-  labelPropagation: DecompositionResultsLabelPropagation;
-  louvain: DecompositionResultsLouvain;
-  leiden: DecompositionResultsLeiden;
-  domainDriven: DecompositionResultsDomainDriven;
-  actorDriven: DecompositionResultsActorDriven;
-}
-
-export interface GraphSummary {
-  nodeCount: number;
-  edgeCount: number;
-  nodes: ClassNodeDto[];
+export interface ServiceBoundaryDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  metrics: BoundaryMetrics;
+  typeNames: string[];
 }
 
 /**

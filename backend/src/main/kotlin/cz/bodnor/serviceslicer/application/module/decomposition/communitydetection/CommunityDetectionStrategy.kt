@@ -1,4 +1,4 @@
-package cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection
+package cz.bodnor.serviceslicer.application.module.decomposition.communitydetection
 
 import cz.bodnor.serviceslicer.domain.decompositioncandidate.DecompositionMethod
 import cz.bodnor.serviceslicer.domain.graph.ClassNode

@@ -1,6 +1,7 @@
 package cz.bodnor.serviceslicer.adapter.`in`.event
 
 import cz.bodnor.serviceslicer.application.module.benchmark.event.BenchmarkRunCreatedEvent
+import cz.bodnor.serviceslicer.application.module.benchmark.event.BenchmarkRunRestartedEvent
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.RunSutValidationCommand
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.event.ValidateSutBenchmarkEvent
 import cz.bodnor.serviceslicer.application.module.job.JobContainer
@@ -14,6 +15,7 @@ import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestWriteService
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.batch.core.JobParametersBuilder
+import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
@@ -42,7 +44,21 @@ class BenchmarkRunEventListener(
             .addJobParameter(JobParameterLabel.BENCHMARK_RUN_ID, event.benchmarkRunId, UUID::class.java)
             .toJobParameters()
 
-        logger.info { "Starting Job ${batchJob.name} for benchmarkId ${event.benchmarkRunId}" }
+        logger.info { "Starting Job ${batchJob.name} for benchmarkRunId ${event.benchmarkRunId}" }
+
+        jobLauncherService.launchAsync(batchJob, jobParameters)
+    }
+
+    @Async
+    @EventListener
+    fun onBenchmarkRunRestartedEvent(event: BenchmarkRunRestartedEvent) {
+        val batchJob = jobContainer[JobType.BENCHMARK]
+
+        val jobParameters = JobParametersBuilder()
+            .addJobParameter(JobParameterLabel.BENCHMARK_RUN_ID, event.benchmarkRunId, UUID::class.java)
+            .toJobParameters()
+
+        logger.info { "Restarting Job ${batchJob.name} for benchmarkRunId ${event.benchmarkRunId}" }
 
         jobLauncherService.launchAsync(batchJob, jobParameters)
     }

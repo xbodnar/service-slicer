@@ -8,7 +8,6 @@ interface ApplyDomainExpertDecomposition {
     data class MicroserviceCluster(
         val clusterId: String,
         val clusterName: String,
-        val description: String,
         val classes: List<String>,
     )
 

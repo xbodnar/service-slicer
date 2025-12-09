@@ -1,7 +1,7 @@
-package cz.bodnor.serviceslicer.adapter.`in`.job.batch
+package cz.bodnor.serviceslicer.adapter.`in`.job.decompositionjob
 
-import cz.bodnor.serviceslicer.application.module.decomposition.command.DomainExpertDecompositionCommand
-import cz.bodnor.serviceslicer.application.module.decomposition.command.DomainExpertDecompositionCommand.DomainDecompositionType.ACTOR_DRIVEN
+import cz.bodnor.serviceslicer.application.module.decomposition.command.DetectGraphCommunitiesCommand
+import cz.bodnor.serviceslicer.application.module.decomposition.service.CommunityDetectionAlgorithm
 import cz.bodnor.serviceslicer.domain.job.JobParameterLabel.DECOMPOSITION_JOB_ID
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.batch.core.StepContribution
@@ -15,7 +15,7 @@ import java.util.UUID
 
 @Component
 @JobScope
-class ActorDrivenDecompositionTasklet(
+class LabelPropagationCommunityDetectionTasklet(
     private val commandBus: CommandBus,
     @Value("#{jobParameters['${DECOMPOSITION_JOB_ID}']}") private val decompositionJobId: UUID,
 ) : Tasklet {
@@ -24,7 +24,7 @@ class ActorDrivenDecompositionTasklet(
         contribution: StepContribution,
         chunkContext: ChunkContext,
     ): RepeatStatus? {
-        commandBus(DomainExpertDecompositionCommand(decompositionJobId, ACTOR_DRIVEN))
+        commandBus(DetectGraphCommunitiesCommand(decompositionJobId, CommunityDetectionAlgorithm.LABEL_PROPAGATION))
 
         return RepeatStatus.FINISHED
     }

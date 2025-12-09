@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.decomposition.communitydetection
 
 import cz.bodnor.serviceslicer.application.module.decomposition.service.GraphAnalysisUtils
-import cz.bodnor.serviceslicer.application.module.microservicesuggestion.communitydetection.CommunityDetectionStrategy
 import cz.bodnor.serviceslicer.domain.decompositioncandidate.DecompositionMethod
 import cz.bodnor.serviceslicer.domain.graph.ClassNode
 import org.jgrapht.alg.clustering.LabelPropagationClustering
