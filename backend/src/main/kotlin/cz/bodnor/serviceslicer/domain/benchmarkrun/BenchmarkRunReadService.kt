@@ -1,6 +1,7 @@
 package cz.bodnor.serviceslicer.domain.benchmarkrun
 
 import cz.bodnor.serviceslicer.domain.common.BaseFinderService
+import cz.bodnor.serviceslicer.domain.job.JobStatus
 import org.springframework.stereotype.Service
 
 @Service
@@ -10,4 +11,6 @@ class BenchmarkRunReadService(
     override fun errorBlock(message: String) = error(message)
 
     override fun getEntityType() = BenchmarkRun::class
+
+    fun findOldestPending() = repository.findFirstByStatusOrderByCreatedTimestampAsc(JobStatus.PENDING)
 }

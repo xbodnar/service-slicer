@@ -190,4 +190,6 @@ interface BenchmarkRunRepository : JpaRepository<BenchmarkRun, UUID> {
         benchmarkId: UUID,
         pageable: Pageable,
     ): Page<BenchmarkRun>
+
+    fun findFirstByStatusOrderByCreatedTimestampAsc(status: JobStatus): BenchmarkRun?
 }

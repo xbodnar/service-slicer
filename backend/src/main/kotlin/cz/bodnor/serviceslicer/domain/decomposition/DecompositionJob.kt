@@ -54,4 +54,7 @@ class DecompositionJob(
 }
 
 @Repository
-interface DecompositionJobRepository : JpaRepository<DecompositionJob, UUID>
+interface DecompositionJobRepository : JpaRepository<DecompositionJob, UUID> {
+
+    fun findFirstByStatusOrderByCreatedTimestampAsc(status: JobStatus): DecompositionJob?
+}

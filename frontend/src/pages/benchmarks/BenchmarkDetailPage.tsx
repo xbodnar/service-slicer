@@ -172,7 +172,7 @@ export function BenchmarkDetailPage() {
 
   const confirmRunBenchmark = async () => {
     if (!requireAuth()) return
-    const duration = testDuration.trim()
+    const duration = testDuration.trim() || '1m'
 
     try {
       const result = await runBenchmark.mutateAsync({

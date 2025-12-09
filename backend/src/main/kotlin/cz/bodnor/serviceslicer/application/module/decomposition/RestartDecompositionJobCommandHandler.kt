@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.decomposition
 
 import cz.bodnor.serviceslicer.application.module.decomposition.command.RestartDecompositionJobCommand
-import cz.bodnor.serviceslicer.application.module.decomposition.event.DecompositionJobRestartedEvent
 import cz.bodnor.serviceslicer.domain.decomposition.DecompositionJob
 import cz.bodnor.serviceslicer.domain.decomposition.DecompositionJobReadService
 import cz.bodnor.serviceslicer.domain.job.JobStatus
@@ -14,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional
 @Component
 class RestartDecompositionJobCommandHandler(
     private val decompositionJobReadService: DecompositionJobReadService,
-    private val applicationEventPublisher: ApplicationEventPublisher,
 ) : CommandHandler<DecompositionJob, RestartDecompositionJobCommand> {
 
     override val command = RestartDecompositionJobCommand::class
@@ -27,8 +25,6 @@ class RestartDecompositionJobCommandHandler(
         }
 
         decompositionJob.queued()
-
-        applicationEventPublisher.publishEvent(DecompositionJobRestartedEvent(decompositionJob.id))
 
         return decompositionJob
     }
