@@ -61,6 +61,11 @@ class BenchmarkRun(
         this.targetTestCases.add(TargetTestCase(this, sut, load, frequency))
     }
 
+    fun queue() {
+        require(this.status == JobStatus.FAILED) { "Cannot queue benchmark run in status $status" }
+        this.status = JobStatus.PENDING
+    }
+
     fun markTestCaseCompleted(
         testCaseId: UUID,
         performanceMetrics: List<QueryLoadTestMetrics.PerformanceMetrics>,

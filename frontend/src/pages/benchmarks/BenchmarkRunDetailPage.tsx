@@ -7,11 +7,13 @@ import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Loader2, CheckCircle, XCircle, Clock, PlayCircle, Activity, ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle, XCircle, Clock, PlayCircle, Activity, ChevronDown, ChevronUp, Info, RotateCcw } from 'lucide-react'
 import { format } from 'date-fns'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ComposedChart, Scatter, ReferenceLine } from 'recharts'
-import {useGetBenchmarkRun} from "@/api/generated/benchmark-run-controller/benchmark-run-controller.ts";
+import {useGetBenchmarkRun, useRestartBenchmarkRun} from "@/api/generated/benchmark-run-controller/benchmark-run-controller.ts";
 import {useGetBenchmark} from "@/api/generated/benchmark-controller/benchmark-controller.ts";
+import { useToast } from '@/components/ui/use-toast'
+import { useQueryClient } from '@tanstack/react-query'
 
 const getStateColor = (state: string) => {
   switch (state) {
@@ -49,10 +51,50 @@ const getStateIcon = (state: string) => {
 
 export function BenchmarkRunDetailPage() {
   const { benchmarkId, runId } = useParams<{ benchmarkId: string; runId: string }>()
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
   const { data, isLoading, error } = useGetBenchmarkRun(runId!)
   const { data: benchmarkData, isLoading: isBenchmarkLoading } = useGetBenchmark(benchmarkId!)
   const [expandedK6Outputs, setExpandedK6Outputs] = useState<Set<string>>(new Set())
   const [selectedLoad, setSelectedLoad] = useState<string>('')
+
+  const restartRunMutation = useRestartBenchmarkRun({
+    mutation: {
+      onSuccess: (updatedRun) => {
+        toast({
+          title: 'Run restarted',
+          description: 'The benchmark run has been restarted successfully',
+        })
+
+        // Update the cache with the response from the restart API
+        queryClient.setQueryData(
+          [`/benchmark-runs/${runId}`],
+          (oldData: any) => {
+            if (!oldData) return oldData
+            return {
+              ...oldData,
+              ...updatedRun
+            }
+          }
+        )
+
+        // Invalidate list query to refresh the list page
+        queryClient.invalidateQueries({ queryKey: ['/benchmark-runs'], exact: true })
+      },
+      onError: (error: Error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to restart run',
+          description: error.message || 'An unknown error occurred',
+        })
+      },
+    },
+  })
+
+  const handleRestartRun = () => {
+    if (!runId) return
+    restartRunMutation.mutate({ benchmarkRunId: runId })
+  }
 
   // Set initial selected load when data loads
   useEffect(() => {
@@ -326,6 +368,23 @@ export function BenchmarkRunDetailPage() {
             <p className="text-muted-foreground mt-1 font-mono text-sm">{data.id}</p>
           </div>
         </div>
+        <Button
+          variant="outline"
+          onClick={handleRestartRun}
+          disabled={data.status !== 'FAILED' || restartRunMutation.isPending}
+        >
+          {restartRunMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Restarting...
+            </>
+          ) : (
+            <>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Restart Run
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Dashboard Stats Overview */}
