@@ -1,4 +1,4 @@
-import {ArrowRight, Calendar, FolderKanban, Loader2, Package2, Plus, CheckCircle, XCircle, Clock, Activity} from "lucide-react";
+import {Calendar, FolderKanban, Loader2, Package2, Plus, CheckCircle, XCircle, Clock, Activity} from "lucide-react";
 import {Link} from "react-router-dom";
 import {Button} from "@/components/ui/button.tsx";
 import {Badge} from "@/components/ui/badge.tsx";
