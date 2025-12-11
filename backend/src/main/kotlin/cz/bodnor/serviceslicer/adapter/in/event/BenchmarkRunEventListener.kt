@@ -2,12 +2,6 @@ package cz.bodnor.serviceslicer.adapter.`in`.event
 
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.RunSutValidationCommand
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.event.ValidateSutBenchmarkEvent
-import cz.bodnor.serviceslicer.application.module.job.JobContainer
-import cz.bodnor.serviceslicer.application.module.job.JobLauncherService
-import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
-import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkWriteService
-import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
-import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestWriteService
 import cz.bodnor.serviceslicer.infrastructure.config.logger
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import org.springframework.scheduling.annotation.Async

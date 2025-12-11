@@ -1,7 +1,6 @@
 package cz.bodnor.serviceslicer.adapter.`in`.job.decompositionjob
 
 import cz.bodnor.serviceslicer.application.module.job.JobContainer
-import cz.bodnor.serviceslicer.application.module.job.JobLauncherService
 import cz.bodnor.serviceslicer.domain.decomposition.DecompositionJobReadService
 import cz.bodnor.serviceslicer.domain.job.JobParameterLabel
 import cz.bodnor.serviceslicer.domain.job.JobType

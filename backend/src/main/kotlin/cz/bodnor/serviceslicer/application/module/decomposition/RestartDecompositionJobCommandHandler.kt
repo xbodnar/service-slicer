@@ -6,7 +6,6 @@ import cz.bodnor.serviceslicer.domain.decomposition.DecompositionJobReadService
 import cz.bodnor.serviceslicer.domain.job.JobStatus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import cz.bodnor.serviceslicer.infrastructure.exception.verify
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 

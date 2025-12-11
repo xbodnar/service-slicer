@@ -6,13 +6,10 @@ import cz.bodnor.serviceslicer.application.module.analysis.port.out.ApplyDomainE
 import cz.bodnor.serviceslicer.application.module.decomposition.command.DomainExpertDecompositionCommand.DomainDecompositionType
 import cz.bodnor.serviceslicer.domain.graph.ClassNode
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.ai.chat.client.advisor.api.Advisor
 import org.springframework.ai.chat.client.entity
-import org.springframework.ai.chat.client.responseEntity
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.ai.converter.BeanOutputConverter
 import org.springframework.ai.openai.OpenAiChatOptions
-import org.springframework.ai.openai.api.OpenAiApi
 import org.springframework.ai.openai.api.ResponseFormat
 import org.springframework.stereotype.Component
 
