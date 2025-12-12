@@ -51,15 +51,50 @@ data class BehaviorModel(
     val steps: List<ApiRequest>,
 )
 
+/**
+ * Represents a single API request within a behavior model.
+ */
 data class ApiRequest(
-    val method: String,
-    val path: String,
-    val component: String? = null,
-    val headers: Map<String, String> = emptyMap(),
-    val params: Map<String, String> = emptyMap(),
-    val body: Map<String, Any?> = emptyMap(),
-    val save: Map<String, String> = emptyMap(),
-    val waitMsFrom: Int,
-    val waitMsTo: Int,
+    /**
+     * ID of the API operation taken from the OpenApi specification, that this request corresponds to.
+     */
     val operationId: String,
+    /**
+     * HTTP method of the API operation taken from the OpenApi specification, that this request corresponds to.
+     */
+    val method: String,
+    /**
+     * Path of the API operation taken from the OpenApi specification, that this request corresponds to.
+     */
+    val path: String,
+    /**
+     * Name of the component this request belongs to.
+     */
+    val component: String? = null,
+    /**
+     * Map of HTTP Headers (key-value pairs), may contain variables
+     */
+    val headers: Map<String, String> = emptyMap(),
+    /**
+     * Map of Query Parameters (key-value pairs), may contain variables
+     */
+    val params: Map<String, String> = emptyMap(),
+    /**
+     * Request body (JSON Object), may contain variables
+     */
+    val body: Map<String, Any?> = emptyMap(),
+    /**
+     * Map of JSONPath selectors to extract variables from the response. Key is the variable name, value is the
+     * JSONPath selector. If a subsequent requests are using any variables, it must be defined in a previous step.
+     * Example: {"articleId": "$.articles[0].id"}
+     */
+    val save: Map<String, String> = emptyMap(),
+    /**
+     * Minimum think time in milliseconds
+     */
+    val waitMsFrom: Int,
+    /**
+     * Maximum think time in milliseconds
+     */
+    val waitMsTo: Int,
 )

@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.operationalsetting
 
+import cz.bodnor.serviceslicer.application.module.benchmark.port.out.GenerateUsageProfile
 import cz.bodnor.serviceslicer.application.module.operationalsetting.command.CreateOperationalSettingCommand
 import cz.bodnor.serviceslicer.application.module.operationalsetting.service.OpenApiParsingService
 import cz.bodnor.serviceslicer.application.module.operationalsetting.service.ValidateOperationalSetting
@@ -17,6 +18,7 @@ class CreateOperationalSettingCommandHandler(
     private val operationalSettingWriteService: OperationalSettingWriteService,
     private val fileReadService: FileReadService,
     private val openApiParsingService: OpenApiParsingService,
+    private val generateUsageProfile: GenerateUsageProfile,
 ) : CommandHandler<OperationalSetting, CreateOperationalSettingCommand> {
     override val command = CreateOperationalSettingCommand::class
 
@@ -24,13 +26,22 @@ class CreateOperationalSettingCommandHandler(
     override fun handle(command: CreateOperationalSettingCommand): OperationalSetting {
         val file = fileReadService.getById(command.openApiFileId)
         verify(file.status == FileStatus.READY) { "File is not uploaded yet" }
+        verify(command.usageProfile.isNotEmpty() || command.generateUsageProfile) {
+            "Usage profile is empty and automatic generation is disabled"
+        }
         val apiOperations = openApiParsingService.parse(file.id)
+
+        val usageProfile = if (command.generateUsageProfile) {
+            generateUsageProfile(file.id)
+        } else {
+            command.usageProfile
+        }
 
         val operationalSetting = OperationalSetting(
             name = command.name,
             description = command.description,
             openApiFile = file,
-            usageProfile = command.usageProfile,
+            usageProfile = usageProfile,
             operationalProfile = command.operationalProfile,
         )
 

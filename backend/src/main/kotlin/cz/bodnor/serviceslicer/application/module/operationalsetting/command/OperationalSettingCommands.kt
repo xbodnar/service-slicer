@@ -11,6 +11,7 @@ data class CreateOperationalSettingCommand(
     val description: String? = null,
     val openApiFileId: UUID,
     val usageProfile: List<BehaviorModel>,
+    val generateUsageProfile: Boolean = false,
     val operationalProfile: Map<Int, BigDecimal>,
 ) : Command<OperationalSetting>
 

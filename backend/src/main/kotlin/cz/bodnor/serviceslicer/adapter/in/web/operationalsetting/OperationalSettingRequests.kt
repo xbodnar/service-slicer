@@ -9,5 +9,6 @@ data class CreateOperationalSettingRequest(
     val description: String? = null,
     val openApiFileId: UUID,
     val usageProfile: List<BehaviorModel>,
+    val generateUsageProfile: Boolean = false,
     val operationalProfile: Map<Int, BigDecimal>,
 )
