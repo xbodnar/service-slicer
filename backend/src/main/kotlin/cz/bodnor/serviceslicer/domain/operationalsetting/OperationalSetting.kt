@@ -19,9 +19,9 @@ import java.util.UUID
 @Entity
 class OperationalSetting(
     // Name of the operational setting
-    val name: String,
+    var name: String,
     // Description of the operational setting
-    val description: String? = null,
+    var description: String? = null,
     // Reference to the OpenAPI specification file
     @ManyToOne
     var openApiFile: File,

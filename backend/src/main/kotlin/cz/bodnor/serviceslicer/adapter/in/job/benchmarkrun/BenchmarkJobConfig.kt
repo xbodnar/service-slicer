@@ -15,6 +15,7 @@ class BenchmarkJobConfig(
     private val jobRepository: JobRepository,
     private val txManager: PlatformTransactionManager,
     private val executeTestCaseTasklet: ExecuteTestCaseTasklet,
+    private val benchmarkRunExecutionListener: BenchmarkRunExecutionListener,
 ) {
 
     @Bean
@@ -24,6 +25,7 @@ class BenchmarkJobConfig(
 
     @Bean
     fun benchmarkJob(): Job = JobBuilder(JobType.BENCHMARK.name, jobRepository)
+        .listener(benchmarkRunExecutionListener)
         .start(executeSutLoadTestsStep())
         .build()
 }

@@ -27,7 +27,8 @@ import type {
   CreateOperationalSettingRequest,
   ListOperationalSettingsParams,
   ListOperationalSettingsResponse,
-  OperationalSettingDto
+  OperationalSettingDto,
+  UpdateOperationalSettingRequest
 } from '../openAPIDefinition.schemas';
 
 import { apiClient } from '../../client';
@@ -37,7 +38,206 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 
-export const listOperationalSettings = (
+export const getOperationalSetting = (
+    operationalSettingId: string,
+ options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<OperationalSettingDto>(
+      {url: `/operational-settings/${operationalSettingId}`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetOperationalSettingQueryKey = (operationalSettingId?: string,) => {
+    return [
+    `/operational-settings/${operationalSettingId}`
+    ] as const;
+    }
+
+    
+export const getGetOperationalSettingQueryOptions = <TData = Awaited<ReturnType<typeof getOperationalSetting>>, TError = unknown>(operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOperationalSettingQueryKey(operationalSettingId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOperationalSetting>>> = ({ signal }) => getOperationalSetting(operationalSettingId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(operationalSettingId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetOperationalSettingQueryResult = NonNullable<Awaited<ReturnType<typeof getOperationalSetting>>>
+export type GetOperationalSettingQueryError = unknown
+
+
+export function useGetOperationalSetting<TData = Awaited<ReturnType<typeof getOperationalSetting>>, TError = unknown>(
+ operationalSettingId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOperationalSetting>>,
+          TError,
+          Awaited<ReturnType<typeof getOperationalSetting>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOperationalSetting<TData = Awaited<ReturnType<typeof getOperationalSetting>>, TError = unknown>(
+ operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOperationalSetting>>,
+          TError,
+          Awaited<ReturnType<typeof getOperationalSetting>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOperationalSetting<TData = Awaited<ReturnType<typeof getOperationalSetting>>, TError = unknown>(
+ operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetOperationalSetting<TData = Awaited<ReturnType<typeof getOperationalSetting>>, TError = unknown>(
+ operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetOperationalSettingQueryOptions(operationalSettingId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const updateOperationalSetting = (
+    operationalSettingId: string,
+    updateOperationalSettingRequest: UpdateOperationalSettingRequest,
+ options?: SecondParameter<typeof apiClient>,) => {
+      
+      
+      return apiClient<OperationalSettingDto>(
+      {url: `/operational-settings/${operationalSettingId}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: updateOperationalSettingRequest
+    },
+      options);
+    }
+  
+
+
+export const getUpdateOperationalSettingMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOperationalSetting>>, TError,{operationalSettingId: string;data: UpdateOperationalSettingRequest}, TContext>, request?: SecondParameter<typeof apiClient>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOperationalSetting>>, TError,{operationalSettingId: string;data: UpdateOperationalSettingRequest}, TContext> => {
+
+const mutationKey = ['updateOperationalSetting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOperationalSetting>>, {operationalSettingId: string;data: UpdateOperationalSettingRequest}> = (props) => {
+          const {operationalSettingId,data} = props ?? {};
+
+          return  updateOperationalSetting(operationalSettingId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOperationalSettingMutationResult = NonNullable<Awaited<ReturnType<typeof updateOperationalSetting>>>
+    export type UpdateOperationalSettingMutationBody = UpdateOperationalSettingRequest
+    export type UpdateOperationalSettingMutationError = unknown
+
+    export const useUpdateOperationalSetting = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOperationalSetting>>, TError,{operationalSettingId: string;data: UpdateOperationalSettingRequest}, TContext>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateOperationalSetting>>,
+        TError,
+        {operationalSettingId: string;data: UpdateOperationalSettingRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getUpdateOperationalSettingMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const deleteOperationalSetting = (
+    operationalSettingId: string,
+ options?: SecondParameter<typeof apiClient>,) => {
+      
+      
+      return apiClient<void>(
+      {url: `/operational-settings/${operationalSettingId}`, method: 'DELETE'
+    },
+      options);
+    }
+  
+
+
+export const getDeleteOperationalSettingMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOperationalSetting>>, TError,{operationalSettingId: string}, TContext>, request?: SecondParameter<typeof apiClient>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOperationalSetting>>, TError,{operationalSettingId: string}, TContext> => {
+
+const mutationKey = ['deleteOperationalSetting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOperationalSetting>>, {operationalSettingId: string}> = (props) => {
+          const {operationalSettingId} = props ?? {};
+
+          return  deleteOperationalSetting(operationalSettingId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOperationalSettingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOperationalSetting>>>
+    
+    export type DeleteOperationalSettingMutationError = unknown
+
+    export const useDeleteOperationalSetting = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOperationalSetting>>, TError,{operationalSettingId: string}, TContext>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOperationalSetting>>,
+        TError,
+        {operationalSettingId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteOperationalSettingMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const listOperationalSettings = (
     params?: ListOperationalSettingsParams,
  options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
 ) => {
@@ -179,147 +379,6 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getCreateOperationalSettingMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    export const getOperationalSetting = (
-    operationalSettingId: string,
- options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
-) => {
-      
-      
-      return apiClient<OperationalSettingDto>(
-      {url: `/operational-settings/${operationalSettingId}`, method: 'GET', signal
-    },
-      options);
-    }
-  
-
-
-
-export const getGetOperationalSettingQueryKey = (operationalSettingId?: string,) => {
-    return [
-    `/operational-settings/${operationalSettingId}`
-    ] as const;
-    }
-
-    
-export const getGetOperationalSettingQueryOptions = <TData = Awaited<ReturnType<typeof getOperationalSetting>>, TError = unknown>(operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetOperationalSettingQueryKey(operationalSettingId);
-
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOperationalSetting>>> = ({ signal }) => getOperationalSetting(operationalSettingId, requestOptions, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn, enabled: !!(operationalSettingId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetOperationalSettingQueryResult = NonNullable<Awaited<ReturnType<typeof getOperationalSetting>>>
-export type GetOperationalSettingQueryError = unknown
-
-
-export function useGetOperationalSetting<TData = Awaited<ReturnType<typeof getOperationalSetting>>, TError = unknown>(
- operationalSettingId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getOperationalSetting>>,
-          TError,
-          Awaited<ReturnType<typeof getOperationalSetting>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetOperationalSetting<TData = Awaited<ReturnType<typeof getOperationalSetting>>, TError = unknown>(
- operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getOperationalSetting>>,
-          TError,
-          Awaited<ReturnType<typeof getOperationalSetting>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetOperationalSetting<TData = Awaited<ReturnType<typeof getOperationalSetting>>, TError = unknown>(
- operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useGetOperationalSetting<TData = Awaited<ReturnType<typeof getOperationalSetting>>, TError = unknown>(
- operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalSetting>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGetOperationalSettingQueryOptions(operationalSettingId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
-}
-
-
-
-
-export const deleteOperationalSetting = (
-    operationalSettingId: string,
- options?: SecondParameter<typeof apiClient>,) => {
-      
-      
-      return apiClient<void>(
-      {url: `/operational-settings/${operationalSettingId}`, method: 'DELETE'
-    },
-      options);
-    }
-  
-
-
-export const getDeleteOperationalSettingMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOperationalSetting>>, TError,{operationalSettingId: string}, TContext>, request?: SecondParameter<typeof apiClient>}
-): UseMutationOptions<Awaited<ReturnType<typeof deleteOperationalSetting>>, TError,{operationalSettingId: string}, TContext> => {
-
-const mutationKey = ['deleteOperationalSetting'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOperationalSetting>>, {operationalSettingId: string}> = (props) => {
-          const {operationalSettingId} = props ?? {};
-
-          return  deleteOperationalSetting(operationalSettingId,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteOperationalSettingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOperationalSetting>>>
-    
-    export type DeleteOperationalSettingMutationError = unknown
-
-    export const useDeleteOperationalSetting = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOperationalSetting>>, TError,{operationalSettingId: string}, TContext>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteOperationalSetting>>,
-        TError,
-        {operationalSettingId: string},
-        TContext
-      > => {
-
-      const mutationOptions = getDeleteOperationalSettingMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

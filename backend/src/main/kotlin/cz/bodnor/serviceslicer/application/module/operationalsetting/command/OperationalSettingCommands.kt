@@ -18,3 +18,11 @@ data class CreateOperationalSettingCommand(
 data class DeleteOperationalSettingCommand(
     val operationalSettingId: UUID,
 ) : Command<Unit>
+
+data class UpdateOperationalSettingCommand(
+    val operationalSettingId: UUID,
+    val name: String,
+    val description: String? = null,
+    val usageProfile: List<BehaviorModel>,
+    val operationalProfile: Map<Int, BigDecimal>,
+) : Command<OperationalSetting>

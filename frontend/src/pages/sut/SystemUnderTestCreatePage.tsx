@@ -119,7 +119,7 @@ export function SystemUnderTestCreatePage() {
       })
 
       // Navigate to the detail page
-      navigate(`/systems-under-test/${(result as any).systemUnderTestId}`)
+      navigate(`/systems-under-test/${result.id}`)
     } catch (error) {
       toast({
         variant: 'destructive',

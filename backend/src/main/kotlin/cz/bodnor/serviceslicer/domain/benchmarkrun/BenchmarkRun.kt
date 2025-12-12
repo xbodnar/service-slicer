@@ -66,6 +66,18 @@ class BenchmarkRun(
         this.status = JobStatus.PENDING
     }
 
+    fun started() {
+        this.status = JobStatus.RUNNING
+    }
+
+    fun completed() {
+        this.status = JobStatus.COMPLETED
+    }
+
+    fun failed() {
+        this.status = JobStatus.FAILED
+    }
+
     fun markTestCaseCompleted(
         testCaseId: UUID,
         performanceMetrics: List<QueryLoadTestMetrics.PerformanceMetrics>,

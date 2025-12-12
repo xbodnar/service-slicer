@@ -46,36 +46,6 @@ export interface SystemUnderTestDto {
   databaseSeedConfigs: DatabaseSeedConfig[];
 }
 
-/**
- * Request to update a benchmark
- */
-export interface UpdateBenchmarkRequest {
-  name: string;
-  description?: string;
-}
-
-export interface BenchmarkDto {
-  id: string;
-  createdAt: string;
-  updatedAt: string;
-  name: string;
-  description?: string;
-}
-
-/**
- * Request to create a system under test
- */
-export interface CreateSystemUnderTestRequest {
-  /** Name of the system under test */
-  name: string;
-  /** Description of the system under test */
-  description?: string;
-  /** Docker configuration */
-  dockerConfig: DockerConfig;
-  /** Database seed configurations (one per database) */
-  databaseSeedConfigs: DatabaseSeedConfig[];
-}
-
 export type ApiRequestHeaders = {[key: string]: string};
 
 export type ApiRequestParams = {[key: string]: string};
@@ -85,6 +55,7 @@ export type ApiRequestBody = {[key: string]: { [key: string]: unknown }};
 export type ApiRequestSave = {[key: string]: string};
 
 export interface ApiRequest {
+  operationId: string;
   method: string;
   path: string;
   component?: string;
@@ -94,7 +65,6 @@ export interface ApiRequest {
   save: ApiRequestSave;
   waitMsFrom: number;
   waitMsTo: number;
-  operationId: string;
 }
 
 export interface BehaviorModel {
@@ -104,14 +74,13 @@ export interface BehaviorModel {
   steps: ApiRequest[];
 }
 
-export type CreateOperationalSettingRequestOperationalProfile = {[key: string]: number};
+export type UpdateOperationalSettingRequestOperationalProfile = {[key: string]: number};
 
-export interface CreateOperationalSettingRequest {
+export interface UpdateOperationalSettingRequest {
   name: string;
   description?: string;
-  openApiFileId: string;
   usageProfile: BehaviorModel[];
-  operationalProfile: CreateOperationalSettingRequestOperationalProfile;
+  operationalProfile: UpdateOperationalSettingRequestOperationalProfile;
 }
 
 export type FileDtoStatus = typeof FileDtoStatus[keyof typeof FileDtoStatus];
@@ -151,6 +120,52 @@ export interface OperationalSettingDto {
   openApiFile: FileDto;
   usageProfile: BehaviorModel[];
   operationalProfile: OperationalSettingDtoOperationalProfile;
+}
+
+/**
+ * Request to update a benchmark
+ */
+export interface UpdateBenchmarkRequest {
+  name: string;
+  description?: string;
+}
+
+export interface BenchmarkDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  description?: string;
+}
+
+/**
+ * Request to create a system under test
+ */
+export interface CreateSystemUnderTestRequest {
+  /** Name of the system under test */
+  name: string;
+  /** Description of the system under test */
+  description?: string;
+  /** Docker configuration */
+  dockerConfig: DockerConfig;
+  /** Database seed configurations (one per database) */
+  databaseSeedConfigs: DatabaseSeedConfig[];
+}
+
+export type CreateOperationalSettingRequestOperationalProfile = {[key: string]: number};
+
+/**
+ * Request to create an operational setting
+ */
+export interface CreateOperationalSettingRequest {
+  name: string;
+  description?: string;
+  openApiFileId: string;
+  /** List of behavior models. Can be empty if generateUsageProfile is true */
+  usageProfile: BehaviorModel[];
+  /** If true, behavior models will be auto-generated from the OpenAPI spec */
+  generateUsageProfile?: boolean;
+  operationalProfile: CreateOperationalSettingRequestOperationalProfile;
 }
 
 /**
@@ -392,6 +407,238 @@ export interface TargetTestCaseOperationMetrics {
   scalabilityShare: number;
 }
 
+export type ApiOperationRequestBody = {[key: string]: SchemaObject};
+
+export type ApiOperationResponses = {[key: string]: ApiResponse};
+
+export interface ApiOperation {
+  openApiFileId: string;
+  operationId: string;
+  method: string;
+  path: string;
+  parameters: ApiParameter[];
+  requestBody?: ApiOperationRequestBody;
+  responses: ApiOperationResponses;
+  id: string;
+  version: number;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface ApiParameter {
+  name: string;
+  in: string;
+  required: boolean;
+  schema: SchemaObject;
+}
+
+export type ApiResponseContent = {[key: string]: SchemaObject};
+
+export interface ApiResponse {
+  content: ApiResponseContent;
+}
+
+export type DiscriminatorMapping = {[key: string]: string};
+
+export type DiscriminatorExtensions = {[key: string]: { [key: string]: unknown }};
+
+export interface Discriminator {
+  propertyName?: string;
+  mapping?: DiscriminatorMapping;
+  extensions?: DiscriminatorExtensions;
+}
+
+export type ExternalDocumentationExtensions = {[key: string]: { [key: string]: unknown }};
+
+export interface ExternalDocumentation {
+  description?: string;
+  url?: string;
+  extensions?: ExternalDocumentationExtensions;
+}
+
+export type SchemaAdditionalProperties = { [key: string]: unknown };
+
+export type SchemaConst = { [key: string]: unknown };
+
+export type SchemaDefault = { [key: string]: unknown };
+
+export type SchemaDependentRequired = {[key: string]: string[]};
+
+export type SchemaDependentSchemas = {[key: string]: Schema};
+
+export type SchemaEnumItem = { [key: string]: unknown };
+
+export type SchemaExample = { [key: string]: unknown };
+
+export type SchemaExamplesItem = { [key: string]: unknown };
+
+export type SchemaExtensions = {[key: string]: { [key: string]: unknown }};
+
+export type SchemaPatternProperties = {[key: string]: Schema};
+
+export type SchemaProperties = {[key: string]: Schema};
+
+export interface Schema {
+  type?: string[];
+  format?: string;
+  if?: unknown;
+  then?: unknown;
+  else?: unknown;
+  get$anchor?: string;
+  get$comment?: string;
+  get$dynamicAnchor?: string;
+  get$id?: string;
+  get$ref?: string;
+  get$schema?: string;
+  get$vocabulary?: string;
+  additionalItems?: unknown;
+  additionalProperties?: SchemaAdditionalProperties;
+  allOf?: Schema[];
+  anyOf?: Schema[];
+  const?: SchemaConst;
+  contains?: unknown;
+  contentEncoding?: string;
+  contentMediaType?: string;
+  contentSchema?: unknown;
+  default?: SchemaDefault;
+  dependentRequired?: SchemaDependentRequired;
+  dependentSchemas?: SchemaDependentSchemas;
+  deprecated?: boolean;
+  description?: string;
+  discriminator?: Discriminator;
+  enum?: SchemaEnumItem[];
+  example?: SchemaExample;
+  examples?: SchemaExamplesItem[];
+  exclusiveMaximum?: number;
+  exclusiveMinimum?: number;
+  extensions?: SchemaExtensions;
+  externalDocs?: ExternalDocumentation;
+  items?: unknown;
+  maxContains?: number;
+  maxItems?: number;
+  maxLength?: number;
+  maxProperties?: number;
+  maximum?: number;
+  minContains?: number;
+  minItems?: number;
+  minLength?: number;
+  minProperties?: number;
+  minimum?: number;
+  multipleOf?: number;
+  not?: unknown;
+  oneOf?: Schema[];
+  pattern?: string;
+  patternProperties?: SchemaPatternProperties;
+  prefixItems?: Schema[];
+  properties?: SchemaProperties;
+  propertyNames?: unknown;
+  readOnly?: boolean;
+  required?: string[];
+  title?: string;
+  unevaluatedItems?: unknown;
+  unevaluatedProperties?: unknown;
+  uniqueItems?: boolean;
+  writeOnly?: boolean;
+  xml?: Xml;
+}
+
+export type SchemaObjectAdditionalProperties = { [key: string]: unknown };
+
+export type SchemaObjectConst = { [key: string]: unknown };
+
+export type SchemaObjectDefault = { [key: string]: unknown };
+
+export type SchemaObjectDependentRequired = {[key: string]: string[]};
+
+export type SchemaObjectDependentSchemas = {[key: string]: Schema};
+
+export type SchemaObjectEnumItem = { [key: string]: unknown };
+
+export type SchemaObjectExample = { [key: string]: unknown };
+
+export type SchemaObjectExamplesItem = { [key: string]: unknown };
+
+export type SchemaObjectExtensions = {[key: string]: { [key: string]: unknown }};
+
+export type SchemaObjectPatternProperties = {[key: string]: Schema};
+
+export type SchemaObjectProperties = {[key: string]: Schema};
+
+export interface SchemaObject {
+  type?: string[];
+  format?: string;
+  if?: Schema;
+  then?: Schema;
+  else?: Schema;
+  get$anchor?: string;
+  get$comment?: string;
+  get$dynamicAnchor?: string;
+  get$id?: string;
+  get$ref?: string;
+  get$schema?: string;
+  get$vocabulary?: string;
+  additionalItems?: Schema;
+  additionalProperties?: SchemaObjectAdditionalProperties;
+  allOf?: Schema[];
+  anyOf?: Schema[];
+  const?: SchemaObjectConst;
+  contains?: Schema;
+  contentEncoding?: string;
+  contentMediaType?: string;
+  contentSchema?: Schema;
+  default?: SchemaObjectDefault;
+  dependentRequired?: SchemaObjectDependentRequired;
+  dependentSchemas?: SchemaObjectDependentSchemas;
+  deprecated?: boolean;
+  description?: string;
+  discriminator?: Discriminator;
+  enum?: SchemaObjectEnumItem[];
+  example?: SchemaObjectExample;
+  examples?: SchemaObjectExamplesItem[];
+  exclusiveMaximum?: number;
+  exclusiveMinimum?: number;
+  extensions?: SchemaObjectExtensions;
+  externalDocs?: ExternalDocumentation;
+  items?: SchemaObject;
+  maxContains?: number;
+  maxItems?: number;
+  maxLength?: number;
+  maxProperties?: number;
+  maximum?: number;
+  minContains?: number;
+  minItems?: number;
+  minLength?: number;
+  minProperties?: number;
+  minimum?: number;
+  multipleOf?: number;
+  not?: Schema;
+  oneOf?: Schema[];
+  pattern?: string;
+  patternProperties?: SchemaObjectPatternProperties;
+  prefixItems?: Schema[];
+  properties?: SchemaObjectProperties;
+  propertyNames?: Schema;
+  readOnly?: boolean;
+  required?: string[];
+  title?: string;
+  unevaluatedItems?: Schema;
+  unevaluatedProperties?: Schema;
+  uniqueItems?: boolean;
+  writeOnly?: boolean;
+  xml?: Xml;
+}
+
+export type XmlExtensions = {[key: string]: { [key: string]: unknown }};
+
+export interface Xml {
+  name?: string;
+  namespace?: string;
+  prefix?: string;
+  attribute?: boolean;
+  wrapped?: boolean;
+  extensions?: XmlExtensions;
+}
+
 export interface PerformanceMetrics {
   operationId: string;
   totalRequests: number;
@@ -605,5 +852,13 @@ export type ListBenchmarkRunsParams = {
 benchmarkId: string;
 page?: number;
 size?: number;
+};
+
+export type ListApiOperationsParams = {
+openApiFileId: string;
+};
+
+export type CreateApiOperationsParams = {
+openApiFileId: string;
 };
 

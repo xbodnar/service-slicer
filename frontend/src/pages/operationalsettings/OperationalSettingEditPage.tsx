@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useParams } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -9,15 +9,13 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { FileSelector } from '@/components/ui/file-selector'
 import { useToast } from '@/components/ui/use-toast'
-import { type UploadedFile } from '@/hooks/useFileUpload'
-import { useCreateOperationalSetting } from '@/api/generated/operational-setting-controller/operational-setting-controller'
-import { useListApiOperations, useCreateApiOperations } from '@/api/generated/api-operation-controller/api-operation-controller'
+import { useGetOperationalSetting, useUpdateOperationalSetting } from '@/api/generated/operational-setting-controller/operational-setting-controller'
+import { useListApiOperations } from '@/api/generated/api-operation-controller/api-operation-controller'
 import { type ApiOperation } from '@/api/generated/openAPIDefinition.schemas'
-import { ArrowLeft, Plus, Trash2, Check, Activity, FileJson, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Check, FileJson, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 
-type BehaviorModelInputMode = 'manual' | 'json' | 'auto-generate'
+type BehaviorModelInputMode = 'manual' | 'json'
 
 // Common HTTP headers for autocomplete
 const COMMON_HTTP_HEADERS = [
@@ -39,7 +37,7 @@ const COMMON_HTTP_HEADERS = [
   'If-Modified-Since',
 ]
 
-// Form schemas (reusing from BenchmarkCreatePage)
+// Form schemas
 const keyValuePairSchema = z.object({
   key: z.string(),
   value: z.string(),
@@ -63,13 +61,12 @@ const behaviorModelSchema = z.object({
       body: z.string().default('{}'),
       save: z.array(keyValuePairSchema).default([]),
     })
-  ).default([]),
+  ).min(1, 'At least one step is required').default([]),
 })
 
-const benchmarkConfigSchema = z.object({
+const editConfigSchema = z.object({
   name: z.string().min(1, 'Config name is required'),
   description: z.string().optional(),
-  generateBehaviorModels: z.boolean().default(false),
   behaviorModels: z.array(behaviorModelSchema).optional(),
   behaviorModelsJson: z.string().optional(),
   operationalProfile: z.array(
@@ -79,16 +76,15 @@ const benchmarkConfigSchema = z.object({
     })
   ).min(1, 'At least one operational load is required'),
 }).refine((data) => {
-  if (data.generateBehaviorModels) return true
   if (data.behaviorModels && data.behaviorModels.length > 0) return true
   if (data.behaviorModelsJson && data.behaviorModelsJson.trim() !== '') return true
   return false
 }, {
-  message: 'Either enable auto-generation, provide JSON, or define at least one behavior model manually',
+  message: 'Either provide JSON or define at least one behavior model manually',
   path: ['behaviorModels'],
 })
 
-type BenchmarkConfigFormData = z.infer<typeof benchmarkConfigSchema>
+type EditConfigFormData = z.infer<typeof editConfigSchema>
 
 interface AutocompleteInputProps {
   value: string
@@ -163,7 +159,6 @@ function KeyValuePairList({ name, control, label, keyPlaceholder = 'Key', valueP
     name,
   })
 
-  // Get current form values if watch is provided
   const getFieldValue = (index: number, field: 'key' | 'value') => {
     if (!watch) return ''
     const pathParts = name.split('.')
@@ -469,75 +464,34 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors, apiOpera
   )
 }
 
-export function OperationalSettingCreatePage() {
+export function OperationalSettingEditPage() {
+  const { configId } = useParams<{ configId: string }>()
   const navigate = useNavigate()
   const { toast } = useToast()
-  const createOperationalSetting = useCreateOperationalSetting()
-  const createApiOperationsMutation = useCreateApiOperations()
+  const { data: config, isLoading: isLoadingConfig } = useGetOperationalSetting(configId!)
+  const updateOperationalSetting = useUpdateOperationalSetting()
 
-  const [openApiFile, setOpenApiFile] = useState<UploadedFile | null>(null)
   const [behaviorModelInputMode, setBehaviorModelInputMode] = useState<BehaviorModelInputMode>('manual')
   const [jsonValidationError, setJsonValidationError] = useState<string | null>(null)
   const [apiOperations, setApiOperations] = useState<ApiOperation[]>([])
-  const [fetchingOperations, setFetchingOperations] = useState(false)
   const [actors, setActors] = useState<string[]>([])
   const [newActor, setNewActor] = useState('')
   const [collapsedModels, setCollapsedModels] = useState<Set<number>>(new Set())
 
-  // Fetch API operations when openApiFile changes
   const { refetch: refetchApiOperations } = useListApiOperations(
-    { openApiFileId: openApiFile?.fileId || '' },
+    { openApiFileId: config?.openApiFile?.id || '' },
     {
       query: {
-        enabled: false, // Manual fetch
+        enabled: false,
       }
     }
   )
 
-  useEffect(() => {
-    const fetchApiOperations = async () => {
-      if (!openApiFile?.fileId) {
-        setApiOperations([])
-        return
-      }
-
-      setFetchingOperations(true)
-      try {
-        // First, try to list existing operations
-        const { data: existingOps } = await refetchApiOperations()
-
-        if (existingOps && existingOps.length > 0) {
-          setApiOperations(existingOps)
-        } else {
-          // If no operations exist, create them
-          const newOps = await createApiOperationsMutation.mutateAsync({
-            params: { openApiFileId: openApiFile.fileId }
-          })
-          setApiOperations(newOps)
-        }
-      } catch (error) {
-        console.error('Failed to fetch API operations:', error)
-        toast({
-          variant: 'destructive',
-          title: 'Failed to fetch API operations',
-          description: error instanceof Error ? error.message : 'An unknown error occurred',
-        })
-        setApiOperations([])
-      } finally {
-        setFetchingOperations(false)
-      }
-    }
-
-    fetchApiOperations()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openApiFile?.fileId])
-
-  const form = useForm<BenchmarkConfigFormData>({
-    resolver: zodResolver(benchmarkConfigSchema),
+  const form = useForm<EditConfigFormData>({
+    resolver: zodResolver(editConfigSchema),
     defaultValues: {
       name: '',
       description: '',
-      generateBehaviorModels: false,
       behaviorModels: [],
       behaviorModelsJson: '',
       operationalProfile: [{ load: 25, frequency: 1.0 }],
@@ -553,6 +507,73 @@ export function OperationalSettingCreatePage() {
     control: form.control,
     name: 'operationalProfile',
   })
+
+  // Load API operations when config is loaded
+  useEffect(() => {
+    const fetchApiOperations = async () => {
+      if (!config?.openApiFile?.id) return
+
+      try {
+        const { data: ops } = await refetchApiOperations()
+        if (ops) {
+          setApiOperations(ops)
+        }
+      } catch (error) {
+        console.error('Failed to fetch API operations:', error)
+      }
+    }
+
+    fetchApiOperations()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config?.openApiFile?.id])
+
+  // Populate form with existing data
+  useEffect(() => {
+    if (!config) return
+
+    // Transform operational profile from object to array
+    const operationalProfileArray = Object.entries(config.operationalProfile || {}).map(([load, frequency]) => ({
+      load: Number(load),
+      frequency: Number(frequency),
+    }))
+
+    // Transform behavior models
+    const behaviorModels = (config.usageProfile || []).map((model: any) => {
+      // Convert steps to form format
+      const steps = (model.steps || []).map((step: any) => ({
+        method: step.method,
+        path: step.path,
+        operationId: step.operationId,
+        component: step.component || '',
+        waitMsFrom: step.waitMsFrom || 0,
+        waitMsTo: step.waitMsTo || 0,
+        headers: Object.entries(step.headers || {}).map(([key, value]) => ({ key, value: String(value) })),
+        params: Object.entries(step.params || {}).map(([key, value]) => ({ key, value: String(value) })),
+        body: JSON.stringify(step.body || {}, null, 2),
+        save: Object.entries(step.save || {}).map(([key, value]) => ({ key, value: String(value) })),
+      }))
+
+      return {
+        id: model.id,
+        actor: model.actor,
+        frequency: model.frequency,
+        commonHeaders: [],
+        steps,
+      }
+    })
+
+    // Extract unique actors
+    const uniqueActors = Array.from(new Set(behaviorModels.map((m: any) => m.actor)))
+    setActors(uniqueActors)
+
+    form.reset({
+      name: config.name,
+      description: config.description || '',
+      behaviorModels,
+      behaviorModelsJson: '',
+      operationalProfile: operationalProfileArray,
+    })
+  }, [config, form])
 
   const keyValuePairsToObject = (pairs: { key: string; value: string }[]): Record<string, string> => {
     return pairs.reduce((acc, { key, value }) => {
@@ -605,14 +626,8 @@ export function OperationalSettingCreatePage() {
     }
   }
 
-  const onSubmit = async (data: BenchmarkConfigFormData) => {
-    if (!openApiFile) {
-      toast({
-        variant: 'destructive',
-        title: 'OpenAPI file is required',
-      })
-      return
-    }
+  const onSubmit = async (data: EditConfigFormData) => {
+    if (!configId) return
 
     if (behaviorModelInputMode === 'json' && jsonValidationError) {
       toast({
@@ -629,7 +644,6 @@ export function OperationalSettingCreatePage() {
       if (behaviorModelInputMode === 'json' && data.behaviorModelsJson) {
         behaviorModels = JSON.parse(data.behaviorModelsJson)
       } else if (behaviorModelInputMode === 'manual' && data.behaviorModels && data.behaviorModels.length > 0) {
-        // Validate that all behavior models have at least one step
         const modelsWithoutSteps = data.behaviorModels.filter((m: any) => !m.steps || m.steps.length === 0)
         if (modelsWithoutSteps.length > 0) {
           toast({
@@ -653,7 +667,6 @@ export function OperationalSettingCreatePage() {
             body: step.body && step.body.trim() !== '' ? JSON.parse(step.body) : {},
             save: keyValuePairsToObject(step.save || []),
           }))
-          // Exclude commonHeaders from the payload sent to backend
           return {
             id: model.id,
             actor: model.actor,
@@ -673,100 +686,102 @@ export function OperationalSettingCreatePage() {
         return
       }
 
-      // Transform operationalProfile from array to object
       const operationalProfile = data.operationalProfile.reduce((acc: Record<string, number>, p: any) => {
         acc[p.load.toString()] = Number(p.frequency)
         return acc
       }, {})
 
-      const result = await createOperationalSetting.mutateAsync({
+      await updateOperationalSetting.mutateAsync({
+        operationalSettingId: configId,
         data: {
           name: data.name,
           description: data.description || undefined,
-          openApiFileId: openApiFile.fileId,
           usageProfile: behaviorModels,
-          generateUsageProfile: data.generateBehaviorModels,
           operationalProfile,
         },
       })
 
       toast({
-        title: 'Config created',
-        description: 'Your benchmark config has been created successfully',
+        title: 'Config updated',
+        description: 'Your operational setting has been updated successfully',
       })
 
-      navigate(`/operational-settings/${result.id}`)
+      navigate(`/operational-settings/${configId}`)
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Failed to create config',
+        title: 'Failed to update config',
         description: error instanceof Error ? error.message : 'An unknown error occurred',
       })
     }
   }
 
+  if (isLoadingConfig) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (!config) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center gap-4">
+          <Link to="/operational-settings">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">Config Not Found</h1>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Link to="/operational-settings">
+        <Link to={`/operational-settings/${configId}`}>
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Create Operational Setting</h1>
-          <p className="text-muted-foreground">Create a reusable load test configuration</p>
+          <h1 className="text-3xl font-bold">Edit Operational Setting</h1>
+          <p className="text-muted-foreground">Update configuration for {config.name}</p>
         </div>
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Combined Card */}
         <Card>
           <CardContent className="space-y-6 pt-6">
-            {/* Basic Info and OpenAPI File in same row */}
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
-                  <Input id="name" {...form.register('name')} placeholder="Standard Load Test" />
-                  {form.formState.errors.name && (
-                    <p className="text-sm text-destructive">{String(form.formState.errors.name.message)}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description (optional)</Label>
-                  <Textarea
-                    id="description"
-                    {...form.register('description')}
-                    placeholder="Standard load test configuration for REST APIs"
-                    rows={3}
-                  />
-                </div>
+            {/* Basic Info */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input id="name" {...form.register('name')} placeholder="Standard Load Test" />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-destructive">{String(form.formState.errors.name.message)}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <FileSelector
-                  id="openapi-file"
-                  label="OpenAPI Specification File"
-                  accept=".json,.yaml,.yml"
-                  required
-                  onFileSelected={setOpenApiFile}
-                  selectedFile={openApiFile}
-                  mimeTypeFilter="json"
+                <Label htmlFor="description">Description (optional)</Label>
+                <Textarea
+                  id="description"
+                  {...form.register('description')}
+                  placeholder="Standard load test configuration for REST APIs"
+                  rows={3}
                 />
-                {fetchingOperations && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Loading API operations...</span>
-                  </div>
-                )}
-                {!fetchingOperations && apiOperations.length > 0 && (
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <Check className="h-3 w-3" />
-                    <span>{apiOperations.length} API operations loaded</span>
-                  </div>
-                )}
+              </div>
+
+              {/* Display OpenAPI file (read-only) */}
+              <div className="space-y-2">
+                <Label>OpenAPI File (cannot be changed)</Label>
+                <Input value={config.openApiFile?.filename || 'N/A'} disabled />
               </div>
             </div>
 
@@ -774,26 +789,24 @@ export function OperationalSettingCreatePage() {
             <div className="space-y-4">
               <div className="space-y-3">
                 <Label>Behavior Models Input Method</Label>
-                <div className="grid grid-cols-3 gap-3">
-                    <Button
-                        type="button"
-                        variant={behaviorModelInputMode === 'manual' ? 'default' : 'outline'}
-                        className="w-full"
-                        onClick={() => {
-                            setBehaviorModelInputMode('manual')
-                            form.setValue('generateBehaviorModels', false)
-                            setJsonValidationError(null)
-                        }}
-                    >
-                        Manual Input
-                    </Button>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    type="button"
+                    variant={behaviorModelInputMode === 'manual' ? 'default' : 'outline'}
+                    className="w-full"
+                    onClick={() => {
+                      setBehaviorModelInputMode('manual')
+                      setJsonValidationError(null)
+                    }}
+                  >
+                    Manual Input
+                  </Button>
                   <Button
                     type="button"
                     variant={behaviorModelInputMode === 'json' ? 'default' : 'outline'}
                     className="w-full"
                     onClick={() => {
                       setBehaviorModelInputMode('json')
-                      form.setValue('generateBehaviorModels', false)
                       const currentJson = form.watch('behaviorModelsJson')
                       if (currentJson) validateBehaviorModelsJson(currentJson)
                     }}
@@ -801,29 +814,8 @@ export function OperationalSettingCreatePage() {
                     <FileJson className="h-4 w-4 mr-2" />
                     Raw JSON
                   </Button>
-                    <Button
-                        type="button"
-                        variant={behaviorModelInputMode === 'auto-generate' ? 'default' : 'outline'}
-                        className="w-full"
-                        onClick={() => {
-                            setBehaviorModelInputMode('auto-generate')
-                            form.setValue('generateBehaviorModels', true)
-                            setJsonValidationError(null)
-                        }}
-                    >
-                        <Activity className="h-4 w-4 mr-2" />
-                        Auto-generate
-                    </Button>
                 </div>
               </div>
-
-              {behaviorModelInputMode === 'auto-generate' && (
-                <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                  <p className="text-sm text-blue-900">
-                    Behavior models will be automatically generated from the OpenAPI specification file.
-                  </p>
-                </div>
-              )}
 
               {behaviorModelInputMode === 'json' && (
                 <div className="space-y-2">
@@ -833,7 +825,7 @@ export function OperationalSettingCreatePage() {
                     {...form.register('behaviorModelsJson', {
                       onChange: (e) => validateBehaviorModelsJson(e.target.value)
                     })}
-                    placeholder={`[{"id": "checkout-flow", "actor": "Customer", "usageProfile": 0.7, "steps": [{"method": "GET", "path": "/api/products", "operationId": "listProducts", "headers": {}, "params": {}, "body": {}, "save": {}}]}]`}
+                    placeholder={`[{"id": "checkout-flow", "actor": "Customer", "frequency": 0.7, "steps": [{"method": "GET", "path": "/api/products", "operationId": "listProducts", "headers": {}, "params": {}, "body": {}, "save": {}}]}]`}
                     rows={10}
                     className={`font-mono text-xs ${jsonValidationError ? 'border-destructive' : ''}`}
                   />
@@ -907,11 +899,6 @@ export function OperationalSettingCreatePage() {
                           </div>
                         ))}
                       </div>
-                    )}
-                    {actors.length === 0 && (
-                      <p className="text-xs text-muted-foreground italic">
-                        No actors defined yet. Add actors to use in behavior models.
-                      </p>
                     )}
                   </div>
 
@@ -1128,17 +1115,17 @@ export function OperationalSettingCreatePage() {
         </Card>
 
         <div className="flex justify-end gap-4">
-          <Link to="/operational-settings">
+          <Link to={`/operational-settings/${configId}`}>
             <Button type="button" variant="outline">Cancel</Button>
           </Link>
-          <Button type="submit" disabled={createOperationalSetting.isPending}>
-            {createOperationalSetting.isPending ? (
+          <Button type="submit" disabled={updateOperationalSetting.isPending}>
+            {updateOperationalSetting.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
+                Updating...
               </>
             ) : (
-              'Create Config'
+              'Update Config'
             )}
           </Button>
         </div>

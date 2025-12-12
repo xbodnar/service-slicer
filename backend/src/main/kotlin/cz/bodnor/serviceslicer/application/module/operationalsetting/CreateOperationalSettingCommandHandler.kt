@@ -4,6 +4,8 @@ import cz.bodnor.serviceslicer.application.module.benchmark.port.out.GenerateUsa
 import cz.bodnor.serviceslicer.application.module.operationalsetting.command.CreateOperationalSettingCommand
 import cz.bodnor.serviceslicer.application.module.operationalsetting.service.OpenApiParsingService
 import cz.bodnor.serviceslicer.application.module.operationalsetting.service.ValidateOperationalSetting
+import cz.bodnor.serviceslicer.domain.apiop.ApiOperation
+import cz.bodnor.serviceslicer.domain.apiop.ApiOperationReadService
 import cz.bodnor.serviceslicer.domain.file.FileReadService
 import cz.bodnor.serviceslicer.domain.file.FileStatus
 import cz.bodnor.serviceslicer.domain.operationalsetting.OperationalSetting
@@ -12,6 +14,7 @@ import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandHandler
 import cz.bodnor.serviceslicer.infrastructure.exception.verify
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Component
 class CreateOperationalSettingCommandHandler(
@@ -19,6 +22,7 @@ class CreateOperationalSettingCommandHandler(
     private val fileReadService: FileReadService,
     private val openApiParsingService: OpenApiParsingService,
     private val generateUsageProfile: GenerateUsageProfile,
+    private val apiOperationReadService: ApiOperationReadService,
 ) : CommandHandler<OperationalSetting, CreateOperationalSettingCommand> {
     override val command = CreateOperationalSettingCommand::class
 
@@ -29,7 +33,7 @@ class CreateOperationalSettingCommandHandler(
         verify(command.usageProfile.isNotEmpty() || command.generateUsageProfile) {
             "Usage profile is empty and automatic generation is disabled"
         }
-        val apiOperations = openApiParsingService.parse(file.id)
+        val apiOperations = getApiOperations(command.openApiFileId)
 
         val usageProfile = if (command.generateUsageProfile) {
             generateUsageProfile(file.id)
@@ -51,5 +55,15 @@ class CreateOperationalSettingCommandHandler(
         )
 
         return operationalSettingWriteService.save(operationalSetting)
+    }
+
+    private fun getApiOperations(openApiFileId: UUID): List<ApiOperation> {
+        val apiOperations = apiOperationReadService.getByOpenApiFileId(openApiFileId)
+
+        if (apiOperations.isNotEmpty()) {
+            return apiOperations
+        }
+
+        return openApiParsingService.parse(openApiFileId)
     }
 }

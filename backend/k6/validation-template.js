@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import {check, sleep} from 'k6';
+import jsonpath from 'https://jslib.k6.io/jsonpath/1.0.2/index.js';
 
 // --- CONFIG FROM ORCHESTRATOR / GENERATED ---
 const BASE_URL = __ENV.BASE_URL;
@@ -91,31 +92,28 @@ function applyTemplate(obj, ctx) {
 }
 
 function getFromJsonPath(json, path) {
-    if (!path.startsWith('$.')) {
-        throw new Error(`Path must start with '$.': ${path}`);
-    }
-    const parts = path.slice(2).split('.');
-    let cur = json;
-    for (const part of parts) {
-        const m = part.match(/(\w+)\[(\d+)\]/); // e.g. articles[0]
-        if (m) {
-            const key = m[1];
-            const idx = Number(m[2]);
-            cur = cur?.[key]?.[idx];
-        } else {
-            cur = cur?.[part];
-        }
-        if (cur === undefined || cur === null) break;
-    }
-    return cur;
+    const result = jsonpath.query(json, path);
+    // jsonpath.query returns an array of matches, return the first match or null
+    return result.length > 0 ? result[0] : null;
 }
 
 function executeStep(step, ctx) {
     console.log(`[DEBUG] Executing step ${step.operationId} with context:`, JSON.stringify(ctx));
-    const url = BASE_URL + applyTemplate(step.path, ctx);
-    console.log(`[DEBUG] Templated URL: ${url}`);
+
+    // Build URL with query parameters
+    let url = BASE_URL + applyTemplate(step.path, ctx);
+    const queryParams = applyTemplate(step.params || {}, ctx);
+
+    if (queryParams && Object.keys(queryParams).length > 0) {
+        const queryString = Object.entries(queryParams)
+            .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+            .join('&');
+        url += (url.includes('?') ? '&' : '?') + queryString;
+    }
+
+    console.log(`[DEBUG] Final URL with params: ${url}`);
+
     const headers = applyTemplate(step.headers || {}, ctx);
-    const params = applyTemplate(step.params || {}, ctx);
     const body = applyTemplate(step.body || null, ctx);
 
     // Add Content-Type header for JSON requests if not already set
@@ -130,7 +128,6 @@ function executeStep(step, ctx) {
 
     const reqParams = {
         headers: headers,
-        params: params,
         tags: {
             behavior_id: ctx.behaviorId,
             actor: ctx.actor,

@@ -13,6 +13,7 @@ import { BenchmarkRunDetailPage } from '@/pages/benchmarks/BenchmarkRunDetailPag
 import { OperationalSettingListPage } from '@/pages/operationalsettings/OperationalSettingListPage'
 import { OperationalSettingDetailPage } from '@/pages/operationalsettings/OperationalSettingDetailPage'
 import { OperationalSettingCreatePage } from '@/pages/operationalsettings/OperationalSettingCreatePage'
+import { OperationalSettingEditPage } from '@/pages/operationalsettings/OperationalSettingEditPage'
 import { FileListPage } from '@/pages/files/FileListPage'
 import { SystemUnderTestListPage } from '@/pages/sut/SystemUnderTestListPage'
 import { SystemUnderTestDetailPage } from '@/pages/sut/SystemUnderTestDetailPage'
@@ -45,6 +46,7 @@ function App() {
           <Route path="operational-settings" element={<OperationalSettingListPage />} />
           <Route path="operational-settings/new" element={<ProtectedRoute><OperationalSettingCreatePage /></ProtectedRoute>} />
           <Route path="operational-settings/:configId" element={<OperationalSettingDetailPage />} />
+          <Route path="operational-settings/:configId/edit" element={<ProtectedRoute><OperationalSettingEditPage /></ProtectedRoute>} />
 
           {/* Systems Under Test */}
           <Route path="systems-under-test" element={<SystemUnderTestListPage />} />

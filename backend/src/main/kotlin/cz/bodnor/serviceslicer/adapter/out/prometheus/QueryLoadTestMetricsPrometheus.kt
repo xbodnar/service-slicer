@@ -25,25 +25,23 @@ class QueryLoadTestMetricsPrometheus(
         // Build label filter for k6 metrics
         val labelFilter = """test_case_id="$testCaseId""""
 
-        val duration = end.epochSecond - start.epochSecond
-
-        // Query 1: Get total requests count per operation using increase over the full duration
+        // Query 1: Get total requests count per operation
         val totalRequestsQuery = "sum by (operation) (k6_http_reqs_total{$labelFilter})"
 
-        // Query 2: Get failed requests count per operation using increase over the full duration
+        // Query 2: Get failed requests count per operation
         val failedRequestsQuery = "sum by (operation) (k6_http_reqs_total{$labelFilter,status!~\"2..\"})"
 
-        // Query 3: Get mean response time histogram per operation
-        val meanResponseTimeQuery = "histogram_avg(sum by (operation) (increase(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
+        // Query 3: Get mean response time from native histogram per operation
+        val meanResponseTimeQuery = "histogram_avg(sum by (operation) (k6_http_req_duration_seconds{$labelFilter}))"
 
-        // Query 4: Standard deviation of response time
-        val stdDevResponseTimeQuery = "histogram_stddev(sum by (operation) (increase(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
+        // Query 4: Standard deviation of response time from native histogram
+        val stdDevResponseTimeQuery = "histogram_stddev(sum by (operation) (k6_http_req_duration_seconds{$labelFilter}))"
 
-        // Query 5: 95th percentile response time
-        val p95ResponseTimeQuery = "histogram_quantile(0.95, sum by (operation, le) (increase(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
+        // Query 5: 95th percentile response time from native histogram
+        val p95ResponseTimeQuery = "histogram_quantile(0.95, sum by (operation) (k6_http_req_duration_seconds{$labelFilter}))"
 
-        // Query 6: 99th percentile response time
-        val p99ResponseTimeQuery = "histogram_quantile(0.99, sum by (operation, le) (increase(k6_http_req_duration_seconds{$labelFilter}[${duration}s])))"
+        // Query 6: 99th percentile response time from native histogram
+        val p99ResponseTimeQuery = "histogram_quantile(0.99, sum by (operation) (k6_http_req_duration_seconds{$labelFilter}))"
 
         // Execute instant queries at the end time with a lookback window to the start
         val totalRequests = prometheusConnector.query(totalRequestsQuery, end)
@@ -82,10 +80,18 @@ class QueryLoadTestMetricsPrometheus(
                 operationId = op,
                 totalRequests = totalRequests[op]?.toLong() ?: 0L,
                 failedRequests = failedRequests[op]?.toLong() ?: 0L,
-                meanResponseTimeMs = (meanResponseTimeResponse[op] ?: BigDecimal.ZERO).multiply(BigDecimal(1000)),
-                stdDevResponseTimeMs = (stdDevResponseTimeResponse[op] ?: BigDecimal.ZERO).multiply(BigDecimal(1000)),
-                p95DurationMs = (p95ResponseTimeResponse[op] ?: BigDecimal.ZERO).multiply(BigDecimal(1000)),
-                p99DurationMs = (p99ResponseTimeResponse[op] ?: BigDecimal.ZERO).multiply(BigDecimal(1000)),
+                meanResponseTimeMs = (
+                    meanResponseTimeResponse[op] ?: error("No mean response time returned from prometheus for $op")
+                    ).multiply(BigDecimal(1000)),
+                stdDevResponseTimeMs = (
+                    stdDevResponseTimeResponse[op] ?: error("No std dev response time returned from prometheus for $op")
+                    ).multiply(BigDecimal(1000)),
+                p95DurationMs = (
+                    p95ResponseTimeResponse[op] ?: error("No p95 response time returned from prometheus for $op")
+                    ).multiply(BigDecimal(1000)),
+                p99DurationMs = (
+                    p99ResponseTimeResponse[op] ?: error("No p99 response time returned from prometheus for $op")
+                    ).multiply(BigDecimal(1000)),
             )
         }
     }

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, ArrowLeft, Trash2, FileJson, Activity, Users, ChevronDown, ChevronRight } from 'lucide-react'
+import { Loader2, ArrowLeft, Trash2, FileJson, Activity, Users, ChevronDown, ChevronRight, Pencil } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -97,12 +97,20 @@ export function OperationalSettingDetailPage() {
             <p className="text-muted-foreground">{config.description || 'No description'}</p>
           </div>
         </div>
-        {canDelete && (
-          <Button variant="destructive" onClick={handleDelete} disabled={deleteOperationalSetting.isPending}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <Link to={`/operational-settings/${config.id}/edit`}>
+            <Button variant="outline">
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
+          {canDelete && (
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteOperationalSetting.isPending}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Overview Card */}

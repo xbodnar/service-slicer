@@ -64,4 +64,8 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet id="remove-name-column" author="Norbert Bodnar">
+        <dropColumn tableName="api_operation" columnName="name"/>
+    </changeSet>
 </databaseChangeLog>

@@ -1053,6 +1053,9 @@ export function BenchmarkRunDetailPage() {
               const testCase = data.targetTestCases.find((tc: TargetTestCaseDto) => tc.load.toString() === selectedLoad)
               if (!testCase) return null
 
+              // Get the operational profile frequency for this load
+              const loadFrequency = benchmarkData?.operationalSetting?.operationalProfile?.[testCase.load]
+
               return (
                 <div className="p-4 rounded-lg border bg-purple-50/50 dark:bg-purple-950/20">
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -1082,7 +1085,7 @@ export function BenchmarkRunDetailPage() {
                           <p className="text-xs text-muted-foreground">Relative Domain Metric</p>
                         </div>
                         <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-                          {testCase.relativeDomainMetric.toFixed(4)}
+                          {Number(testCase.relativeDomainMetric.toFixed(4))} / {loadFrequency !== undefined ? Number(loadFrequency) : 'N/A'}
                         </p>
                       </div>
                     </div>
