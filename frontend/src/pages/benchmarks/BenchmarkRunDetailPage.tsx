@@ -443,8 +443,8 @@ export function BenchmarkRunDetailPage() {
                       dataKey="frequency"
                       stroke="#003a7d"
                       strokeWidth={3}
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 5 }}
+                      dot={{ r: 2, fill: '#003a7d', fillOpacity: 1 }}
+                      activeDot={{ r: 3 }}
                       name="Total Probability Mass"
                     />
                     {data.testSuites.map((suite: TestSuiteDto, index: number) => (
@@ -456,8 +456,8 @@ export function BenchmarkRunDetailPage() {
                         fill={colors[index % colors.length]}
                         fillOpacity={0.2}
                         strokeWidth={2}
-                        dot={{ r: 3 }}
-                        activeDot={{ r: 5 }}
+                        dot={{ r: 2, fill: colors[index % colors.length], fillOpacity: 1 }}
+                        activeDot={{ r: 3 }}
                       />
                     ))}
                   </ComposedChart>
