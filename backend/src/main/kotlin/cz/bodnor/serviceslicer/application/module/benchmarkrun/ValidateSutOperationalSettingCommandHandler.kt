@@ -26,7 +26,8 @@ class ValidateSutOperationalSettingCommandHandler(
         val sut = sutReadService.getById(command.systemUnderTestId)
         val benchmark = benchmarkReadService.getById(command.benchmarkId)
 
-        benchmark.startValidationRun(sut.id)
+        TODO()
+//        benchmark.startValidationRun(sut.id)
         benchmarkWriteService.save(benchmark)
 
         applicationEventPublisher.publishEvent(

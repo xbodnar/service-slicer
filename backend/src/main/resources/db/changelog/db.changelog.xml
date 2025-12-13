@@ -6,4 +6,142 @@
 
     <includeAll path="db/changelog/tables"/>
     <includeAll path="db/changelog/fk"/>
+
+    <changeSet id="clean-tables-before-altering" author="Norbert Bodnar">
+        <delete tableName="target_test_case"/>
+        <delete tableName="benchmark_run"/>
+        <delete tableName="benchmark"/>
+    </changeSet>
+
+    <changeSet id="drop-old-benchmark-columns" author="Norbert Bodnar">
+        <!-- Drop foreign key constraints first -->
+        <dropForeignKeyConstraint
+                baseTableName="benchmark"
+                constraintName="fk_benchmark_baseline_sut"/>
+
+        <dropForeignKeyConstraint
+                baseTableName="benchmark"
+                constraintName="fk_benchmark_target_sut"/>
+
+        <!-- Drop old columns -->
+        <dropColumn tableName="benchmark" columnName="baseline_sut_id"/>
+        <dropColumn tableName="benchmark" columnName="target_sut_id"/>
+        <dropColumn tableName="benchmark" columnName="baseline_sut_validation_result"/>
+        <dropColumn tableName="benchmark" columnName="target_sut_validation_result"/>
+    </changeSet>
+
+    <changeSet id="create-benchmark-system-under-test-join-table" author="Norbert Bodnar">
+        <!-- Create new join table -->
+        <createTable tableName="benchmark_system_under_test">
+            <!-- Composite primary key -->
+            <column name="benchmark_id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="system_under_test_id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Validation result -->
+            <column name="validation_result" type="jsonb">
+                <constraints nullable="true"/>
+            </column>
+            <column name="is_baseline" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Foreign keys -->
+        <addForeignKeyConstraint
+                baseTableName="benchmark_system_under_test"
+                baseColumnNames="benchmark_id"
+                constraintName="fk_benchmark_system_under_test_benchmark"
+                referencedTableName="benchmark"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+                baseTableName="benchmark_system_under_test"
+                baseColumnNames="system_under_test_id"
+                constraintName="fk_benchmark_system_under_test_sut"
+                referencedTableName="system_under_test"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+    </changeSet>
+
+    <!-- Test suite -->
+    <changeSet id="create-test-suite-table" author="Norbert Bodnar">
+        <createTable tableName="test_suite">
+            <!-- Updatable entity -->
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="version" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Entity -->
+            <column name="benchmark_run_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="system_under_test_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_baseline" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_timestamp" type="timestamptz">
+                <constraints nullable="true"/>
+            </column>
+            <column name="end_timestamp" type="timestamptz">
+                <constraints nullable="true"/>
+            </column>
+            <column name="test_suite_results" type="jsonb">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="merge-test-case-tables" author="Norbert Bodnar">
+        <renameColumn tableName="target_test_case" oldColumnName="target_sut_id" newColumnName="system_under_test_id"/>
+        <addColumn tableName="target_test_case">
+            <column name="test_suite_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <renameTable oldTableName="target_test_case" newTableName="test_case"/>
+    </changeSet>
+
+    <changeSet id="benchmark-run-support-multiple-suts" author="Norbert Bodnar">
+        <dropColumn tableName="benchmark_run" columnName="baseline_test_case_id"/>
+        <dropTable tableName="baseline_test_case"/>
+        <dropColumn tableName="benchmark_run" columnName="experiment_results"/>
+        <addColumn tableName="benchmark_run">
+            <column name="start_timestamp" type="timestamptz">
+                <constraints nullable="true"/>
+            </column>
+            <column name="end_timestamp" type="timestamptz">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="drop-benchmark_run_id-column-from-test-case" author="Norbert Bodnar">
+        <dropColumn tableName="test_case" columnName="benchmark_run_id"/>
+    </changeSet>
+    
+    <changeSet id="drop-system_under_test_id-column-from-test-case" author="Norbert Bodnar">
+        <dropColumn tableName="test_case" columnName="system_under_test_id"/>
+        <addForeignKeyConstraint baseTableName="test_case" baseColumnNames="test_suite_id"
+                                 constraintName="fk_test_case_test_suite"
+                                 referencedTableName="test_suite"
+                                 referencedColumnNames="id"/>
+    </changeSet>
 </databaseChangeLog>

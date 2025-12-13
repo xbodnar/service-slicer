@@ -1,7 +1,7 @@
 package cz.bodnor.serviceslicer.application.module.benchmark.query
 
+import cz.bodnor.serviceslicer.adapter.`in`.web.benchmark.BenchmarkSystemUnderTestDto
 import cz.bodnor.serviceslicer.domain.benchmark.Benchmark
-import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestWithFiles
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.Query
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -18,7 +18,6 @@ data class ListBenchmarksQuery(
 data class GetBenchmarkQuery(val benchmarkId: UUID) : Query<GetBenchmarkQuery.Result> {
     data class Result(
         val benchmark: Benchmark,
-        val baselineSut: SystemUnderTestWithFiles,
-        val targetSut: SystemUnderTestWithFiles,
+        val systemsUnderTest: List<BenchmarkSystemUnderTestDto>,
     )
 }

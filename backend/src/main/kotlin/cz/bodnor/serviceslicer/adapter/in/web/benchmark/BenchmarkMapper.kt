@@ -29,16 +29,13 @@ interface BenchmarkMapper {
 
     // OUTBOUND MAPPINGS
 
-    //    @Mapping(target = "baselineSut", source = "baselineSut")
-//    @Mapping(target = "targetSut", source = "targetSut")
     @Mapping(target = "id", source = "benchmark.id")
     @Mapping(target = "createdAt", source = "benchmark.createdAt")
     @Mapping(target = "updatedAt", source = "benchmark.updatedAt")
     @Mapping(target = "name", source = "benchmark.name")
     @Mapping(target = "description", source = "benchmark.description")
     @Mapping(target = "operationalSetting", source = "benchmark.operationalSetting")
-    @Mapping(target = "baselineSutValidationResult", source = "benchmark.baselineSutValidationResult")
-    @Mapping(target = "targetSutValidationResult", source = "benchmark.targetSutValidationResult")
+    @Mapping(target = "systemsUnderTest", source = "systemsUnderTest")
     fun toDto(result: GetBenchmarkQuery.Result): BenchmarkDetailDto
 
     fun toDto(result: Benchmark): BenchmarkDto

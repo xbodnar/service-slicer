@@ -1,7 +1,8 @@
 package cz.bodnor.serviceslicer.adapter.`in`.web.benchmark
 
 import cz.bodnor.serviceslicer.adapter.`in`.web.operationalsetting.OperationalSettingDto
-import cz.bodnor.serviceslicer.adapter.`in`.web.sut.SystemUnderTestDetailDto
+import cz.bodnor.serviceslicer.adapter.`in`.web.sut.DatabaseSeedConfigDto
+import cz.bodnor.serviceslicer.adapter.`in`.web.sut.DockerConfigDto
 import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
@@ -31,15 +32,17 @@ data class BenchmarkDetailDto(
     val name: String,
     val description: String?,
     val operationalSetting: OperationalSettingDto,
-    val baselineSut: SystemUnderTestDetailDto,
-    val targetSut: SystemUnderTestDetailDto,
-    val baselineSutValidationResult: ValidationResult?,
-    val targetSutValidationResult: ValidationResult?,
+    val systemsUnderTest: List<BenchmarkSystemUnderTestDto>,
 )
 
-data class BenchmarkRunDto(
+data class BenchmarkSystemUnderTestDto(
     val id: UUID,
     val createdAt: Instant,
     val updatedAt: Instant,
-
+    val name: String,
+    val description: String?,
+    val dockerConfig: DockerConfigDto,
+    val databaseSeedConfigs: List<DatabaseSeedConfigDto>,
+    val isBaseline: Boolean,
+    val validationResult: ValidationResult?,
 )

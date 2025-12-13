@@ -21,19 +21,25 @@ class CreateBenchmarkCommandHandler(
 
     @Transactional
     override fun handle(command: CreateBenchmarkCommand): Benchmark {
-        verify(command.baselineSutId != command.targetSutId) {
-            "Baseline and target SUT must be different"
+        verify(command.systemsUnderTest.contains(command.baselineSutId)) {
+            "Baseline SUT is not part of the systems under test"
         }
-        val baselineSut = sutReadService.getById(command.baselineSutId)
-        val targetSut = sutReadService.getById(command.targetSutId)
+        val systemsUnderTest = sutReadService.findAllByIds(command.systemsUnderTest.toSet())
+        verify(systemsUnderTest.size == command.systemsUnderTest.size) {
+            "Failed to load all systems under test, missing: " +
+                "${command.systemsUnderTest - systemsUnderTest.map { it.id }.toSet()}"
+        }
+
         val operationalSetting = operationalSettingReadService.getById(command.operationalSettingId)
 
-        return benchmarkWriteService.create(
+        val benchmark = Benchmark(
             name = command.name,
             description = command.description,
             operationalSetting = operationalSetting,
-            baselineSut = baselineSut,
-            targetSut = targetSut,
         )
+
+        systemsUnderTest.forEach { benchmark.addSystemUnderTest(it, it.id == command.baselineSutId) }
+
+        return benchmarkWriteService.save(benchmark)
     }
 }

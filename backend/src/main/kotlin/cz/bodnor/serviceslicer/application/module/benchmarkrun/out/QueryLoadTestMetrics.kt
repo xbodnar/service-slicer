@@ -1,5 +1,6 @@
 package cz.bodnor.serviceslicer.application.module.benchmarkrun.out
 
+import cz.bodnor.serviceslicer.domain.testcase.OperationId
 import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
@@ -7,7 +8,7 @@ import java.util.UUID
 interface QueryLoadTestMetrics {
 
     data class PerformanceMetrics(
-        val operationId: String,
+        val operationId: OperationId,
 
         // counts
         val totalRequests: Long,

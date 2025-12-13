@@ -240,8 +240,8 @@ export interface CreateBenchmarkRequest {
   name: string;
   description?: string;
   operationalSettingId: string;
+  systemsUnderTest: string[];
   baselineSutId: string;
-  targetSutId: string;
 }
 
 export type ValidationResultValidationState = typeof ValidationResultValidationState[keyof typeof ValidationResultValidationState];
@@ -261,61 +261,13 @@ export interface ValidationResult {
   k6Output?: string;
 }
 
-/**
- * Result of generating behavior models
- */
-export interface GenerateBehaviorModelsResult {
-  /** ID of the updated load test configuration */
+export interface Result {
   loadTestConfigId: string;
 }
 
 export interface CreateBenchmarkRunRequest {
   benchmarkId: string;
   testDuration?: string;
-}
-
-export type BaselineTestCaseDtoStatus = typeof BaselineTestCaseDtoStatus[keyof typeof BaselineTestCaseDtoStatus];
-
-
-// eslint-disable-next-line @typescript-eslint/no-redeclare
-export const BaselineTestCaseDtoStatus = {
-  RUNNING: 'RUNNING',
-  PENDING: 'PENDING',
-  COMPLETED: 'COMPLETED',
-  FAILED: 'FAILED',
-} as const;
-
-export type BaselineTestCaseDtoOperationMetrics = {[key: string]: BaselineTestCaseOperationMetrics};
-
-export type BaselineTestCaseDtoRelativeDomainMetrics = {[key: string]: number};
-
-/**
- * Baseline test case DTO
- */
-export interface BaselineTestCaseDto {
-  id: string;
-  createdAt: string;
-  updatedAt: string;
-  load: number;
-  startTimestamp?: string;
-  endTimestamp?: string;
-  status: BaselineTestCaseDtoStatus;
-  k6Output?: string;
-  jsonSummary?: JsonNode;
-  baselineSutId: string;
-  operationMetrics: BaselineTestCaseDtoOperationMetrics;
-  relativeDomainMetrics: BaselineTestCaseDtoRelativeDomainMetrics;
-}
-
-export interface BaselineTestCaseOperationMetrics {
-  operationId: string;
-  totalRequests: number;
-  failedRequests: number;
-  meanResponseTimeMs: number;
-  stdDevResponseTimeMs: number;
-  p95DurationMs: number;
-  p99DurationMs: number;
-  scalabilityThreshold: number;
 }
 
 export type BenchmarkRunDtoStatus = typeof BenchmarkRunDtoStatus[keyof typeof BenchmarkRunDtoStatus];
@@ -339,16 +291,7 @@ export interface BenchmarkRunDto {
   benchmarkId: string;
   testDuration: string;
   status: BenchmarkRunDtoStatus;
-  baselineTestCase: BaselineTestCaseDto;
-  targetTestCases: TargetTestCaseDto[];
-  experimentResults?: ExperimentResults;
-}
-
-export type ExperimentResultsOperationExperimentResults = {[key: string]: OperationExperimentResults};
-
-export interface ExperimentResults {
-  totalDomainMetric: number;
-  operationExperimentResults: ExperimentResultsOperationExperimentResults;
+  testSuites: TestSuiteDto[];
 }
 
 export interface JsonNode {}
@@ -362,39 +305,38 @@ export interface OperationExperimentResults {
   performanceOffset?: number;
 }
 
-export type TargetTestCaseDtoStatus = typeof TargetTestCaseDtoStatus[keyof typeof TargetTestCaseDtoStatus];
+export type TestCaseDtoStatus = typeof TestCaseDtoStatus[keyof typeof TestCaseDtoStatus];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const TargetTestCaseDtoStatus = {
+export const TestCaseDtoStatus = {
   RUNNING: 'RUNNING',
   PENDING: 'PENDING',
   COMPLETED: 'COMPLETED',
   FAILED: 'FAILED',
 } as const;
 
-export type TargetTestCaseDtoOperationMetrics = {[key: string]: TargetTestCaseOperationMetrics};
+export type TestCaseDtoOperationMetrics = {[key: string]: TestCaseOperationMetrics};
 
 /**
  * Target test case DTO
  */
-export interface TargetTestCaseDto {
+export interface TestCaseDto {
   id: string;
   createdAt: string;
   updatedAt: string;
   load: number;
+  loadFrequency: number;
+  status: TestCaseDtoStatus;
   startTimestamp?: string;
   endTimestamp?: string;
-  status: TargetTestCaseDtoStatus;
+  operationMetrics: TestCaseDtoOperationMetrics;
   k6Output?: string;
   jsonSummary?: JsonNode;
-  targetSutId: string;
-  loadFrequency: number;
-  operationMetrics: TargetTestCaseDtoOperationMetrics;
   relativeDomainMetric?: number;
 }
 
-export interface TargetTestCaseOperationMetrics {
+export interface TestCaseOperationMetrics {
   operationId: string;
   totalRequests: number;
   failedRequests: number;
@@ -405,6 +347,37 @@ export interface TargetTestCaseOperationMetrics {
   p99DurationMs: number;
   passScalabilityThreshold: boolean;
   scalabilityShare: number;
+}
+
+export type TestSuiteDtoStatus = typeof TestSuiteDtoStatus[keyof typeof TestSuiteDtoStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const TestSuiteDtoStatus = {
+  RUNNING: 'RUNNING',
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+} as const;
+
+export interface TestSuiteDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  systemUnderTest: SystemUnderTestDto;
+  isBaseline: boolean;
+  status: TestSuiteDtoStatus;
+  startTimestamp?: string;
+  endTimestamp?: string;
+  testSuiteResults?: TestSuiteResults;
+  testCases: TestCaseDto[];
+}
+
+export type TestSuiteResultsOperationExperimentResults = {[key: string]: OperationExperimentResults};
+
+export interface TestSuiteResults {
+  totalDomainMetric: number;
+  operationExperimentResults: TestSuiteResultsOperationExperimentResults;
 }
 
 export type ApiOperationRequestBody = {[key: string]: SchemaObject};
@@ -806,10 +779,19 @@ export interface BenchmarkDetailDto {
   name: string;
   description?: string;
   operationalSetting: OperationalSettingDto;
-  baselineSut: SystemUnderTestDetailDto;
-  targetSut: SystemUnderTestDetailDto;
-  baselineSutValidationResult?: ValidationResult;
-  targetSutValidationResult?: ValidationResult;
+  systemsUnderTest: BenchmarkSystemUnderTestDto[];
+}
+
+export interface BenchmarkSystemUnderTestDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  description?: string;
+  dockerConfig: DockerConfigDto;
+  databaseSeedConfigs: DatabaseSeedConfigDto[];
+  isBaseline: boolean;
+  validationResult?: ValidationResult;
 }
 
 /**

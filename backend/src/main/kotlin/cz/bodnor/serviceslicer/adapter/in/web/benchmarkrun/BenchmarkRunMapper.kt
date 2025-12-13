@@ -1,14 +1,15 @@
 package cz.bodnor.serviceslicer.adapter.`in`.web.benchmarkrun
 
+import cz.bodnor.serviceslicer.adapter.`in`.web.sut.SystemUnderTestMapper
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.CreateBenchmarkRunCommand
 import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRun
-import cz.bodnor.serviceslicer.domain.testcase.BaselineTestCase
-import cz.bodnor.serviceslicer.domain.testcase.TargetTestCase
+import cz.bodnor.serviceslicer.domain.testcase.TestCase
+import cz.bodnor.serviceslicer.domain.testsuite.TestSuite
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
 import org.springframework.data.domain.Page
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = [SystemUnderTestMapper::class])
 interface BenchmarkRunMapper {
 
     // INBOUND MAPPINGS
@@ -25,9 +26,8 @@ interface BenchmarkRunMapper {
     @Mapping(target = "pageSize", source = "size")
     fun toDto(result: Page<BenchmarkRun>): ListBenchmarkRunsResponse
 
-    @Mapping(target = "baselineSutId", source = "baselineSut.id")
-    fun toDto(result: BaselineTestCase): BaselineTestCaseDto
+    @Mapping(target = "isBaseline", source = "baseline")
+    fun toDto(result: TestSuite): TestSuiteDto
 
-    @Mapping(target = "targetSutId", source = "targetSut.id")
-    fun toDto(result: TargetTestCase): TargetTestCaseDto
+    fun toDto(result: TestCase): TestCaseDto
 }

@@ -8,8 +8,8 @@ data class CreateBenchmarkRequest(
     val name: String,
     val description: String? = null,
     val operationalSettingId: UUID,
+    val systemsUnderTest: List<UUID>,
     val baselineSutId: UUID,
-    val targetSutId: UUID,
 )
 
 @Schema(description = "Request to update a benchmark")

@@ -5,7 +5,7 @@ import java.math.BigDecimal
 
 @JvmInline value class OperationId(@get:JsonValue val value: String)
 
-data class TargetTestCaseOperationMetrics(
+data class TestCaseOperationMetrics(
     val operationId: OperationId,
 
     // counts

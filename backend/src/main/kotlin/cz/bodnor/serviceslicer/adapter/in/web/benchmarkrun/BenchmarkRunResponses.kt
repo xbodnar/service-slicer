@@ -1,11 +1,11 @@
 package cz.bodnor.serviceslicer.adapter.`in`.web.benchmarkrun
 
 import com.fasterxml.jackson.databind.JsonNode
-import cz.bodnor.serviceslicer.domain.benchmarkrun.ExperimentResults
+import cz.bodnor.serviceslicer.adapter.`in`.web.sut.SystemUnderTestDto
 import cz.bodnor.serviceslicer.domain.job.JobStatus
-import cz.bodnor.serviceslicer.domain.testcase.BaselineTestCaseOperationMetrics
 import cz.bodnor.serviceslicer.domain.testcase.OperationId
-import cz.bodnor.serviceslicer.domain.testcase.TargetTestCaseOperationMetrics
+import cz.bodnor.serviceslicer.domain.testcase.TestCaseOperationMetrics
+import cz.bodnor.serviceslicer.domain.testsuite.TestSuiteResults
 import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 import java.time.Instant
@@ -28,40 +28,34 @@ data class BenchmarkRunDto(
     val benchmarkId: UUID,
     val testDuration: String,
     val status: JobStatus,
-    val baselineTestCase: BaselineTestCaseDto,
-    val targetTestCases: List<TargetTestCaseDto>,
-    val experimentResults: ExperimentResults?,
+    val testSuites: List<TestSuiteDto>,
 )
 
-@Schema(description = "Baseline test case DTO")
-data class BaselineTestCaseDto(
+data class TestSuiteDto(
     val id: UUID,
     val createdAt: Instant,
     val updatedAt: Instant,
-    val load: Int,
+    val systemUnderTest: SystemUnderTestDto,
+    val isBaseline: Boolean,
+    val status: JobStatus,
     val startTimestamp: Instant?,
     val endTimestamp: Instant?,
-    val status: JobStatus,
-    val k6Output: String?,
-    val jsonSummary: JsonNode?,
-    val baselineSutId: UUID,
-    val operationMetrics: Map<OperationId, BaselineTestCaseOperationMetrics>,
-    val relativeDomainMetrics: Map<Int, BigDecimal>,
+    val testSuiteResults: TestSuiteResults?,
+    val testCases: List<TestCaseDto>,
 )
 
 @Schema(description = "Target test case DTO")
-data class TargetTestCaseDto(
+data class TestCaseDto(
     val id: UUID,
     val createdAt: Instant,
     val updatedAt: Instant,
     val load: Int,
+    val loadFrequency: BigDecimal,
+    val status: JobStatus,
     val startTimestamp: Instant?,
     val endTimestamp: Instant?,
-    val status: JobStatus,
+    val operationMetrics: Map<OperationId, TestCaseOperationMetrics>,
     val k6Output: String?,
     val jsonSummary: JsonNode?,
-    val targetSutId: UUID,
-    val loadFrequency: BigDecimal,
-    val operationMetrics: Map<OperationId, TargetTestCaseOperationMetrics>,
     val relativeDomainMetric: BigDecimal?,
 )

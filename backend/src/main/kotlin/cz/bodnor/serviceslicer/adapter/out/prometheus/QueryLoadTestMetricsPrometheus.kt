@@ -2,6 +2,7 @@ package cz.bodnor.serviceslicer.adapter.out.prometheus
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
+import cz.bodnor.serviceslicer.domain.testcase.OperationId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Component
 import java.math.BigDecimal
@@ -24,49 +25,65 @@ class QueryLoadTestMetricsPrometheus(
     ): List<QueryLoadTestMetrics.PerformanceMetrics> {
         // Build label filter for k6 metrics
         val labelFilter = """test_case_id="$testCaseId""""
+        val startEpoch = start.epochSecond
+        val endEpoch = end.epochSecond
+        val durationSeconds = endEpoch - startEpoch
+        val durationRange = "${durationSeconds}s"
 
-        // Query 1: Get total requests count per operation
-        val totalRequestsQuery = "sum by (operation) (k6_http_reqs_total{$labelFilter})"
+        // Use increase() for counters to get delta over time range
+        // This is more reliable than point-in-time subtraction with @ modifier
+        // Query 1: Get total requests count per operation (increase over time range)
+        val totalRequestsQuery = "sum by (operation) (increase(k6_http_reqs_total{$labelFilter}[$durationRange] @ $endEpoch))"
 
-        // Query 2: Get failed requests count per operation
-        val failedRequestsQuery = "sum by (operation) (k6_http_reqs_total{$labelFilter,status!~\"2..\"})"
+        // Query 2: Get failed requests count per operation (increase over time range)
+        val failedRequestsQuery = "sum by (operation) (increase(k6_http_reqs_total{$labelFilter,status!~\"2..\"}[$durationRange] @ $endEpoch))"
+
+        // Query 3-6: For native histograms, use increase() over the time range
+        // This works because k6 writes cumulative native histograms (like counters)
+        val histogramBase = "sum by (operation) (increase(k6_http_req_duration_seconds{$labelFilter}[$durationRange] @ $endEpoch))"
 
         // Query 3: Get mean response time from native histogram per operation
-        val meanResponseTimeQuery = "histogram_avg(sum by (operation) (k6_http_req_duration_seconds{$labelFilter}))"
+        val meanResponseTimeQuery = "histogram_avg($histogramBase)"
 
         // Query 4: Standard deviation of response time from native histogram
-        val stdDevResponseTimeQuery = "histogram_stddev(sum by (operation) (k6_http_req_duration_seconds{$labelFilter}))"
+        val stdDevResponseTimeQuery = "histogram_stddev($histogramBase)"
 
         // Query 5: 95th percentile response time from native histogram
-        val p95ResponseTimeQuery = "histogram_quantile(0.95, sum by (operation) (k6_http_req_duration_seconds{$labelFilter}))"
+        val p95ResponseTimeQuery = "histogram_quantile(0.95, $histogramBase)"
 
         // Query 6: 99th percentile response time from native histogram
-        val p99ResponseTimeQuery = "histogram_quantile(0.99, sum by (operation) (k6_http_req_duration_seconds{$labelFilter}))"
+        val p99ResponseTimeQuery = "histogram_quantile(0.99, $histogramBase)"
 
-        // Execute instant queries at the end time with a lookback window to the start
-        val totalRequests = prometheusConnector.query(totalRequestsQuery, end)
+        // Execute instant queries
+        val totalRequests = prometheusConnector.query(totalRequestsQuery)
             .also { logger.debug { "Total requests response: $it" } }
             .parseVectorResult()
 
-        val failedRequests = prometheusConnector.query(failedRequestsQuery, end)
+        val failedRequests = prometheusConnector.query(failedRequestsQuery)
             .also { logger.debug { "Failed requests response: $it" } }
             .parseVectorResult()
 
-        val meanResponseTimeResponse = prometheusConnector.query(meanResponseTimeQuery, end)
+        val meanResponseTimeResponse = prometheusConnector.query(meanResponseTimeQuery)
             .also { logger.debug { "Mean response time response: $it" } }
             .parseVectorResult()
 
-        val stdDevResponseTimeResponse = prometheusConnector.query(stdDevResponseTimeQuery, end)
+        val stdDevResponseTimeResponse = prometheusConnector.query(stdDevResponseTimeQuery)
             .also { logger.debug { "StdDev response time response: $it" } }
             .parseVectorResult()
 
-        val p95ResponseTimeResponse = prometheusConnector.query(p95ResponseTimeQuery, end)
+        val p95ResponseTimeResponse = prometheusConnector.query(p95ResponseTimeQuery)
             .also { logger.debug { "P95 response time response: $it" } }
             .parseVectorResult()
 
-        val p99ResponseTimeResponse = prometheusConnector.query(p99ResponseTimeQuery, end)
+        val p99ResponseTimeResponse = prometheusConnector.query(p99ResponseTimeQuery)
             .also { logger.debug { "P99 response time response: $it" } }
             .parseVectorResult()
+
+        // Validate that we got at least some data
+        require(totalRequests.isNotEmpty()) {
+            "No metrics found in Prometheus for test case $testCaseId in time range [$start, $end]. " +
+                "This indicates the test did not run properly or metrics were not written."
+        }
 
         val allOperations = totalRequests.keys +
             failedRequests.keys +
@@ -77,7 +94,7 @@ class QueryLoadTestMetricsPrometheus(
 
         return allOperations.map { op ->
             QueryLoadTestMetrics.PerformanceMetrics(
-                operationId = op,
+                operationId = OperationId(op),
                 totalRequests = totalRequests[op]?.toLong() ?: 0L,
                 failedRequests = failedRequests[op]?.toLong() ?: 0L,
                 meanResponseTimeMs = (
@@ -107,15 +124,17 @@ class QueryLoadTestMetricsPrometheus(
             "Expected vector result, but got ${data.resultType}"
         }
 
-        return data.result.associate {
-            require(it.value?.size == 2) {
-                "Expected 2 values, but got ${it.value?.size}"
+        return data.result
+            .filter { it.metric.isNotEmpty() } // Filter out vector(0) fallback results with empty metric labels
+            .associate {
+                require(it.value?.size == 2) {
+                    "Expected 2 values, but got ${it.value?.size}"
+                }
+
+                val operation = it.metric["operation"] ?: error("Missing operation label in metric: ${it.metric}")
+                val value = it.value[1] as String
+
+                operation to BigDecimal(value)
             }
-
-            val operation = it.metric["operation"] ?: error("Missing operation label in metric: ${it.metric}")
-            val value = it.value[1] as String
-
-            operation to BigDecimal(value)
-        }
     }
 }

@@ -3,14 +3,12 @@ package cz.bodnor.serviceslicer.domain.benchmark
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import cz.bodnor.serviceslicer.domain.operationalsetting.OperationalSetting
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.ManyToOne
-import jakarta.persistence.OneToOne
-import org.hibernate.annotations.JdbcTypeCode
-import org.hibernate.type.SqlTypes
+import jakarta.persistence.OneToMany
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
-import java.time.Instant
 import java.util.UUID
 
 /**
@@ -26,54 +24,35 @@ class Benchmark(
     // Reference to the load test configuration
     @ManyToOne
     var operationalSetting: OperationalSetting,
-    // Baseline system under test
-    @OneToOne
-    val baselineSut: SystemUnderTest,
-    // Target system under test
-    @OneToOne
-    val targetSut: SystemUnderTest,
 ) : UpdatableEntity() {
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    var baselineSutValidationResult: ValidationResult? = null
-        private set
+    @OneToMany(mappedBy = "benchmark", cascade = [CascadeType.ALL], orphanRemoval = true)
+    private val _systemsUnderTest: MutableSet<BenchmarkSystemUnderTest> = mutableSetOf()
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    var targetSutValidationResult: ValidationResult? = null
-        private set
+    val systemsUnderTest: Set<BenchmarkSystemUnderTest>
+        get() = _systemsUnderTest.toSet()
 
-    fun startValidationRun(systemUnderTestId: UUID) {
-        when (systemUnderTestId) {
-            baselineSut.id -> baselineSutValidationResult = ValidationResult()
-            targetSut.id -> targetSutValidationResult = ValidationResult()
-            else -> error("SUT $systemUnderTestId not found in benchmark $this")
-        }
+    fun addSystemUnderTest(
+        systemUnderTest: SystemUnderTest,
+        isBaseline: Boolean,
+    ) {
+        val id = BenchmarkSystemUnderTestId(
+            benchmarkId = this.id,
+            systemUnderTestId = systemUnderTest.id,
+        )
+        val benchmarkSut = BenchmarkSystemUnderTest(
+            id = id,
+            benchmark = this,
+            systemUnderTest = systemUnderTest,
+            isBaseline = isBaseline,
+        )
+        _systemsUnderTest.add(benchmarkSut)
     }
 
-    fun completeValidationRun(
-        systemUnderTestId: UUID,
-        result: ValidationResult,
-    ) {
-        when (systemUnderTestId) {
-            baselineSut.id -> baselineSutValidationResult = result
-            targetSut.id -> targetSutValidationResult = result
-            else -> error("SUT $systemUnderTestId not found in benchmark $this")
-        }
+    fun removeSystemUnderTest(systemUnderTest: SystemUnderTest) {
+        _systemsUnderTest.removeIf { it.systemUnderTest.id == systemUnderTest.id }
     }
 }
 
 @Repository
 interface BenchmarkRepository : JpaRepository<Benchmark, UUID>
-
-data class ValidationResult(
-    val validationState: ValidationState = ValidationState.PENDING,
-    val timestamp: Instant = Instant.now(),
-    val errorMessage: String? = null,
-    val k6Output: String? = null,
-)
-
-enum class ValidationState {
-    PENDING,
-    VALID,
-    INVALID,
-}

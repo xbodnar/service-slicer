@@ -8,23 +8,26 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useToast } from '@/components/ui/use-toast'
 import { useCreateBenchmark } from '@/hooks/useBenchmarks'
 import { useListSystemsUnderTest } from '@/api/generated/system-under-test-controller/system-under-test-controller'
 import { useListOperationalSettings } from '@/api/generated/operational-setting-controller/operational-setting-controller'
 import { ArrowLeft, Loader2, Server, Settings } from 'lucide-react'
+import { useState } from 'react'
 
 const benchmarkSchema = z
   .object({
     name: z.string().min(1, 'Benchmark name is required'),
     description: z.string().optional(),
     operationalSettingId: z.string().min(1, 'Operational setting is required'),
+    systemsUnderTest: z.array(z.string()).min(1, 'At least one system under test is required'),
     baselineSutId: z.string().min(1, 'Baseline system is required'),
-    targetSutId: z.string().min(1, 'Target system is required'),
   })
-  .refine((data) => data.baselineSutId !== data.targetSutId, {
-    message: 'Baseline and target systems must be different',
-    path: ['targetSutId'],
+  .refine((data) => data.systemsUnderTest.includes(data.baselineSutId), {
+    message: 'Baseline system must be one of the selected systems under test',
+    path: ['baselineSutId'],
   })
 
 type BenchmarkFormData = z.infer<typeof benchmarkSchema>
@@ -36,19 +39,42 @@ export function BenchmarkCreatePage() {
   const { data: systemsUnderTestList, isLoading: sutsLoading } = useListSystemsUnderTest()
   const { data: operationalSettingsList, isLoading: configsLoading } = useListOperationalSettings()
 
+  const [selectedSystems, setSelectedSystems] = useState<string[]>([])
+  const [baselineSutId, setBaselineSutId] = useState<string>('')
+
   const form = useForm<BenchmarkFormData>({
     resolver: zodResolver(benchmarkSchema),
     defaultValues: {
       name: '',
       description: '',
       operationalSettingId: '',
+      systemsUnderTest: [],
       baselineSutId: '',
-      targetSutId: '',
     },
   })
 
   const systems = systemsUnderTestList?.items || []
   const operationalSettings = operationalSettingsList?.items || []
+
+  const handleSystemToggle = (systemId: string, checked: boolean) => {
+    const newSelectedSystems = checked
+      ? [...selectedSystems, systemId]
+      : selectedSystems.filter((id) => id !== systemId)
+
+    setSelectedSystems(newSelectedSystems)
+    form.setValue('systemsUnderTest', newSelectedSystems)
+
+    // Clear baseline if it's no longer in selected systems
+    if (!checked && baselineSutId === systemId) {
+      setBaselineSutId('')
+      form.setValue('baselineSutId', '')
+    }
+  }
+
+  const handleBaselineChange = (systemId: string) => {
+    setBaselineSutId(systemId)
+    form.setValue('baselineSutId', systemId)
+  }
 
   const onSubmit = async (data: BenchmarkFormData) => {
     const selectedSetting = operationalSettings.find((setting: any) => setting.id === data.operationalSettingId)
@@ -68,8 +94,8 @@ export function BenchmarkCreatePage() {
           name: data.name,
           description: data.description || undefined,
           operationalSettingId: selectedSetting.id,
+          systemsUnderTest: data.systemsUnderTest,
           baselineSutId: data.baselineSutId,
-          targetSutId: data.targetSutId,
         },
       })
 
@@ -98,7 +124,7 @@ export function BenchmarkCreatePage() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold">Create Benchmark</h1>
-          <p className="text-muted-foreground">Reference an existing SUT pair and operational setting</p>
+          <p className="text-muted-foreground">Select multiple systems under test and an operational setting</p>
         </div>
       </div>
 
@@ -178,7 +204,9 @@ export function BenchmarkCreatePage() {
         <Card>
           <CardHeader>
             <CardTitle>Systems Under Test</CardTitle>
-            <CardDescription>Pick the baseline and target systems to compare.</CardDescription>
+            <CardDescription>
+              Select one or more systems to test, then mark exactly one as the baseline.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {sutsLoading ? (
@@ -190,60 +218,68 @@ export function BenchmarkCreatePage() {
                 No systems available. Create Systems Under Test first, then return to make a benchmark.
               </p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="baseline-sut">Baseline System *</Label>
-                  <Select
-                    value={form.watch('baselineSutId')}
-                    onValueChange={(value) => form.setValue('baselineSutId', value)}
-                  >
-                    <SelectTrigger id="baseline-sut">
-                      <SelectValue placeholder="Select baseline system" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {systems.map((system: any) => (
-                        <SelectItem key={system.id} value={system.id}>
-                          <div className="flex items-center gap-2">
-                            <Server className="h-4 w-4" />
-                            {system.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.baselineSutId && (
+                  <Label>Select Systems *</Label>
+                  <div className="space-y-2 border rounded-md p-4">
+                    {systems.map((system: any) => (
+                      <div key={system.id} className="flex items-center space-x-3">
+                        <Checkbox
+                          id={`system-${system.id}`}
+                          checked={selectedSystems.includes(system.id)}
+                          onCheckedChange={(checked) => handleSystemToggle(system.id, checked as boolean)}
+                        />
+                        <Label
+                          htmlFor={`system-${system.id}`}
+                          className="flex items-center gap-2 cursor-pointer font-normal"
+                        >
+                          <Server className="h-4 w-4" />
+                          <span>{system.name}</span>
+                          {system.description && (
+                            <span className="text-xs text-muted-foreground">- {system.description}</span>
+                          )}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {form.formState.errors.systemsUnderTest && (
                     <p className="text-sm text-destructive">
-                      {String(form.formState.errors.baselineSutId.message)}
+                      {String(form.formState.errors.systemsUnderTest.message)}
                     </p>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="target-sut">Target System *</Label>
-                  <Select
-                    value={form.watch('targetSutId')}
-                    onValueChange={(value) => form.setValue('targetSutId', value)}
-                  >
-                    <SelectTrigger id="target-sut">
-                      <SelectValue placeholder="Select target system" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {systems.map((system: any) => (
-                        <SelectItem key={system.id} value={system.id}>
-                          <div className="flex items-center gap-2">
-                            <Server className="h-4 w-4" />
-                            {system.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.targetSutId && (
-                    <p className="text-sm text-destructive">
-                      {String(form.formState.errors.targetSutId.message)}
+                {selectedSystems.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Baseline System *</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Select which system will serve as the performance baseline.
                     </p>
-                  )}
-                </div>
+                    <RadioGroup value={baselineSutId} onValueChange={handleBaselineChange}>
+                      <div className="space-y-2 border rounded-md p-4">
+                        {systems
+                          .filter((system: any) => selectedSystems.includes(system.id))
+                          .map((system: any) => (
+                            <div key={system.id} className="flex items-center space-x-3">
+                              <RadioGroupItem value={system.id} id={`baseline-${system.id}`} />
+                              <Label
+                                htmlFor={`baseline-${system.id}`}
+                                className="flex items-center gap-2 cursor-pointer font-normal"
+                              >
+                                <Server className="h-4 w-4" />
+                                <span>{system.name}</span>
+                              </Label>
+                            </div>
+                          ))}
+                      </div>
+                    </RadioGroup>
+                    {form.formState.errors.baselineSutId && (
+                      <p className="text-sm text-destructive">
+                        {String(form.formState.errors.baselineSutId.message)}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

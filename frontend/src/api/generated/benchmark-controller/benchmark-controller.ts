@@ -27,9 +27,9 @@ import type {
   BenchmarkDetailDto,
   BenchmarkDto,
   CreateBenchmarkRequest,
-  GenerateBehaviorModelsResult,
   ListBenchmarksParams,
   ListBenchmarksResponse,
+  Result,
   UpdateBenchmarkRequest,
   ValidationResult
 } from '../openAPIDefinition.schemas';
@@ -393,7 +393,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 ) => {
       
       
-      return apiClient<GenerateBehaviorModelsResult>(
+      return apiClient<Result>(
       {url: `/benchmarks/${benchmarkId}/generate-bm`, method: 'POST', signal
     },
       options);

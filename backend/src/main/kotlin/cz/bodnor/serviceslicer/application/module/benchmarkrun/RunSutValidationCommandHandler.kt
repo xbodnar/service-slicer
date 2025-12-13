@@ -23,6 +23,7 @@ class RunSutValidationCommandHandler(
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     override fun handle(command: RunSutValidationCommand) {
+        TODO()
         logger.info { "Validating SUT ${command.systemUnderTestId} for benchmark ${command.benchmarkId}" }
 
         val result = validationRunner.runSutValidation(
@@ -31,7 +32,7 @@ class RunSutValidationCommandHandler(
         )
 
         val benchmark = benchmarkReadService.getById(command.benchmarkId)
-        benchmark.completeValidationRun(command.systemUnderTestId, result)
+//        benchmark.completeValidationRun(command.systemUnderTestId, result)
 
         benchmarkWriteService.save(benchmark)
 

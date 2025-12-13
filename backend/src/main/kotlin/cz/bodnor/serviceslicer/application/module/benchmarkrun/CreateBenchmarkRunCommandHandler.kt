@@ -22,11 +22,22 @@ class CreateBenchmarkRunCommandHandler(
     @Transactional
     override fun handle(command: CreateBenchmarkRunCommand): BenchmarkRun {
         val benchmark = benchmarkReadService.getById(command.benchmarkId)
-        val benchmarkRun = benchmarkRunWriteService.create(
+
+        val benchmarkRun = BenchmarkRun(
             benchmark = benchmark,
             testDuration = Duration.parse(command.testDuration ?: k6Properties.testDuration),
         )
 
-        return benchmarkRun
+        // Create a TestSuite for each SystemUnderTest in the Benchmark
+        benchmark.systemsUnderTest.forEach { benchmarkSut ->
+            val testSuite = benchmarkRun.addTestSuite(benchmarkSut.systemUnderTest, benchmarkSut.isBaseline)
+
+            // Create a TestCase for each load in the operational profile
+            benchmark.operationalSetting.operationalProfile.forEach { (load, frequency) ->
+                testSuite.addTestCase(load, frequency)
+            }
+        }
+
+        return benchmarkRunWriteService.save(benchmarkRun)
     }
 }

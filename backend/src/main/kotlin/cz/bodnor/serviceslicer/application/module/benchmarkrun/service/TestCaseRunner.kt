@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
-import cz.bodnor.serviceslicer.domain.benchmarkrun.BenchmarkRun
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTestReadService
 import cz.bodnor.serviceslicer.domain.testcase.TestCase
 import cz.bodnor.serviceslicer.infrastructure.config.K6Properties
@@ -37,33 +36,25 @@ class TestCaseRunner(
         val jsonSummary: JsonNode?,
     )
 
-    fun runTestCase(
-        benchmarkRun: BenchmarkRun,
-        testCase: TestCase,
-    ): Result {
-        val benchmark = benchmarkRun.benchmark
-        val (sut, load) = if (testCase.id == benchmarkRun.baselineTestCase.id) {
-            benchmark.baselineSut to benchmark.operationalSetting.operationalProfile.keys.min()
-        } else {
-            val testCase = benchmarkRun.targetTestCases.find { it.id == testCase.id }
-                ?: error("No test case with id ${testCase.id}")
-            benchmark.targetSut to testCase.load
-        }
+    fun runTestCase(testCase: TestCase): Result {
+        val load = testCase.load
+        val sut = testCase.testSuite.systemUnderTest
+        val duration = testCase.testSuite.benchmarkRun.testDuration
+        val operationalSetting = testCase.testSuite.benchmarkRun.benchmark.operationalSetting
 
         logger.info {
-            "Executing ${if (testCase.id == benchmarkRun.baselineTestCase.id) "Baseline" else "Target"}" +
-                "TestCase for SUT ${sut.id} [${sut.name}] with load=$load and duration=${benchmarkRun.testDuration}"
+            "Executing TestCase for SUT ${sut.id} [${sut.name}] with load=$load and duration=$duration"
         }
         // Start the SUT (blocking call - waits until SUT is healthy and ready)
         sutRunner.startSUT(sut)
 
         try {
             val k6Result = k6Runner.runTest(
-                operationalSettingId = benchmark.operationalSetting.id,
+                operationalSettingId = operationalSetting.id,
                 testCaseId = testCase.id,
                 appPort = sut.dockerConfig.appPort,
                 load = load,
-                testDuration = benchmarkRun.testDuration.toString(),
+                testDuration = duration.toString(),
             )
 
             val performanceMetrics = queryLoadTestMetrics(

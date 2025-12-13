@@ -1,15 +1,12 @@
 package cz.bodnor.serviceslicer.domain.benchmarkrun
 
-import com.fasterxml.jackson.databind.JsonNode
-import cz.bodnor.serviceslicer.application.module.benchmarkrun.out.QueryLoadTestMetrics
 import cz.bodnor.serviceslicer.domain.benchmark.Benchmark
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import cz.bodnor.serviceslicer.domain.job.JobStatus
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
-import cz.bodnor.serviceslicer.domain.testcase.BaselineTestCase
 import cz.bodnor.serviceslicer.domain.testcase.OperationId
-import cz.bodnor.serviceslicer.domain.testcase.TargetTestCase
 import cz.bodnor.serviceslicer.domain.testcase.TestCase
+import cz.bodnor.serviceslicer.domain.testsuite.TestSuite
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -17,15 +14,12 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
-import jakarta.persistence.OneToOne
-import org.hibernate.annotations.JdbcTypeCode
-import org.hibernate.type.SqlTypes
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.math.BigDecimal
-import java.math.MathContext
+import java.time.Instant
 import java.util.UUID
 import kotlin.time.Duration
 
@@ -34,9 +28,6 @@ class BenchmarkRun(
     @ManyToOne
     val benchmark: Benchmark,
 
-    @OneToOne(cascade = [CascadeType.ALL], orphanRemoval = true)
-    val baselineTestCase: BaselineTestCase,
-
     val testDuration: Duration,
 ) : UpdatableEntity() {
 
@@ -44,26 +35,35 @@ class BenchmarkRun(
     var status: JobStatus = JobStatus.PENDING
         private set
 
-    @OneToMany(cascade = [CascadeType.ALL], orphanRemoval = true, mappedBy = "benchmarkRun", fetch = FetchType.EAGER)
-    val targetTestCases: MutableList<TargetTestCase> = mutableListOf()
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    var experimentResults: ExperimentResults? = null
+    var startTimestamp: Instant? = null
         private set
+
+    var endTimestamp: Instant? = null
+        private set
+
+    @OneToMany(cascade = [CascadeType.ALL], orphanRemoval = true, mappedBy = "benchmarkRun", fetch = FetchType.EAGER)
+    private val _testSuites: MutableList<TestSuite> = mutableListOf()
+
+    val testSuites: Set<TestSuite>
+        get() = _testSuites.toSet()
 
     fun getTestDurationString() = testDuration.toString()
 
-    fun addTargetTestCase(
-        sut: SystemUnderTest,
-        load: Int,
-        frequency: BigDecimal,
-    ) {
-        this.targetTestCases.add(TargetTestCase(this, sut, load, frequency))
+    fun addTestSuite(
+        systemUnderTest: SystemUnderTest,
+        isBaseline: Boolean,
+    ): TestSuite {
+        val testSuite = TestSuite(benchmarkRun = this, systemUnderTest = systemUnderTest, isBaseline = isBaseline)
+        this._testSuites.add(testSuite)
+        return testSuite
     }
 
     fun queue() {
         require(this.status == JobStatus.FAILED) { "Cannot queue benchmark run in status $status" }
         this.status = JobStatus.PENDING
+        this.startTimestamp = null
+        this.endTimestamp = null
+        this._testSuites.filter { it.status == JobStatus.FAILED }.forEach { it.queued() }
     }
 
     fun started() {
@@ -78,126 +78,19 @@ class BenchmarkRun(
         this.status = JobStatus.FAILED
     }
 
-    fun markTestCaseCompleted(
-        testCaseId: UUID,
-        performanceMetrics: List<QueryLoadTestMetrics.PerformanceMetrics>,
-        k6Output: String,
-        jsonSummary: JsonNode?,
-    ) {
-        if (baselineTestCase.id == testCaseId) {
-            baselineTestCase.completed(performanceMetrics, k6Output, jsonSummary)
-        } else {
-            getTargetTestCase(testCaseId).completed(performanceMetrics, k6Output, jsonSummary)
-        }
-        this.updateOverallStatus()
+    fun getBaselineTestCase(): TestCase {
+        val baselineTestSuite = testSuites.first { it.isBaseline }
+        return baselineTestSuite.testCases.minBy { it.load }
     }
 
-    fun markTestCaseFailed(testCaseId: UUID) {
-        if (baselineTestCase.id == testCaseId) {
-            baselineTestCase.failed()
-        } else {
-            getTargetTestCase(testCaseId).failed()
+    fun getScalabilityThresholds(): Map<OperationId, BigDecimal> {
+        val baselineTestCase = getBaselineTestCase()
+        require(baselineTestCase.status == JobStatus.COMPLETED) {
+            "Baseline test case is not completed yet, status: ${baselineTestCase.status}"
         }
-        this.updateOverallStatus()
-    }
-
-    private fun updateOverallStatus() {
-        val allTestCases = listOf(baselineTestCase) + targetTestCases
-        this.status = when {
-            allTestCases.any { it.status == JobStatus.FAILED } -> JobStatus.FAILED
-            allTestCases.all { it.status == JobStatus.COMPLETED } -> JobStatus.COMPLETED
-            allTestCases.any { it.status == JobStatus.RUNNING } -> JobStatus.RUNNING
-            else -> JobStatus.PENDING
+        return baselineTestCase.operationMetrics.mapValues { (_, metrics) ->
+            metrics.meanResponseTimeMs + metrics.stdDevResponseTimeMs.multiply(3.toBigDecimal())
         }
-
-        if (this.status == JobStatus.COMPLETED) {
-            this.experimentResults = computeExperimentResults()
-        }
-    }
-
-    fun computeExperimentResults(): ExperimentResults {
-        val operations = targetTestCases.flatMap { it.operationMetrics.keys }
-        val operationExperimentResults = operations.associateWith { operation ->
-            val gsl = findGsl(operation)
-            val scalabilityGap = gsl?.let { computeScalabilityGap(operation, it) }
-            val performanceOffset = gsl?.let { computePerformanceOffset(operation, it) }
-
-            OperationExperimentResults(
-                operationId = operation.value,
-                totalRequests = targetTestCases.sumOf { it.operationMetrics[operation]?.totalRequests ?: 0L },
-                failedRequests = targetTestCases.sumOf { it.operationMetrics[operation]?.failedRequests ?: 0L },
-                scalabilityFootprint = gsl,
-                scalabilityGap = scalabilityGap,
-                performanceOffset = performanceOffset,
-            )
-        }
-
-        return ExperimentResults(
-            totalDomainMetric = targetTestCases.sumOf { it.relativeDomainMetric!! },
-            operationExperimentResults = operationExperimentResults,
-        )
-    }
-
-    private fun computePerformanceOffset(
-        operation: OperationId,
-        load: Int,
-    ): BigDecimal? {
-        val firstFailingLoad = targetTestCases
-            .sortedBy { it.load }
-            .filter { it.load > load }
-            .firstOrNull { it.operationMetrics[operation]?.passScalabilityThreshold == false }
-
-        if (firstFailingLoad == null) {
-            return null
-        }
-
-        val mu = firstFailingLoad.operationMetrics[operation]?.meanResponseTimeMs ?: return null
-
-        // Relative overshoot (e.g. 0.5 = 50% slower than threshold)
-        return (mu - baselineTestCase.operationMetrics[operation]?.scalabilityThreshold!!).divide(
-            baselineTestCase.operationMetrics[operation]?.scalabilityThreshold!!,
-            MathContext.DECIMAL32,
-        )
-    }
-
-    private fun computeScalabilityGap(
-        operation: OperationId,
-        gsl: Int,
-    ): BigDecimal? {
-        val firstFailingLoad = targetTestCases
-            .sortedBy { it.load }
-            .filter { it.load > gsl }
-            .firstOrNull { it.operationMetrics[operation]?.passScalabilityThreshold == false }
-        if (firstFailingLoad == null) {
-            return null
-        }
-
-        return firstFailingLoad.operationMetrics[operation]?.invocationFrequency
-    }
-
-    /**
-     * Finds the greatest successful load (GSL) for the given operation.
-     */
-    private fun findGsl(operation: OperationId): Int? {
-        var gsl: Int? = null
-        targetTestCases.sortedBy { it.load }.forEach { testCase ->
-            if (testCase.operationMetrics[operation]?.passScalabilityThreshold == true) {
-                gsl = testCase.load
-            }
-        }
-
-        return gsl
-    }
-
-    private fun getTargetTestCase(id: UUID): TargetTestCase = targetTestCases.find { it.id == id }
-        ?: error("Test case with id $id not found")
-
-    fun getNextTestCaseToRun(): TestCase? {
-        if (baselineTestCase.status == JobStatus.PENDING) {
-            return baselineTestCase
-        }
-
-        return targetTestCases.sortedBy { it.load }.firstOrNull { it.status == JobStatus.PENDING }
     }
 }
 

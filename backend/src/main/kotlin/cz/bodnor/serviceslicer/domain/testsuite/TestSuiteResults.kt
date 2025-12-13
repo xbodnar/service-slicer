@@ -1,9 +1,9 @@
-package cz.bodnor.serviceslicer.domain.benchmarkrun
+package cz.bodnor.serviceslicer.domain.testsuite
 
 import cz.bodnor.serviceslicer.domain.testcase.OperationId
 import java.math.BigDecimal
 
-data class ExperimentResults(
+data class TestSuiteResults(
     /**
      * The relative Domain Metric measures the overall scalability of a deployment architecture at a given load.
      * It represents the probability that the SUT does not fail under a given load.

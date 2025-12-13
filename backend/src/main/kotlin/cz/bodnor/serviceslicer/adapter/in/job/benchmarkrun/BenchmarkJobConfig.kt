@@ -1,6 +1,5 @@
 package cz.bodnor.serviceslicer.adapter.`in`.job.benchmarkrun
 
-import cz.bodnor.serviceslicer.adapter.`in`.job.benchmarkrun.ExecuteTestCaseTasklet
 import cz.bodnor.serviceslicer.domain.job.JobType
 import org.springframework.batch.core.Job
 import org.springframework.batch.core.job.builder.JobBuilder
