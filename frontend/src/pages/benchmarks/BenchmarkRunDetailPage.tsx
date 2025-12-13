@@ -376,7 +376,7 @@ export function BenchmarkRunDetailPage() {
                 return dataPoint
               })
 
-              const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6']
+              const colors = ['#d83034', '#4ecb8d', '#ff73b6', '#f9e858', '#c701ff', '#008dff', '#ff9d3a']
 
               // Custom tooltip with rounded values
               const CustomTooltip = ({ active, payload, label }: any) => {
@@ -388,7 +388,7 @@ export function BenchmarkRunDetailPage() {
                         if (entry.dataKey === 'frequency') {
                           return (
                             <p key={index} className="text-sm" style={{ color: entry.color }}>
-                              Frequency: {Number(entry.value.toFixed(3))}
+                              Total Probability Mass: {Number(entry.value.toFixed(3))}
                             </p>
                           )
                         }
@@ -404,6 +404,9 @@ export function BenchmarkRunDetailPage() {
                 return null
               }
 
+              const maxRelativeDomainMetric = Math.max(...Object.values(benchmarkData.operationalSetting.operationalProfile).map(load => Number(load)))
+              const maxY = Math.min(maxRelativeDomainMetric + 0.05, 1)
+
               return chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={400}>
                   <ComposedChart data={chartData} margin={{ left: 10, right: 10, top: 20 }}>
@@ -415,7 +418,7 @@ export function BenchmarkRunDetailPage() {
                     />
                     <YAxis
                       label={{ value: 'Relative Domain Metric', angle: -90, position: 'insideBottomLeft' }}
-                      domain={[0, 1]}
+                      domain={[0, maxY]}
                       tickFormatter={(value) => value.toFixed(2)}
                     />
                     <Tooltip content={<CustomTooltip />} />
@@ -423,11 +426,11 @@ export function BenchmarkRunDetailPage() {
                     <Line
                       type="monotone"
                       dataKey="frequency"
-                      stroke="blue"
-                      strokeWidth={2}
+                      stroke="#003a7d"
+                      strokeWidth={3}
                       dot={{ r: 3 }}
                       activeDot={{ r: 5 }}
-                      name="Frequency"
+                      name="Total Probability Mass"
                     />
                     {data.testSuites.map((suite: TestSuiteDto, index: number) => (
                       <Line
@@ -435,6 +438,7 @@ export function BenchmarkRunDetailPage() {
                         type="monotone"
                         dataKey={suite.systemUnderTest.name}
                         stroke={colors[index % colors.length]}
+                        opacity={0.7}
                         strokeWidth={2}
                         dot={{ r: 4 }}
                         activeDot={{ r: 6 }}
@@ -484,7 +488,7 @@ export function BenchmarkRunDetailPage() {
                 return dataPoint
               })
 
-              const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6']
+                const colors = ['#d83034', '#4ecb8d', '#ff73b6', '#f9e858', '#c701ff', '#008dff', '#ff9d3a']
 
               return radarData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={400}>
