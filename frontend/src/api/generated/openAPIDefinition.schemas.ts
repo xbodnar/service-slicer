@@ -244,21 +244,100 @@ export interface CreateBenchmarkRequest {
   baselineSutId: string;
 }
 
-export type ValidationResultValidationState = typeof ValidationResultValidationState[keyof typeof ValidationResultValidationState];
+export interface Benchmark {
+  name: string;
+  description?: string;
+  operationalSetting: OperationalSetting;
+  id: string;
+  version: number;
+  systemsUnderTest: BenchmarkSystemUnderTest[];
+  updatedAt: string;
+  createdAt: string;
+}
+
+export type BenchmarkSutValidationRunStatus = typeof BenchmarkSutValidationRunStatus[keyof typeof BenchmarkSutValidationRunStatus];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const ValidationResultValidationState = {
+export const BenchmarkSutValidationRunStatus = {
+  RUNNING: 'RUNNING',
   PENDING: 'PENDING',
-  VALID: 'VALID',
-  INVALID: 'INVALID',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
 } as const;
 
-export interface ValidationResult {
-  validationState: ValidationResultValidationState;
-  timestamp: string;
+export interface BenchmarkSutValidationRun {
+  benchmarkSystemUnderTest: BenchmarkSystemUnderTest;
+  id: string;
+  version: number;
   errorMessage?: string;
   k6Output?: string;
+  status: BenchmarkSutValidationRunStatus;
+  startTimestamp?: string;
+  endTimestamp?: string;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface BenchmarkSystemUnderTest {
+  id: BenchmarkSystemUnderTestId;
+  benchmark: Benchmark;
+  systemUnderTest: SystemUnderTest;
+  isBaseline: boolean;
+  benchmarkSutValidationRun?: BenchmarkSutValidationRun;
+}
+
+export interface BenchmarkSystemUnderTestId {
+  benchmarkId: string;
+  systemUnderTestId: string;
+}
+
+export type FileStatus = typeof FileStatus[keyof typeof FileStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const FileStatus = {
+  PENDING: 'PENDING',
+  READY: 'READY',
+  FAILED: 'FAILED',
+} as const;
+
+export interface File {
+  filename: string;
+  fileSize: number;
+  mimeType: string;
+  id: string;
+  version: number;
+  storageKey: string;
+  status: FileStatus;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export type OperationalSettingOperationalProfile = {[key: string]: number};
+
+export interface OperationalSetting {
+  name: string;
+  description?: string;
+  openApiFile: File;
+  usageProfile: BehaviorModel[];
+  operationalProfile: OperationalSettingOperationalProfile;
+  id: string;
+  version: number;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface SystemUnderTest {
+  name: string;
+  description?: string;
+  dockerConfig: DockerConfig;
+  databaseSeedConfigs: DatabaseSeedConfig[];
+  id: string;
+  version: number;
+  fileIds: string[];
+  updatedAt: string;
+  createdAt: string;
 }
 
 export interface Result {
@@ -785,6 +864,28 @@ export interface BenchmarkDetailDto {
   systemsUnderTest: BenchmarkSystemUnderTestDto[];
 }
 
+export type BenchmarkSutValidationRunDtoStatus = typeof BenchmarkSutValidationRunDtoStatus[keyof typeof BenchmarkSutValidationRunDtoStatus];
+
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const BenchmarkSutValidationRunDtoStatus = {
+  RUNNING: 'RUNNING',
+  PENDING: 'PENDING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+} as const;
+
+export interface BenchmarkSutValidationRunDto {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  status: BenchmarkSutValidationRunDtoStatus;
+  startTimestamp?: string;
+  endTimestamp?: string;
+  errorMessage?: string;
+  k6Output?: string;
+}
+
 export interface BenchmarkSystemUnderTestDto {
   id: string;
   createdAt: string;
@@ -794,7 +895,7 @@ export interface BenchmarkSystemUnderTestDto {
   dockerConfig: DockerConfigDto;
   databaseSeedConfigs: DatabaseSeedConfigDto[];
   isBaseline: boolean;
-  validationResult?: ValidationResult;
+  benchmarkSutValidationRun?: BenchmarkSutValidationRunDto;
 }
 
 /**

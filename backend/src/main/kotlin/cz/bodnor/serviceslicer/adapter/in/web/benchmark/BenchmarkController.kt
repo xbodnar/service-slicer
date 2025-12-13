@@ -1,9 +1,9 @@
 package cz.bodnor.serviceslicer.adapter.`in`.web.benchmark
 
+import cz.bodnor.serviceslicer.application.module.benchmark.command.CreateBenchmarkValidationRunCommand
 import cz.bodnor.serviceslicer.application.module.benchmark.command.GenerateBehaviorModelsCommand
 import cz.bodnor.serviceslicer.application.module.benchmark.query.GetBenchmarkQuery
 import cz.bodnor.serviceslicer.application.module.benchmark.query.ListBenchmarksQuery
-import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.ValidateSutOperationalSettingCommand
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryBus
 import org.springframework.web.bind.annotation.GetMapping
@@ -53,7 +53,7 @@ class BenchmarkController(
         @PathVariable benchmarkId: UUID,
         @PathVariable systemUnderTestId: UUID,
     ) = commandBus(
-        ValidateSutOperationalSettingCommand(
+        CreateBenchmarkValidationRunCommand(
             benchmarkId = benchmarkId,
             systemUnderTestId = systemUnderTestId,
         ),

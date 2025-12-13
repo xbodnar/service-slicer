@@ -144,4 +144,55 @@
                                  referencedTableName="test_suite"
                                  referencedColumnNames="id"/>
     </changeSet>
+
+    <changeSet id="create-validation-run-table" author="Norbert Bodnar">
+        <createTable tableName="benchmark_sut_validation_run">
+            <!-- Updatable entity -->
+            <column name="id" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="version" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Entity -->
+            <!-- Composite foreign key to benchmark_system_under_test -->
+            <column name="benchmark_system_under_test_benchmark_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="benchmark_system_under_test_system_under_test_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_timestamp" type="timestamptz">
+                <constraints nullable="true"/>
+            </column>
+            <column name="end_timestamp" type="timestamptz">
+                <constraints nullable="true"/>
+            </column>
+            <column name="k6_output" type="text">
+                <constraints nullable="true"/>
+            </column>
+            <column name="error_message" type="text">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <!-- Add foreign key constraint for composite key -->
+        <addForeignKeyConstraint
+                baseTableName="benchmark_sut_validation_run"
+                baseColumnNames="benchmark_system_under_test_benchmark_id,benchmark_system_under_test_system_under_test_id"
+                constraintName="fk_validation_run_benchmark_sut"
+                referencedTableName="benchmark_system_under_test"
+                referencedColumnNames="benchmark_id,system_under_test_id"/>
+
+        <dropColumn tableName="benchmark_system_under_test" columnName="validation_result"/>
+    </changeSet>
 </databaseChangeLog>

@@ -26,12 +26,12 @@ import type {
 import type {
   BenchmarkDetailDto,
   BenchmarkDto,
+  BenchmarkSutValidationRun,
   CreateBenchmarkRequest,
   ListBenchmarksParams,
   ListBenchmarksResponse,
   Result,
-  UpdateBenchmarkRequest,
-  ValidationResult
+  UpdateBenchmarkRequest
 } from '../openAPIDefinition.schemas';
 
 import { apiClient } from '../../client';
@@ -337,7 +337,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 ) => {
       
       
-      return apiClient<ValidationResult>(
+      return apiClient<BenchmarkSutValidationRun>(
       {url: `/benchmarks/${benchmarkId}/sut/${systemUnderTestId}/validate`, method: 'POST', signal
     },
       options);

@@ -76,17 +76,17 @@ export function BenchmarkDetailPage() {
     return true
   }
 
-  // Poll for validation results when any validation is PENDING
+  // Poll for validation results when any validation is PENDING or RUNNING
   useEffect(() => {
     if (!data) return
 
     const hasPendingValidation = data.systemsUnderTest?.some(
-      (sut) => sut.validationResult?.validationState === 'PENDING'
+      (sut) => sut.benchmarkSutValidationRun?.status === 'PENDING' || sut.benchmarkSutValidationRun?.status === 'RUNNING'
     )
 
     if (hasPendingValidation) {
       const pollInterval = setInterval(() => {
-        refetch()
+        void refetch()
       }, 3000) // Poll every 3 seconds
 
       return () => clearInterval(pollInterval)
@@ -137,7 +137,7 @@ export function BenchmarkDetailPage() {
       })
 
       setIsEditing(false)
-      refetch()
+      void refetch()
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -155,7 +155,7 @@ export function BenchmarkDetailPage() {
         title: 'Behavior models generated',
         description: 'Behavior models have been generated successfully',
       })
-      refetch()
+      void refetch()
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -632,32 +632,32 @@ export function BenchmarkDetailPage() {
                   {/* Validation */}
                   <div className="mb-3">
                     {(() => {
-                      const validationResult = sut.validationResult
-                      const validationState = validationResult?.validationState
-                      const isPending = validationState === 'PENDING'
-                      const isValid = validationState === 'VALID'
-                      const isInvalid = validationState === 'INVALID'
+                      const validationRun = sut.benchmarkSutValidationRun
+                      const status = validationRun?.status
+                      const isRunning = status === 'RUNNING' || status === 'PENDING'
+                      const isCompleted = status === 'COMPLETED'
+                      const isFailed = status === 'FAILED'
 
                       return (
                         <div className="flex flex-col gap-2">
                           <Button
-                            variant={isValid ? 'outline' : isInvalid ? 'destructive' : 'outline'}
+                            variant={isCompleted ? 'outline' : isFailed ? 'destructive' : 'outline'}
                             size="sm"
                             onClick={() => handleValidateConfig(sut.id)}
-                            disabled={isPending}
-                            className={isValid ? 'border-green-600 text-green-600 hover:bg-green-50 w-fit' : 'w-fit'}
+                            disabled={isRunning}
+                            className={isCompleted ? 'border-green-600 text-green-600 hover:bg-green-50 w-fit' : 'w-fit'}
                           >
-                            {isPending ? (
+                            {isRunning ? (
                               <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 Validating...
                               </>
-                            ) : isValid ? (
+                            ) : isCompleted ? (
                               <>
                                 <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
                                 Re-validate
                               </>
-                            ) : isInvalid ? (
+                            ) : isFailed ? (
                               <>
                                 <XCircle className="h-4 w-4 mr-2" />
                                 Re-validate
@@ -669,12 +669,12 @@ export function BenchmarkDetailPage() {
                               </>
                             )}
                           </Button>
-                          {isInvalid && validationResult?.errorMessage && (
+                          {isFailed && validationRun?.errorMessage && (
                             <div className="p-2 rounded-md bg-destructive/10 border border-destructive/20">
-                              <p className="text-xs text-destructive">{validationResult.errorMessage}</p>
+                              <p className="text-xs text-destructive">{validationRun.errorMessage}</p>
                             </div>
                           )}
-                          {(isValid || isInvalid) && validationResult?.k6Output && (
+                          {(isCompleted || isFailed) && validationRun?.k6Output && (
                             <>
                               <Button
                                 variant="ghost"
@@ -698,7 +698,7 @@ export function BenchmarkDetailPage() {
                                 <div className="p-3 rounded-lg bg-background border">
                                   <p className="text-xs font-semibold text-muted-foreground mb-2">Validation Output:</p>
                                   <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto p-2 rounded bg-muted/30">
-                                    {validationResult.k6Output}
+                                    {validationRun.k6Output}
                                   </pre>
                                 </div>
                               )}

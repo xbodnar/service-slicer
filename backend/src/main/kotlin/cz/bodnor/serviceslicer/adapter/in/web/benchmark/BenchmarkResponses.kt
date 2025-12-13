@@ -3,7 +3,7 @@ package cz.bodnor.serviceslicer.adapter.`in`.web.benchmark
 import cz.bodnor.serviceslicer.adapter.`in`.web.operationalsetting.OperationalSettingDto
 import cz.bodnor.serviceslicer.adapter.`in`.web.sut.DatabaseSeedConfigDto
 import cz.bodnor.serviceslicer.adapter.`in`.web.sut.DockerConfigDto
-import cz.bodnor.serviceslicer.domain.benchmark.ValidationResult
+import cz.bodnor.serviceslicer.domain.job.JobStatus
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
 import java.util.UUID
@@ -44,5 +44,16 @@ data class BenchmarkSystemUnderTestDto(
     val dockerConfig: DockerConfigDto,
     val databaseSeedConfigs: List<DatabaseSeedConfigDto>,
     val isBaseline: Boolean,
-    val validationResult: ValidationResult?,
+    val benchmarkSutValidationRun: BenchmarkSutValidationRunDto?,
+)
+
+data class BenchmarkSutValidationRunDto(
+    val id: UUID,
+    val createdAt: Instant,
+    val updatedAt: Instant,
+    val status: JobStatus,
+    val startTimestamp: Instant?,
+    val endTimestamp: Instant?,
+    val errorMessage: String?,
+    val k6Output: String?,
 )

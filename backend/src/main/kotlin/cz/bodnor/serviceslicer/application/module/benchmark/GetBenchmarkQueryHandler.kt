@@ -1,9 +1,11 @@
 package cz.bodnor.serviceslicer.application.module.benchmark
 
+import cz.bodnor.serviceslicer.adapter.`in`.web.benchmark.BenchmarkSutValidationRunDto
 import cz.bodnor.serviceslicer.adapter.`in`.web.benchmark.BenchmarkSystemUnderTestDto
 import cz.bodnor.serviceslicer.adapter.`in`.web.sut.SystemUnderTestMapper
 import cz.bodnor.serviceslicer.application.module.benchmark.query.GetBenchmarkQuery
 import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkReadService
+import cz.bodnor.serviceslicer.domain.benchmark.BenchmarkSystemUnderTest
 import cz.bodnor.serviceslicer.domain.file.FileReadService
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryHandler
 import org.springframework.stereotype.Component
@@ -23,7 +25,11 @@ class GetBenchmarkQueryHandler(
         val fileIds = benchmark.systemsUnderTest.flatMap { it.systemUnderTest.getFileIds() }.toSet()
         val files = fileReadService.findAllByIds(fileIds).associateBy { it.id }
 
-        val systemsUnderTest = benchmark.systemsUnderTest.map {
+        val systemsUnderTest = benchmark.systemsUnderTest.sortedWith(
+            compareByDescending<BenchmarkSystemUnderTest> {
+                it.isBaseline
+            }.thenBy { it.systemUnderTest.name },
+        ).map {
             BenchmarkSystemUnderTestDto(
                 id = it.systemUnderTest.id,
                 createdAt = it.systemUnderTest.createdAt,
@@ -37,7 +43,18 @@ class GetBenchmarkQueryHandler(
                     sutMapper.toDto(dbConfig.withFile(files[dbConfig.sqlSeedFileId]!!))
                 },
                 isBaseline = it.isBaseline,
-                validationResult = it.validationResult,
+                benchmarkSutValidationRun = it.benchmarkSutValidationRun?.let { validationRun ->
+                    BenchmarkSutValidationRunDto(
+                        id = validationRun.id,
+                        createdAt = validationRun.createdAt,
+                        updatedAt = validationRun.updatedAt,
+                        status = validationRun.status,
+                        startTimestamp = validationRun.startTimestamp,
+                        endTimestamp = validationRun.endTimestamp,
+                        errorMessage = validationRun.errorMessage,
+                        k6Output = validationRun.k6Output,
+                    )
+                },
             )
         }
 

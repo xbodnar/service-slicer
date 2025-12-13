@@ -1,48 +1,21 @@
 [
   {
-    "id": "reader-passive",
+    "id": "read-article",
     "actor": "Reader",
     "steps": [
       {
         "body": {},
         "path": "/articles",
-        "save": {},
+        "save": {
+          "articleSlug": "$.articles[1].slug"
+        },
         "method": "GET",
         "params": {
           "limit": "10",
           "offset": "0"
         },
         "headers": {},
-        "waitMsTo": 100,
-        "component": "articles",
-        "waitMsFrom": 0,
-        "operationId": "getArticles"
-      },
-      {
-        "body": {},
-        "path": "/tags",
-        "save": {},
-        "method": "GET",
-        "params": {},
-        "headers": {},
-        "waitMsTo": 5000,
-        "component": "articles",
-        "waitMsFrom": 3000,
-        "operationId": "getTags"
-      },
-      {
-        "body": {},
-        "path": "/articles",
-        "save": {
-          "articleSlug": "$.articles[0].slug"
-        },
-        "method": "GET",
-        "params": {
-          "limit": "10",
-          "offset": "1"
-        },
-        "headers": {},
-        "waitMsTo": 100,
+        "waitMsTo": 0,
         "component": "articles",
         "waitMsFrom": 0,
         "operationId": "getArticles"
@@ -66,7 +39,7 @@
         "method": "GET",
         "params": {},
         "headers": {},
-        "waitMsTo": 100,
+        "waitMsTo": 0,
         "component": "articles",
         "waitMsFrom": 0,
         "operationId": "article"
@@ -82,20 +55,25 @@
         "component": "comments",
         "waitMsFrom": 6000,
         "operationId": "getComments"
-      },
+      }
+    ],
+    "frequency": 0.5
+  },
+  {
+    "id": "comment-on-article",
+    "actor": "Reader",
+    "steps": [
       {
         "body": {},
         "path": "/articles",
-        "save": {
-          "articleSlug2": "$.articles[3].slug"
-        },
+        "save": {},
         "method": "GET",
         "params": {
           "limit": "10",
-          "offset": "1"
+          "offset": "0"
         },
         "headers": {},
-        "waitMsTo": 100,
+        "waitMsTo": 0,
         "component": "articles",
         "waitMsFrom": 0,
         "operationId": "getArticles"
@@ -107,72 +85,10 @@
         "method": "GET",
         "params": {},
         "headers": {},
-        "waitMsTo": 3000,
+        "waitMsTo": 5000,
         "component": "articles",
-        "waitMsFrom": 1000,
+        "waitMsFrom": 3000,
         "operationId": "getTags"
-      },
-      {
-        "body": {},
-        "path": "/articles/${articleSlug2}",
-        "save": {},
-        "method": "GET",
-        "params": {},
-        "headers": {},
-        "waitMsTo": 100,
-        "component": "articles",
-        "waitMsFrom": 0,
-        "operationId": "article"
-      },
-      {
-        "body": {},
-        "path": "/articles/${articleSlug2}/comments",
-        "save": {},
-        "method": "GET",
-        "params": {},
-        "headers": {},
-        "waitMsTo": 10000,
-        "component": "comments",
-        "waitMsFrom": 6000,
-        "operationId": "getComments"
-      }
-    ],
-    "frequency": 0.6
-  },
-  {
-    "id": "reader-active",
-    "actor": "Reader",
-    "steps": [
-      {
-        "body": {},
-        "path": "/articles",
-        "save": {
-          "articleSlug": "$.articles[0].slug"
-        },
-        "method": "GET",
-        "params": {
-          "limit": "10",
-          "offset": "0"
-        },
-        "headers": {},
-        "waitMsTo": 100,
-        "component": "articles",
-        "waitMsFrom": 0,
-        "operationId": "getArticles"
-      },
-      {
-        "body": {},
-        "path": "/articles/${articleSlug}",
-        "save": {
-          "articleAuthor": "$.article.author.username"
-        },
-        "method": "GET",
-        "params": {},
-        "headers": {},
-        "waitMsTo": 2000,
-        "component": "articles",
-        "waitMsFrom": 1000,
-        "operationId": "article"
       },
       {
         "body": {
@@ -186,56 +102,28 @@
           "token": "$.user.token"
         },
         "method": "POST",
-        "params": {
-          "limit": "10",
-          "offset": "0"
-        },
+        "params": {},
         "headers": {},
-        "waitMsTo": 500,
+        "waitMsTo": 0,
         "component": "users",
-        "waitMsFrom": 300,
-        "operationId": "userLogin"
-      },
-      {
-        "body": {},
-        "path": "/articles/feed",
-        "method": "GET",
-        "params": {},
-        "headers": {
-          "Authorization": "Bearer ${token}"
-        },
-        "waitMsTo": 100,
-        "component": "articles",
         "waitMsFrom": 0,
-        "operationId": "getFeed"
-      },
-      {
-        "body": {},
-        "path": "/tags",
-        "save": {},
-        "method": "GET",
-        "params": {},
-        "headers": {
-          "Authorization": "Bearer ${token}"
-        },
-        "waitMsTo": 2000,
-        "component": "articles",
-        "waitMsFrom": 1000,
-        "operationId": "getTags"
+        "operationId": "userLogin"
       },
       {
         "body": {},
         "path": "/articles",
         "save": {
-          "articleSlug": "$.articles[0].slug"
+          "articleSlug": "$.articles[1].slug"
         },
         "method": "GET",
         "params": {
           "limit": "10",
-          "offset": "1"
+          "offset": "0"
         },
-        "headers": {},
-        "waitMsTo": 100,
+        "headers": {
+          "Authorization": "Bearer ${token}"
+        },
+        "waitMsTo": 0,
         "component": "articles",
         "waitMsFrom": 0,
         "operationId": "getArticles"
@@ -249,9 +137,9 @@
         "headers": {
           "Authorization": "Bearer ${token}"
         },
-        "waitMsTo": 2000,
+        "waitMsTo": 5000,
         "component": "articles",
-        "waitMsFrom": 1000,
+        "waitMsFrom": 3000,
         "operationId": "getTags"
       },
       {
@@ -265,7 +153,7 @@
         "headers": {
           "Authorization": "Bearer ${token}"
         },
-        "waitMsTo": 100,
+        "waitMsTo": 0,
         "component": "articles",
         "waitMsFrom": 0,
         "operationId": "article"
@@ -285,18 +173,22 @@
         "operationId": "getComments"
       },
       {
-        "body": {},
-        "path": "/profiles/${articleAuthor}/follow",
+        "body": {
+          "comment": {
+            "body": "This is a great article! Thanks for sharing!"
+          }
+        },
+        "path": "/articles/${articleSlug}/comments",
         "save": {},
         "method": "POST",
         "params": {},
         "headers": {
           "Authorization": "Bearer ${token}"
         },
-        "waitMsTo": 2000,
-        "component": "users",
-        "waitMsFrom": 1000,
-        "operationId": "follow"
+        "waitMsTo": 1000,
+        "component": "comments",
+        "waitMsFrom": 0,
+        "operationId": "createComment"
       },
       {
         "body": {},
@@ -314,57 +206,52 @@
       },
       {
         "body": {},
-        "path": "/articles/${articleSlug}/comments",
-        "save": {},
-        "method": "GET",
-        "params": {},
-        "headers": {
-          "Authorization": "Bearer ${token}"
-        },
-        "waitMsTo": 100,
-        "component": "comments",
-        "waitMsFrom": 0,
-        "operationId": "getComments"
-      },
-      {
-        "body": {
-          "comment": {
-            "body": "This is a great article! Thanks for sharing!"
-          }
-        },
-        "path": "/articles/${articleSlug}/comments",
+        "path": "/profiles/${articleAuthor}/follow",
         "save": {},
         "method": "POST",
         "params": {},
         "headers": {
           "Authorization": "Bearer ${token}"
         },
-        "waitMsTo": 100,
-        "component": "comments",
-        "waitMsFrom": 0,
-        "operationId": "createComment"
-      },
-      {
-        "body": {},
-        "path": "/articles/${articleSlug}/comments",
-        "save": {},
-        "method": "GET",
-        "params": {},
-        "headers": {
-          "Authorization": "Bearer ${token}"
-        },
-        "waitMsTo": 1000,
-        "component": "comments",
-        "waitMsFrom": 0,
-        "operationId": "getComments"
+        "waitMsTo": 2000,
+        "component": "users",
+        "waitMsFrom": 1000,
+        "operationId": "follow"
       }
     ],
     "frequency": 0.3
   },
   {
-    "id": "writer",
+    "id": "write-article",
     "actor": "Writer",
     "steps": [
+      {
+        "body": {},
+        "path": "/articles",
+        "save": {},
+        "method": "GET",
+        "params": {
+          "limit": "10",
+          "offset": "0"
+        },
+        "headers": {},
+        "waitMsTo": 0,
+        "component": "articles",
+        "waitMsFrom": 0,
+        "operationId": "getArticles"
+      },
+      {
+        "body": {},
+        "path": "/tags",
+        "save": {},
+        "method": "GET",
+        "params": {},
+        "headers": {},
+        "waitMsTo": 5000,
+        "component": "articles",
+        "waitMsFrom": 3000,
+        "operationId": "getTags"
+      },
       {
         "body": {
           "user": {
@@ -379,23 +266,21 @@
         "method": "POST",
         "params": {},
         "headers": {},
-        "waitMsTo": 500,
+        "waitMsTo": 0,
         "component": "users",
-        "waitMsFrom": 300,
+        "waitMsFrom": 0,
         "operationId": "userLogin"
       },
       {
         "body": {},
         "path": "/articles/feed",
-        "save": {
-          "articleSlug": "$.articles[0].slug"
-        },
+        "save": {},
         "method": "GET",
         "params": {},
         "headers": {
           "Authorization": "Bearer ${token}"
         },
-        "waitMsTo": 100,
+        "waitMsTo": 0,
         "component": "articles",
         "waitMsFrom": 0,
         "operationId": "getFeed"
@@ -450,7 +335,7 @@
         "headers": {
           "Authorization": "Bearer ${token}"
         },
-        "waitMsTo": 100,
+        "waitMsTo": 0,
         "component": "articles",
         "waitMsFrom": 0,
         "operationId": "article"
@@ -464,68 +349,12 @@
         "headers": {
           "Authorization": "Bearer ${token}"
         },
-        "waitMsTo": 30000,
+        "waitMsTo": 0,
         "component": "comments",
-        "waitMsFrom": 10000,
-        "operationId": "getComments"
-      },
-      {
-        "body": {
-          "article": {
-            "body": "## The Value of Type Inference in Modern Programming Languages\n\nType inference has become an essential feature in contemporary languages, reducing verbosity without sacrificing safety. Instead of manually specifying every variable type, developers let the compiler deduce types from context, producing cleaner and more readable code.\n\nThis approach streamlines development by minimizing boilerplate and allowing programmers to focus on application logic rather than repetitive annotations. At the same time, strong static typing remains intact. The compiler still enforces correctness, catches incompatible assignments, and provides reliable tooling support.\n\nBy combining clarity with safety, type inference contributes to faster iteration, fewer errors, and more maintainable code, making it a core component of modern language design.",
-            "title": "The Value of Type Inference in Modern Programming Languages ${random.alphanumeric(16)}",
-            "tagList": [
-              "programming",
-              "type-inference",
-              "static-typing",
-              "language-design"
-            ],
-            "description": "A short overview of how type inference reduces boilerplate while preserving type safety."
-          }
-        },
-        "path": "/articles",
-        "save": {
-          "articleSlug": "$.article.slug"
-        },
-        "method": "POST",
-        "params": {},
-        "headers": {
-          "Authorization": "Bearer ${token}"
-        },
-        "waitMsTo": 100,
-        "component": "articles",
         "waitMsFrom": 0,
-        "operationId": "createArticle"
-      },
-      {
-        "body": {},
-        "path": "/articles/${articleSlug}",
-        "save": {},
-        "method": "GET",
-        "params": {},
-        "headers": {
-          "Authorization": "Bearer ${token}"
-        },
-        "waitMsTo": 100,
-        "component": "articles",
-        "waitMsFrom": 0,
-        "operationId": "article"
-      },
-      {
-        "body": {},
-        "path": "/articles/${articleSlug}/comments",
-        "save": {},
-        "method": "GET",
-        "params": {},
-        "headers": {
-          "Authorization": "Bearer ${token}"
-        },
-        "waitMsTo": 2000,
-        "component": "comments",
-        "waitMsFrom": 1000,
         "operationId": "getComments"
       }
     ],
-    "frequency": 0.1
+    "frequency": 0.2
   }
 ]

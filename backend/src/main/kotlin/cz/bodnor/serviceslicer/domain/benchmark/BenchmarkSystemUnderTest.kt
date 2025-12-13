@@ -1,13 +1,13 @@
 package cz.bodnor.serviceslicer.domain.benchmark
 
+import cz.bodnor.serviceslicer.domain.benchmarkvalidation.BenchmarkSutValidationRun
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import jakarta.persistence.Embeddable
 import jakarta.persistence.EmbeddedId
 import jakarta.persistence.Entity
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapsId
-import org.hibernate.annotations.JdbcTypeCode
-import org.hibernate.type.SqlTypes
+import jakarta.persistence.OneToOne
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 import java.io.Serializable
@@ -32,10 +32,11 @@ class BenchmarkSystemUnderTest(
     val systemUnderTest: SystemUnderTest,
 
     val isBaseline: Boolean,
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    var validationResult: ValidationResult? = null,
-)
+) {
+    @OneToOne(mappedBy = "benchmarkSystemUnderTest")
+    var benchmarkSutValidationRun: BenchmarkSutValidationRun? = null
+        private set
+}
 
 /**
  * Composite primary key for BenchmarkSystemUnderTest.
