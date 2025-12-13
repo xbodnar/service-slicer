@@ -1,17 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { TestCaseDto, TestSuiteDto } from '@/api/generated/openAPIDefinition.schemas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Loader2, CheckCircle, XCircle, Clock, PlayCircle, Activity, RotateCcw } from 'lucide-react'
 import { format } from 'date-fns'
 import {useGetBenchmarkRun, useRestartBenchmarkRun} from "@/api/generated/benchmark-run-controller/benchmark-run-controller.ts";
 import { useGetBenchmark } from "@/api/generated/benchmark-controller/benchmark-controller.ts";
 import { useToast } from '@/components/ui/use-toast'
 import { useQueryClient } from '@tanstack/react-query'
-import { Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts'
+import { Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts'
 
 const getStateColor = (state: string) => {
   switch (state) {
@@ -57,6 +58,26 @@ export function BenchmarkRunDetailPage() {
       enabled: !!data?.benchmarkId,
     },
   })
+
+  // State for selected SUT and load
+  const [selectedSutId, setSelectedSutId] = useState<string>('')
+  const [selectedLoad, setSelectedLoad] = useState<string>('')
+  const [showK6Output, setShowK6Output] = useState(false)
+
+  // Initialize selections when data loads
+  useEffect(() => {
+    if (data?.testSuites && data.testSuites.length > 0 && !selectedSutId) {
+      setSelectedSutId(data.testSuites[0].systemUnderTest.id)
+      if (data.testSuites[0].testCases.length > 0) {
+        setSelectedLoad(data.testSuites[0].testCases[0].load.toString())
+      }
+    }
+  }, [data, selectedSutId])
+
+  // Reset K6 output visibility when selection changes
+  useEffect(() => {
+    setShowK6Output(false)
+  }, [selectedSutId, selectedLoad])
 
   // Poll for updates when any test suite is PENDING or RUNNING
   useEffect(() => {
@@ -320,174 +341,356 @@ export function BenchmarkRunDetailPage() {
         </Card>
       </div>
 
-      {/* Domain Metric Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Domain Metric Across Load Levels</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {(() => {
-            if (!benchmarkData?.operationalSetting?.operationalProfile) {
-              return <p className="text-muted-foreground text-center py-8">No operational profile available</p>
-            }
-
-            // Get all loads from operational profile
-            const loads = Object.keys(benchmarkData.operationalSetting.operationalProfile)
-              .map(load => Number(load))
-              .sort((a, b) => a - b)
-
-            // Create chart data points
-            const chartData = loads.map(load => {
-              const dataPoint: any = {
-                load,
-                frequency: benchmarkData.operationalSetting.operationalProfile[load]
+      {/* Charts Side by Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Domain Metric Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Domain Metric Across Load Levels</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              if (!benchmarkData?.operationalSetting?.operationalProfile) {
+                return <p className="text-muted-foreground text-center py-8">No operational profile available</p>
               }
 
+              // Get all loads from operational profile
+              const loads = Object.keys(benchmarkData.operationalSetting.operationalProfile)
+                .map(load => Number(load))
+                .sort((a, b) => a - b)
+
+              // Create chart data points
+              const chartData = loads.map(load => {
+                const dataPoint: any = {
+                  load,
+                  frequency: benchmarkData.operationalSetting.operationalProfile[load]
+                }
+
+                data.testSuites.forEach((suite: TestSuiteDto) => {
+                  const testCase = suite.testCases.find((tc: TestCaseDto) => tc.load === load)
+                  if (testCase && testCase.relativeDomainMetric !== undefined && testCase.relativeDomainMetric !== null) {
+                    dataPoint[suite.systemUnderTest.name] = Number(testCase.relativeDomainMetric)
+                  }
+                })
+
+                return dataPoint
+              })
+
+              const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6']
+
+              // Custom tooltip with rounded values
+              const CustomTooltip = ({ active, payload, label }: any) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className="bg-background border border-border rounded-lg shadow-lg p-3">
+                      <p className="font-medium mb-2">Load: {label} users</p>
+                      {payload.map((entry: any, index: number) => {
+                        if (entry.dataKey === 'frequency') {
+                          return (
+                            <p key={index} className="text-sm" style={{ color: entry.color }}>
+                              Frequency: {Number(entry.value.toFixed(3))}
+                            </p>
+                          )
+                        }
+                        return (
+                          <p key={index} className="text-sm" style={{ color: entry.color }}>
+                            {entry.name}: {Number(entry.value?.toFixed(4)) ?? 'N/A'}
+                          </p>
+                        )
+                      })}
+                    </div>
+                  )
+                }
+                return null
+              }
+
+              return chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  <ComposedChart data={chartData} margin={{ left: 10, right: 10, top: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="load"
+                      label={{ value: 'Load (users)', position: 'insideBottomLeft', offset: -10 }}
+                      scale="point"
+                    />
+                    <YAxis
+                      label={{ value: 'Relative Domain Metric', angle: -90, position: 'insideBottomLeft' }}
+                      domain={[0, 1]}
+                      tickFormatter={(value) => value.toFixed(2)}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend verticalAlign="top" align="right" layout="radial"/>
+                    <Line
+                      type="monotone"
+                      dataKey="frequency"
+                      stroke="blue"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                      name="Frequency"
+                    />
+                    {data.testSuites.map((suite: TestSuiteDto, index: number) => (
+                      <Line
+                        key={suite.id}
+                        type="monotone"
+                        dataKey={suite.systemUnderTest.name}
+                        stroke={colors[index % colors.length]}
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    ))}
+                  </ComposedChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">No data available yet</p>
+              )
+            })()}
+          </CardContent>
+        </Card>
+
+        {/* Scalability Footprint Radar Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Scalability Footprint</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              // Get all operations from test suite results
+              const operations = new Set<string>()
               data.testSuites.forEach((suite: TestSuiteDto) => {
-                const testCase = suite.testCases.find((tc: TestCaseDto) => tc.load === load)
-                if (testCase && testCase.relativeDomainMetric !== undefined && testCase.relativeDomainMetric !== null) {
-                  dataPoint[suite.systemUnderTest.name] = Number(testCase.relativeDomainMetric)
+                if (suite.testSuiteResults?.operationExperimentResults) {
+                  Object.keys(suite.testSuiteResults.operationExperimentResults).forEach(op => operations.add(op))
                 }
               })
 
-              return dataPoint
-            })
-
-            const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6']
-
-            // Custom tooltip with rounded values
-            const CustomTooltip = ({ active, payload, label }: any) => {
-              if (active && payload && payload.length) {
-                return (
-                  <div className="bg-background border border-border rounded-lg shadow-lg p-3">
-                    <p className="font-medium mb-2">Load: {label} users</p>
-                    {payload.map((entry: any, index: number) => {
-                      if (entry.dataKey === 'frequency') {
-                        return (
-                          <p key={index} className="text-sm" style={{ color: entry.color }}>
-                            Frequency: {entry.value.toFixed(2)}
-                          </p>
-                        )
-                      }
-                      return (
-                        <p key={index} className="text-sm" style={{ color: entry.color }}>
-                          {entry.name}: {entry.value?.toFixed(4) ?? 'N/A'}
-                        </p>
-                      )
-                    })}
-                  </div>
-                )
+              if (operations.size === 0) {
+                return <p className="text-muted-foreground text-center py-8">No operation results available yet</p>
               }
-              return null
-            }
 
-            return chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={400}>
-                <ComposedChart data={chartData} margin={{ left: 10, right: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="load"
-                    label={{ value: 'Load (users)', position: 'insideBottomLeft', offset: -10 }}
-                    scale="point"
-                  />
-                  <YAxis
-                    label={{ value: 'Relative Domain Metric', angle: -90, position: 'insideBottomLeft' }}
-                    domain={[0, 1]}
-                    tickFormatter={(value) => value.toFixed(2)}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="frequency"
-                    stroke="blue"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 5 }}
-                    name="Frequency"
-                  />
-                  {data.testSuites.map((suite: TestSuiteDto, index: number) => (
-                    <Line
-                      key={suite.id}
-                      type="monotone"
-                      dataKey={suite.systemUnderTest.name}
-                      stroke={colors[index % colors.length]}
-                      strokeWidth={2}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  ))}
-                </ComposedChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-muted-foreground text-center py-8">No data available yet</p>
-            )
-          })()}
-        </CardContent>
-      </Card>
+              // Create radar chart data points - one per operation
+              const radarData = Array.from(operations).map(operationId => {
+                const dataPoint: any = {
+                  operation: operationId
+                }
 
-      {/* Test Suites Detail */}
-      {data.testSuites.map((suite: TestSuiteDto) => (
-        <Card key={suite.id}>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-base">{suite.systemUnderTest.name}</CardTitle>
-              <Badge variant={getStateColor(suite.status)} className={`flex items-center gap-1 ${getStateClassName(suite.status)}`}>
-                {getStateIcon(suite.status)}
-                {suite.status}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="text-sm text-muted-foreground">
-                {suite.systemUnderTest.description && (
-                  <p className="mb-2"><span className="font-medium">Description:</span> {suite.systemUnderTest.description}</p>
-                )}
-                <p><span className="font-medium">System ID:</span> <span className="font-mono text-xs">{suite.systemUnderTest.id}</span></p>
-                <p><span className="font-medium">Number of Test Cases:</span> {suite.testCases.length}</p>
-                {suite.startTimestamp && <p><span className="font-medium">Started:</span> {format(new Date(suite.startTimestamp), 'PPp')}</p>}
-                {suite.endTimestamp && <p><span className="font-medium">Completed:</span> {format(new Date(suite.endTimestamp), 'PPp')}</p>}
+                data.testSuites.forEach((suite: TestSuiteDto) => {
+                  const opResult = suite.testSuiteResults?.operationExperimentResults?.[operationId]
+                  if (opResult?.scalabilityFootprint !== undefined && opResult.scalabilityFootprint !== null) {
+                    dataPoint[suite.systemUnderTest.name] = Number(opResult.scalabilityFootprint)
+                  }
+                })
+
+                return dataPoint
+              })
+
+              const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6']
+
+              return radarData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  <RadarChart data={radarData}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="operation" />
+                    <PolarRadiusAxis angle={90} fontSize={10} stroke="#888" />
+                    <Tooltip formatter={(value: any) => value ?? 'N/A'} />
+                    <Legend verticalAlign="bottom" align="center" layout="horizontal"/>
+                    {data.testSuites.map((suite: TestSuiteDto, index: number) => (
+                      <Radar
+                        key={suite.id}
+                        name={suite.systemUnderTest.name}
+                        dataKey={suite.systemUnderTest.name}
+                        stroke={colors[index % colors.length]}
+                        fill={colors[index % colors.length]}
+                        fillOpacity={0.2}
+                      />
+                    ))}
+                  </RadarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">No data available yet</p>
+              )
+            })()}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Operation Metrics Detail */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Operation Metrics</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Selection Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">System Under Test</label>
+                <Select value={selectedSutId} onValueChange={setSelectedSutId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select system" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {data.testSuites.map((suite: TestSuiteDto) => (
+                      <SelectItem key={suite.systemUnderTest.id} value={suite.systemUnderTest.id}>
+                        {suite.systemUnderTest.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {suite.testCases.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-2">Test Cases by Load</h4>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Load Level</label>
+                <Select value={selectedLoad} onValueChange={setSelectedLoad}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select load" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(() => {
+                      const selectedSuite = data.testSuites.find(s => s.systemUnderTest.id === selectedSutId)
+                      return selectedSuite?.testCases.sort((a, b) => a.load - b.load).map((tc: TestCaseDto) => (
+                        <SelectItem key={tc.load} value={tc.load.toString()}>
+                          {tc.load} users
+                        </SelectItem>
+                      ))
+                    })()}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {(() => {
+              const selectedSuite = data.testSuites.find(s => s.systemUnderTest.id === selectedSutId)
+              const selectedTestCase = selectedSuite?.testCases.find(tc => tc.load.toString() === selectedLoad)
+
+              if (!selectedSuite || !selectedTestCase) {
+                return <p className="text-muted-foreground text-center py-8">Select a system and load to view metrics</p>
+              }
+
+              const operationMetrics = Object.values(selectedTestCase.operationMetrics)
+
+              return (
+                <div className="space-y-4">
+                  {/* Summary Information */}
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Status:</span>
+                        <Badge variant={getStateColor(selectedTestCase.status)} className={`flex items-center gap-1 ${getStateClassName(selectedTestCase.status)}`}>
+                          {getStateIcon(selectedTestCase.status)}
+                          {selectedTestCase.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">Load Frequency:</span>
+                        <span className="font-mono font-medium">{Number(selectedTestCase.loadFrequency.toFixed(2))}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">RDM:</span>
+                        <span className="font-mono font-medium">
+                          {selectedTestCase.relativeDomainMetric !== undefined && selectedTestCase.relativeDomainMetric !== null
+                            ? Number(selectedTestCase.relativeDomainMetric.toFixed(4))
+                            : 'N/A'}
+                        </span>
+                      </div>
+                      {selectedTestCase.startTimestamp && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Started:</span>
+                          <span className="font-medium">{format(new Date(selectedTestCase.startTimestamp), 'Pp')}</span>
+                        </div>
+                      )}
+                        {selectedTestCase.endTimestamp && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Ended:</span>
+                          <span className="font-medium">{format(new Date(selectedTestCase.endTimestamp), 'Pp')}</span>
+                        </div>
+                      )}
+                      {selectedTestCase.startTimestamp && selectedTestCase.endTimestamp && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">Duration:</span>
+                          <span className="font-medium">
+                            {(() => {
+                              const start = new Date(selectedTestCase.startTimestamp)
+                              const end = new Date(selectedTestCase.endTimestamp)
+                              const durationMs = end.getTime() - start.getTime()
+                              const durationSec = Math.floor(durationMs / 1000)
+                              const minutes = Math.floor(durationSec / 60)
+                              const seconds = durationSec % 60
+                              return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
+                            })()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Operation Metrics Table */}
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Load (users)</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">RDM</TableHead>
+                          <TableHead>Operation</TableHead>
+                          <TableHead className="text-right">Total Requests</TableHead>
+                          <TableHead className="text-right">Failed Requests</TableHead>
+                          <TableHead className="text-right">Std Dev (ms)</TableHead>
+                          <TableHead className="text-right">P95 (ms)</TableHead>
+                          <TableHead className="text-right">P99 (ms)</TableHead>
+                          <TableHead className="text-right bg-blue-50 dark:bg-blue-950/30">Mean Response (ms)</TableHead>
+                          <TableHead className="text-right bg-amber-50 dark:bg-amber-950/30">Scalability Threshold (ms)</TableHead>
+                          <TableHead className="text-center bg-amber-50 dark:bg-amber-950/30">Passes Threshold</TableHead>
+                          <TableHead className="text-right bg-amber-50 dark:bg-amber-950/30">Scalability Share</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {suite.testCases.sort((a, b) => a.load - b.load).map((testCase: TestCaseDto) => (
-                          <TableRow key={testCase.id}>
-                            <TableCell className="font-mono">{testCase.load}</TableCell>
-                            <TableCell>
-                              <Badge variant={getStateColor(testCase.status)} className={`flex items-center gap-1 w-fit ${getStateClassName(testCase.status)}`}>
-                                {getStateIcon(testCase.status)}
-                                {testCase.status}
-                              </Badge>
+                        {operationMetrics.map((metric) => (
+                          <TableRow key={metric.operationId}>
+                            <TableCell className="font-mono text-xs">{metric.operationId}</TableCell>
+                            <TableCell className="text-right font-mono">{metric.totalRequests}</TableCell>
+                            <TableCell className="text-right font-mono">{metric.failedRequests}</TableCell>
+                            <TableCell className="text-right font-mono">{metric.stdDevResponseTimeMs.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-mono">{metric.p95DurationMs.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-mono">{metric.p99DurationMs.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-mono bg-blue-50 dark:bg-blue-950/30">{metric.meanResponseTimeMs.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-mono bg-amber-50 dark:bg-amber-950/30">{data.scalabilityThresholds ? data.scalabilityThresholds[metric.operationId].toFixed(2) : 'N/A'}</TableCell>
+                            <TableCell className="text-center bg-amber-50 dark:bg-amber-950/30">
+                              {metric.passScalabilityThreshold ? (
+                                <CheckCircle className="h-4 w-4 text-green-600 inline" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-red-600 inline" />
+                              )}
                             </TableCell>
-                            <TableCell className="text-right font-mono">
-                              {testCase.relativeDomainMetric !== undefined && testCase.relativeDomainMetric !== null
-                                ? testCase.relativeDomainMetric.toFixed(4)
-                                : 'N/A'}
-                            </TableCell>
+                            <TableCell className="text-right font-mono bg-amber-50 dark:bg-amber-950/30">{metric.scalabilityShare.toFixed(4)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </div>
+
+                  {/* K6 Output Section */}
+                  {selectedTestCase.k6Output && (
+                    <div className="mt-6">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowK6Output(!showK6Output)}
+                        className="mb-3"
+                      >
+                        {showK6Output ? 'Hide K6 Output' : 'Show K6 Output'}
+                      </Button>
+
+                      {showK6Output && (
+                        <div className="bg-muted/50 rounded-lg p-4 overflow-auto max-h-96">
+                          <pre className="text-xs font-mono whitespace-pre-wrap">{selectedTestCase.k6Output}</pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              )
+            })()}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -281,6 +281,8 @@ export const BenchmarkRunDtoStatus = {
   FAILED: 'FAILED',
 } as const;
 
+export type BenchmarkRunDtoScalabilityThresholds = {[key: string]: number};
+
 /**
  * Benchmark run DTO
  */
@@ -292,6 +294,7 @@ export interface BenchmarkRunDto {
   testDuration: string;
   status: BenchmarkRunDtoStatus;
   testSuites: TestSuiteDto[];
+  scalabilityThresholds?: BenchmarkRunDtoScalabilityThresholds;
 }
 
 export interface JsonNode {}

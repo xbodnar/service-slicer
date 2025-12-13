@@ -86,11 +86,7 @@ class ExecuteTestCaseCommandHandler(
         val benchmarkRun = testSuite.benchmarkRun
 
         if (result.isSuccess) {
-            val scalabilityThresholds = if (benchmarkRun.getBaselineTestCase().id == testCaseId) {
-                null // If this is the baseline test case, there are no thresholds yet
-            } else {
-                benchmarkRun.getScalabilityThresholds()
-            }
+            val scalabilityThresholds = benchmarkRun.getScalabilityThresholds()
 
             val result = result.getOrThrow()
             testCase.completed(
@@ -102,7 +98,10 @@ class ExecuteTestCaseCommandHandler(
 
             // check if all test cases in test suite are completed
             if (testSuite.testCases.all { it.status == JobStatus.COMPLETED }) {
-                testSuite.completed(benchmarkRun.getScalabilityThresholds())
+                require(scalabilityThresholds != null) {
+                    "Scalability thresholds must exist if all testCases are completed"
+                }
+                testSuite.completed(scalabilityThresholds)
             }
 
             // check if all test cases in benchmark run are completed

@@ -83,11 +83,12 @@ class BenchmarkRun(
         return baselineTestSuite.testCases.minBy { it.load }
     }
 
-    fun getScalabilityThresholds(): Map<OperationId, BigDecimal> {
+    fun getScalabilityThresholds(): Map<OperationId, BigDecimal>? {
         val baselineTestCase = getBaselineTestCase()
-        require(baselineTestCase.status == JobStatus.COMPLETED) {
-            "Baseline test case is not completed yet, status: ${baselineTestCase.status}"
+        if (baselineTestCase.status != JobStatus.COMPLETED) {
+            return null
         }
+
         return baselineTestCase.operationMetrics.mapValues { (_, metrics) ->
             metrics.meanResponseTimeMs + metrics.stdDevResponseTimeMs.multiply(3.toBigDecimal())
         }

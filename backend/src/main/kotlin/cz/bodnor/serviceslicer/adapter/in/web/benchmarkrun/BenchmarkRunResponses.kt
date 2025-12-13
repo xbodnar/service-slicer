@@ -29,6 +29,7 @@ data class BenchmarkRunDto(
     val testDuration: String,
     val status: JobStatus,
     val testSuites: List<TestSuiteDto>,
+    val scalabilityThresholds: Map<OperationId, BigDecimal>?,
 )
 
 data class TestSuiteDto(
