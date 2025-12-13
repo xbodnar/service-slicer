@@ -12,7 +12,22 @@ import {useGetBenchmarkRun, useRestartBenchmarkRun} from "@/api/generated/benchm
 import { useGetBenchmark } from "@/api/generated/benchmark-controller/benchmark-controller.ts";
 import { useToast } from '@/components/ui/use-toast'
 import { useQueryClient } from '@tanstack/react-query'
-import { Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts'
+import {
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+    ComposedChart,
+    RadarChart,
+    PolarGrid,
+    PolarAngleAxis,
+    PolarRadiusAxis,
+    Radar,
+    Area
+} from 'recharts'
 
 const getStateColor = (state: string) => {
   switch (state) {
@@ -424,7 +439,7 @@ export function BenchmarkRunDetailPage() {
                     <Tooltip content={<CustomTooltip />} />
                     <Legend verticalAlign="top" align="right" layout="radial"/>
                     <Line
-                      type="monotone"
+                      type="linear"
                       dataKey="frequency"
                       stroke="#003a7d"
                       strokeWidth={3}
@@ -433,15 +448,16 @@ export function BenchmarkRunDetailPage() {
                       name="Total Probability Mass"
                     />
                     {data.testSuites.map((suite: TestSuiteDto, index: number) => (
-                      <Line
+                      <Area
                         key={suite.id}
-                        type="monotone"
+                        type="linear"
                         dataKey={suite.systemUnderTest.name}
                         stroke={colors[index % colors.length]}
-                        opacity={0.7}
+                        fill={colors[index % colors.length]}
+                        fillOpacity={0.2}
                         strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
                       />
                     ))}
                   </ComposedChart>
