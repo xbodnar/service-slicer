@@ -84,7 +84,8 @@ export function BenchmarkRunDetailPage() {
     if (data?.testSuites && data.testSuites.length > 0 && !selectedSutId) {
       setSelectedSutId(data.testSuites[0].systemUnderTest.id)
       if (data.testSuites[0].testCases.length > 0) {
-        setSelectedLoad(data.testSuites[0].testCases[0].load.toString())
+        const sortedTestCases = [...data.testSuites[0].testCases].sort((a, b) => a.load - b.load)
+        setSelectedLoad(sortedTestCases[0].load.toString())
       }
     }
   }, [data, selectedSutId])
