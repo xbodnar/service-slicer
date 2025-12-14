@@ -304,11 +304,28 @@ By combining these two perspectives, Service Slicer directly addresses a central
 
 Service Slicer orchestrates two primary workflows that together support the end-to-end decomposition and validation process.
 
-The \textbf{static analysis workflow} begins with the upload of a monolithic application artefact. This artefact is stored in object storage, while metadata and job state are persisted in the relational database. The workflow proceeds asynchronously: dependency extraction produces a graph representation stored in Neo4j, community detection algorithms identify candidate service boundaries by clustering the graph, and optional AI-based refinement applies domain-driven or actor-driven decomposition strategies. Throughout this process, intermediate and final results—including dependency graphs, clustering outcomes, and calculated metrics—are written to persistent storage. Users retrieve consolidated decomposition results through read queries that aggregate data from both the graph database and the relational database.
+The \textbf{static analysis workflow} accepts a monolithic application artefact and produces multiple decomposition candidates through a combination of structural analysis and semantic refinement. The workflow operates asynchronously: dependency extraction produces a graph representation, clustering algorithms identify candidate service boundaries, and optional AI-based refinement applies domain-driven or actor-driven decomposition strategies. Throughout this process, intermediate and final results are persisted to enable traceability and incremental exploration. Users retrieve consolidated decomposition results through queries that aggregate structural metrics, cluster assignments, and semantic annotations.
 
-The \textbf{benchmarking workflow} evaluates the runtime behavior of deployable system architectures. Users supply configuration artefacts—Docker Compose files, OpenAPI specifications, and database seeds—which are stored in object storage, with references maintained in the relational database. The workflow operates in three phases: validation confirms that each system under test conforms to the operational profile, execution deploys systems and runs controlled load tests at multiple concurrency levels, and analysis compares performance metrics against baseline thresholds to compute scalability indicators. Metrics collected during load testing are first captured by Prometheus from the deployed systems and are subsequently aggregated and persisted in the relational database. Read-only query endpoints then expose these stored results, enabling access to performance summaries, comparative visualisations, and computed scalability metrics.
+The \textbf{benchmarking workflow} evaluates the runtime behavior of deployable system architectures under realistic load. Users supply deployment configurations and operational profiles that define expected usage patterns. The workflow operates in three phases: validation confirms conformance to the operational profile, execution deploys systems and runs controlled load tests at multiple concurrency levels, and analysis compares performance metrics against baseline thresholds to compute scalability indicators. Performance data collected during testing is aggregated and persisted, enabling comparative analysis across architectural variants through visualization and metric queries.
 
-\sloppy Both workflows follow an event-driven model in which user-initiated commands trigger asynchronous processing pipelines. State transitions and intermediate outputs are persisted at each stage, ensuring traceability and enabling recovery from failures. While the workflows are independent—one produces candidate decompositions, the other validates them empirically—they are complementary: architects use static analysis to identify boundaries and benchmarking to assess their viability under realistic conditions. Detailed descriptions of each workflow, including the sequence of operations and interactions between components, are provided in Chapter~4.
+Both workflows follow an event-driven model in which user-initiated commands trigger asynchronous processing pipelines. State transitions and intermediate outputs are persisted at each stage, ensuring traceability and enabling recovery from failures. While the workflows are independent—one produces candidate decompositions, the other validates them empirically—they are complementary: architects use static analysis to identify boundaries and benchmarking to assess their viability under realistic conditions. Detailed descriptions of each workflow, including the sequence of operations and interactions between components, are provided in Chapters~4 and~5.
+
+\subsection{Alignment with the M2MDF Framework} 
+
+ServiceSlicer addresses several critical gaps identified in the M2MDF review by providing integrated tooling support across multiple framework phases. As illustrated in Figure~\ref{fig:m2mdf}, the platform implements functionality spanning Phases~I through VI, with particular emphasis on the underrepresented deployment-based evaluation phase.
+
+The \textbf{static analysis workflow} implements M2MDF Phases I--IV. In \textbf{Phase~I (Input Collection)}, ServiceSlicer accepts compiled JAR artefacts, focusing on bytecode-level analysis rather than requiring source code or design documentation. For \textbf{Phase~II (Monolith Analysis)}, the platform employs static analysis through bytecode inspection to extract class-level dependencies and construct a complete structural graph. \textbf{Phase~III (Microservices Identification)} leverages graph-based clustering algorithms (Louvain, Leiden, Label Propagation) to identify candidate service boundaries, supplemented by AI-assisted semantic analysis to generate domain-driven and actor-driven decomposition candidates. The platform provides limited support for \textbf{Phase~IV (Optimisation)} through AI-assisted refinement suggesting cluster merges, splits, and naming improvements.
+
+The \textbf{benchmarking workflow} implements M2MDF Phases V--VI. For \textbf{Phase~V (Evaluation)}, ServiceSlicer computes structural quality metrics including service coupling and size distribution, enabling quantitative comparison of decomposition candidates. Most notably, ServiceSlicer directly addresses the Phase~VI gap identified in the M2MDF review: \textbf{deployment-based validation}. The platform automates the complete benchmarking lifecycle—deploying architectural variants via container orchestration, executing realistic workload profiles, collecting performance metrics, and computing multi-level scalability indicators. This empirical evaluation capability enables architects to validate decomposition decisions using measured system behavior under realistic conditions, moving beyond the speculative approaches that characterize existing research.
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=1\textwidth]{figures/m2mdf.drawio.png}
+  \caption{The M2MDF Framework Phases (reproduced from~\cite{M2MDF}) with highlighted phases implemented by ServiceSlicer}%
+  \label{fig:m2mdf}
+\end{figure}
+
+Having established ServiceSlicer's positioning within the M2MDF framework, the following sections detail the system's operational constraints, architectural structure, and component design that enable this end-to-end decomposition support.
 
 \section{System Assumptions and Operational Constraints}
 
@@ -339,15 +356,17 @@ Service Slicer integrates several cooperating components and external tools, as 
 
 \section{Component Overview}
 
-This section describes the individual components that constitute the Service Slicer platform, explaining their responsibilities, internal technologies, and design rationale.
+ServiceSlicer's architecture comprises three distinct layers, each serving a specific role in the decomposition and evaluation workflow. This section describes the responsibilities of components within each layer and their interactions.
 
-\subsection{Frontend}
+\subsection{Presentation and Application Layer}
 
-The frontend is a React-based single-page application that provides the user interface for configuring analyses, uploading artefacts, running benchmarks, and inspecting results. It communicates with the backend via a type-safe, auto-generated API client and renders interactive views such as dependency graphs and performance charts. It is used in ServiceSlicer to offer a responsive and intuitive environment for navigating complex decomposition results and controlling long-running workflows.
+The presentation and application layer implements the core business logic and user interface for decomposition workflows.
 
-\subsection{Backend}
+\paragraph{Frontend}
+The frontend is a React-based single-page application that provides the user interface for configuring analyses, uploading artefacts, running benchmarks, and inspecting results. It communicates with the backend via a type-safe, auto-generated API client and renders interactive views such as dependency graphs and performance charts.
 
-The backend is a Kotlin/Spring Boot service that orchestrates all workflows in ServiceSlicer. It implements the domain logic for decomposition jobs, benchmark execution, operational profile management, and scalability analysis. Using a modular, hexagonal architecture (Figure~\ref{fig:hexagonal}), it coordinates interactions with databases, storage systems, and external tools. It is used as the central engine that executes static analysis, manages load-test automation, aggregates metrics, and exposes the REST API consumed by the frontend.
+\paragraph{Backend}
+The backend is a Kotlin/Spring Boot service that orchestrates all workflows in ServiceSlicer. Using a modular, hexagonal architecture (Figure~\ref{fig:hexagonal}), it coordinates interactions with databases, storage systems, and external tools. It implements the domain logic for decomposition jobs, benchmark execution, operational profile management, and scalability analysis, serving as the central engine that executes static analysis, manages load-test automation, aggregates metrics, and exposes the REST API consumed by the frontend.
 
 \begin{figure}[!htbp]
   \centering
@@ -356,25 +375,33 @@ The backend is a Kotlin/Spring Boot service that orchestrates all workflows in S
   \label{fig:hexagonal}
 \end{figure}
 
-\subsection{Neo4j — Graph Database}
+\subsection{Data Storage Layer}
 
-Neo4j stores the dependency graph extracted from the monolithic application, representing classes and their relationships. It executes community detection algorithms to identify clusters that may represent candidate microservices. It is used in ServiceSlicer because graph-native storage and analytics enable efficient traversal, pattern querying, and algorithmic decomposition—capabilities that would be cumbersome in a relational model.
+The data storage layer provides persistent storage for domain entities, dependency graphs, artefacts, and performance metrics.
 
-\subsection{PostgreSQL — Relational Database}
+\paragraph{PostgreSQL — Relational Database}
+PostgreSQL persists all core domain entities, including decomposition jobs, benchmark configurations, operational settings, and aggregated performance results. It provides transactional consistency and structured querying, while supporting JSON fields for flexible data structures. It serves as the authoritative store for workflow state and as the source of truth for all user-visible results.
 
-PostgreSQL persists all core domain entities, including decomposition jobs, benchmark configurations, operational settings, and aggregated performance results. It provides transactional consistency and structured querying, while supporting JSON fields for flexible data structures. It is used in ServiceSlicer as the authoritative store for workflow state and as the source of truth for all user-visible results.
+\paragraph{Neo4j — Graph Database}
+Neo4j stores the dependency graph extracted from the monolithic application, representing classes and their relationships. It executes community detection algorithms to identify clusters that may represent candidate microservices. Graph-native storage and analytics enable efficient traversal, pattern querying, and algorithmic decomposition—capabilities that would be cumbersome in a relational model.
 
-\subsection{MinIO — Object Storage}
+\paragraph{MinIO — Object Storage}
+MinIO serves as an S3-compatible object storage system for large artefacts such as JAR files, OpenAPI specifications, Docker Compose configurations, and seed data. Files are uploaded and downloaded via presigned URLs to avoid routing large payloads through the backend, efficiently storing and retrieving artefacts that are too large or too unstructured for relational storage.
 
-MinIO serves as an S3-compatible object storage system for large artefacts such as JAR files, OpenAPI specifications, Docker Compose configurations, and seed data. Files are uploaded and downloaded via presigned URLs to avoid routing large payloads through the backend. It is used in ServiceSlicer to efficiently store and retrieve artefacts that are too large or too unstructured for relational storage.
+\paragraph{Prometheus — Time-Series Metrics Store}
+Prometheus collects fine-grained time-series metrics produced by K6 during load testing, such as response times, percentiles, and error rates. It enables measurement of runtime behavior under controlled load and supports computation of multi-level scalability indicators.
 
-\subsection{K6 + Prometheus}
+\subsection{Analysis and Testing Infrastructure}
 
-K6 is the load-testing engine that executes behavior-model-driven test scenarios during benchmarking. Prometheus collects fine-grained time-series metrics produced by K6, such as response times, percentiles, and error rates. Together, they are used in ServiceSlicer to measure the runtime behavior of each architectural candidate under controlled load and to compute the multi-level scalability indicators.
+The analysis and testing infrastructure layer provides the execution environment for load testing and deployment automation.
 
-\subsection{Docker Compose}
+\paragraph{Docker Compose — Deployment Orchestration}
+Docker Compose deploys each System Under Test in a reproducible, isolated environment. It ensures that all candidate architectures—whether monolithic or microservice-based—can be started, validated, and torn down automatically, guaranteeing consistent testing conditions and enabling automated end-to-end benchmark execution.
 
-Docker Compose deploys each System Under Test in a reproducible, isolated environment. It ensures that all candidate architectures—whether monolithic or microservice-based—can be started, validated, and torn down automatically. It is used in ServiceSlicer to guarantee consistent testing conditions, simplify environment provisioning, and enable automated end-to-end benchmark execution.
+\paragraph{K6 — Load Testing Engine}
+K6 executes behavior-model-driven test scenarios during benchmarking, generating realistic workloads that simulate user interactions according to defined operational profiles. Together with Prometheus, it measures the runtime behavior of each architectural candidate under controlled load.
+
+This layered architecture separates concerns between user interaction, persistent state management, and execution infrastructure, enabling independent evolution of each layer while maintaining clear contracts between them.
 
 \chapter{Static Code Analysis Workflow}
 
