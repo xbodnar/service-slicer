@@ -104,7 +104,7 @@ function BenchmarkRunActions({ benchmarkId }: { benchmarkId: string }) {
   const latestRun = runsData?.items?.[0]
   const hasRuns = (runsData?.totalElements || 0) > 0
 
-  if (!hasRuns) {
+  if (!hasRuns || !latestRun) {
     return (
       <Link to={`/benchmarks/${benchmarkId}/runs`} onClick={(e) => e.stopPropagation()}>
         <Button variant="outline" size="sm" className="w-full">
