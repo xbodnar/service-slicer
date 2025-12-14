@@ -468,6 +468,40 @@ export function OperationalSettingEditPage() {
     }, {} as Record<string, string>)
   }
 
+  const convertManualToJson = (models: any[]): string => {
+    if (!models || models.length === 0) return ''
+
+    const jsonModels = models.map((model: any) => ({
+      id: model.id,
+      actor: model.actor,
+      frequency: model.frequency,
+      steps: (model.steps || []).map((step: any) => {
+        let bodyObj = {}
+        if (step.body && step.body.trim() !== '' && step.body.trim() !== '{}') {
+          try {
+            bodyObj = typeof step.body === 'string' ? JSON.parse(step.body) : step.body
+          } catch {
+            bodyObj = {}
+          }
+        }
+        return {
+          method: step.method,
+          path: step.path,
+          operationId: step.operationId,
+          ...(step.component && { component: step.component }),
+          waitMsFrom: Number(step.waitMsFrom) || 0,
+          waitMsTo: Number(step.waitMsTo) || 0,
+          headers: keyValuePairsToObject(step.headers || []),
+          params: keyValuePairsToObject(step.params || []),
+          body: bodyObj,
+          save: keyValuePairsToObject(step.save || []),
+        }
+      })
+    }))
+
+    return JSON.stringify(jsonModels, null, 2)
+  }
+
   const validateBehaviorModelsJson = (jsonString: string) => {
     if (!jsonString || jsonString.trim() === '') {
       setJsonValidationError(null)
@@ -691,8 +725,16 @@ export function OperationalSettingEditPage() {
                     className="w-full"
                     onClick={() => {
                       setBehaviorModelInputMode('json')
-                      const currentJson = form.watch('behaviorModelsJson')
-                      if (currentJson) validateBehaviorModelsJson(currentJson)
+                      // Convert current manual data to JSON when switching modes
+                      const currentModels = form.watch('behaviorModels')
+                      if (currentModels && currentModels.length > 0) {
+                        const jsonString = convertManualToJson(currentModels)
+                        form.setValue('behaviorModelsJson', jsonString)
+                        validateBehaviorModelsJson(jsonString)
+                      } else {
+                        const currentJson = form.watch('behaviorModelsJson')
+                        if (currentJson) validateBehaviorModelsJson(currentJson)
+                      }
                     }}
                   >
                     <FileJson className="h-4 w-4 mr-2" />
