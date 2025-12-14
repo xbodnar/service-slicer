@@ -63,7 +63,13 @@
     abstract    = {%
       The transition from monolithic to microservices architecture has become a crucial challenge in modern software development. This thesis addresses the complex process of decomposing monolithic applications into microservices, focusing on the development and evaluation of semi-automatic decomposition techniques. The research presents a comprehensive analysis of existing decomposition approaches, tools, and methodologies, while introducing a novel tool for semi-automatic monolith decomposition. Through extensive case studies and practical implementations, the thesis evaluates different decomposition strategies, identifies common patterns and anti-patterns, and provides guidelines for successful migration. The findings contribute to the understanding of effective decomposition techniques and offer practical insights for organizations undertaking similar architectural transformations. The research combines theoretical analysis with practical implementation, making it valuable for both academic research and industry practitioners.
     },
+    declaration = {
+      Hereby I declare that this paper is my original authorial work, which I have worked out on my own. All sources, references, and literature used or excerpted during elaboration of this work are properly cited and listed in complete reference to the due source.
+
+      During the preparation of this thesis, I used large language models (OpenAI ChatGPT, Anthropic Claude, and GitHub Copilot) for brainstorming, research discussion, development and text editing. The final content was reviewed and revised by me, and I take full responsibility for the work presented.
+    },
     thanks      = {%
+      I would like to thank my advisor, doc. Bruno Rossi, PhD, for his guidance, valuable feedback, and support throughout the development of this thesis. I am also grateful to my family and friends for their encouragement and support during this journey.
     },
     bib         = thesis.bib,
     %% Remove the following line to use the JVS 2018 faculty logo.
@@ -91,6 +97,7 @@
   }
   \usepackage{floatrow} %% Putting captions above tables
   \usepackage{placeins} %% Float barriers
+  \usepackage{array}    %% Extended column formatting for tables
   \floatsetup[table]{capposition=top}
 
 \begin{document}
@@ -103,7 +110,7 @@ The process of decomposing monolithic applications into microservices is full of
 
 \section{Motivation}
 
-The transition from monolithic to microservices architecture is not straightforward. It requires careful planning, deep understanding of the existing system, and systematic approaches to decomposition. Moreover, it is difficult to predict how a proposed decomposition will behave under realistic workload conditions. While microservices offer potential advantages in scalability, maintainability, and operational flexibility, the path toward achieving these benefits is uncertain and often costly~\cite{M2MDF}~\cite{fromMonolithToMicroservices}~\cite{taibi}.
+The transition from monolithic to microservices architecture is not straightforward. It requires careful planning, deep understanding of the existing system, and systematic approaches to decomposition. A key challenge is that it is difficult to predict how a proposed decomposition will behave under realistic workload conditions. While microservices offer potential advantages in scalability, maintainability, and operational flexibility, the path toward achieving these benefits is uncertain and often costly~\cite{M2MDF}~\cite{fromMonolithToMicroservices}~\cite{taibi}.
 
 Architectural transitions carry substantial risk. O'Reilly's Technology Trends for 2024~\cite{loukides2024TechnologyTrends} reports that 61\% of surveyed enterprises adopted microservices, but 29\% encountered difficulties severe enough to return to monolithic architectures. The resulting systems often become more complex to operate, exhibit worse performance, or fail to deliver expected improvements. These outcomes often stem from poorly chosen service boundaries, increased inter-service communication overhead, or unforeseen distributed-system bottlenecks~\cite{fowler-microservice-tradeoffs}—issues that are difficult to detect through static design analysis alone.
 
@@ -138,7 +145,7 @@ This thesis presents ServiceSlicer, a research prototype designed to support the
     \item \textbf{Empirical scalability evaluation}, enabling controlled benchmarking of alternative architectural variants.
 \end{enumerate}
 
-ServiceSlicer concentrates on backend service decomposition and performance assessment. It does not address front-end migration, data-migration strategies, or organizational and socio-technical aspects of microservice adoption. The produced decompositions are exploratory and are intended to inform architectural decision-making rather than serve as production-ready migration outputs.
+ServiceSlicer concentrates on backend service decomposition and performance assessment. It does not address front-end migration, data-migration strategies, or organizational and socio-technical aspects of microservice adoption. The produced decompositions are exploratory and are intended to inform architectural decision-making rather than serve as production-ready migration outputs. The complete source code accompanies this thesis, and deployment instructions are provided in Appendix~\ref{app:deployment}.
 
 Detailed descriptions of these functionalities are presented in later chapters.
 
@@ -156,19 +163,21 @@ To keep the scope focused and the evaluation reproducible, the tool operates und
 These assumptions ensure comparability across experiments while intentionally narrowing the scope to performance and scalability-related aspects of decomposition.
 
 \section{Thesis Structure}
-The remainder of this thesis is organized as follows: TODO
-  
-\textbf{Chapter 2} reviews the challenges associated with monolith decomposition and surveys existing methods, including static analysis, dynamic analysis, and domain-driven approaches. It also introduces the M2MDF framework and Multi-Level Scalability Assessment methodology as foundational concepts.
+The remainder of this thesis is organized as follows:
 
-\textbf{Chapter 3} presents the architecture and design of the Service Slicer platform, detailing its components, data flows, and integration with external tools for static analysis and benchmarking.
+\textbf{Chapter~\ref{chap:challenges}} reviews the challenges associated with monolith decomposition and surveys existing methods, including static analysis, dynamic analysis, and domain-driven approaches. It also introduces the M2MDF framework and Multi-Level Scalability Assessment methodology as foundational concepts.
 
-\textbf{Chapter 4} describes the implementation of Service Slicer, including key algorithms, data models, and workflow orchestration mechanisms.
+\textbf{Chapter~\ref{chap:architecture}} presents the architecture and design of the ServiceSlicer platform, detailing its components, data flows, and integration with external tools for static analysis and benchmarking.
 
-\textbf{Chapter 5} evaluates Service Slicer through case studies on real-world monolithic applications, assessing its effectiveness in generating decomposition candidates and measuring scalability under load.
+\textbf{Chapter~\ref{chap:static-analysis}} describes the static code analysis workflow, including dependency extraction, graph-based clustering algorithms, and AI-assisted semantic refinement.
 
-\textbf{Chapter 6} concludes the thesis by summarizing contributions, reflecting on limitations, and outlining directions for future research.
+\textbf{Chapter~\ref{chap:benchmarking}} presents the performance benchmarking workflow, detailing the multi-level scalability assessment methodology and its automated implementation.
 
-\chapter{Decomposition of Monolithic Systems: Challenges and Methods}
+\textbf{Chapter~\ref{chap:demonstration}} demonstrates ServiceSlicer through case studies on real-world monolithic applications, assessing its effectiveness in generating decomposition candidates and measuring scalability under load.
+
+\textbf{Chapter~\ref{chap:conclusions}} concludes the thesis by summarizing contributions, reflecting on limitations, and outlining directions for future research.
+
+\chapter{Decomposition of Monolithic Systems: Challenges and Methods}\label{chap:challenges}
 
 Decomposition is a central but difficult step in migrating from monolithic to microservice architectures. This chapter examines why decomposition is challenging, surveys existing solution approaches, and identifies gaps that motivate the design of ServiceSlicer. We begin by exploring the multifaceted nature of decomposition challenges before reviewing how the research community has attempted to address them.
 
@@ -191,7 +200,7 @@ These challenges mean that a decomposition cannot be derived solely from concept
 
 \subsection{Operational and Organizational Challenges}
 
-Moving from a monolithic system to a distributed architecture adds significant operational complexity. Microservices rely on practices and tools that differ greatly from those used in monolithic environments. Operating many independently deployed services requires strong monitoring, distributed tracing, log aggregation, automated deployment pipelines, service discovery, and resilience mechanisms such as circuit breakers. Debugging becomes harder because failures often span multiple services, networks, or data stores. Without sufficient operational maturity, these demands can reduce reliability, increase recovery times, and raise the cognitive load on teams.
+Moving from a monolithic system to a distributed architecture adds significant operational complexity. Microservices rely on practices and tools that differ greatly from those used in monolithic environments. Operating many independently deployed services requires strong monitoring, distributed tracing, log aggregation, automated deployment pipelines, service discovery, and resilience mechanisms such as circuit breakers~\cite{nygard2018release}. Debugging becomes harder because failures often span multiple services, networks, or data stores. Without sufficient operational maturity, these demands can reduce reliability, increase recovery times, and raise the cognitive load on teams.
 
 These operational demands are closely tied to organizational factors. Conway's Law~\cite{brooks1995mythical} states that a system's architecture tends to mirror the structure of the teams that create it. This means that introducing a distributed microservice architecture without adjusting team boundaries, communication patterns, or ownership roles can lead to confusion and friction. Even if a decomposition looks technically sound, it may still fail in practice if it requires teams to work across unclear interfaces or undermines existing responsibilities. For a decomposition to be successful, the organization must ensure that team structures and communication patterns align with the intended service boundaries~\cite{cortex2021monoliths}. Even when technical and organizational challenges are addressed, practitioners face a critical tooling gap.
 
@@ -283,32 +292,39 @@ The M2MDF framework synthesizes these techniques into a six-phase process model,
 
 \textbf{ServiceSlicer addresses these gaps by integrating static analysis, semantic refinement, and automated scalability assessment into a unified platform.} Rather than proposing new clustering algorithms or evaluation metrics, this thesis contributes an \textbf{automated implementation} of existing methodologies, making systematic, data-driven decomposition accessible to practitioners. The following chapter presents ServiceSlicer's architecture and explains how it operationalizes the M2MDF framework with particular emphasis on Phase~VI—deployment-based validation through automated benchmarking.
 
-\chapter{Service Slicer — System Architecture \& Design}
+\chapter{ServiceSlicer — System Architecture \& Design}\label{chap:architecture}
 
-This chapter presents the architecture and design of the Service Slicer platform, building on the decomposition challenges and methodologies discussed previously. It describes the system's structure, key components, and data flows, explaining how Service Slicer integrates static analysis and empirical benchmarking to support monolith decomposition. The following sections provide a detailed overview of each architectural element and their roles in enabling reproducible evaluation of candidate microservice boundaries.
-
-\section{Overview}
-
-Service Slicer is a research tool designed to assist software engineers in decomposing monolithic Java applications into microservice architectures. Rather than relying solely on static code inspection or expert intuition, the platform integrates \textbf{static dependency analysis} with \textbf{empirical performance testing} to generate quantitative, evidence-based insights into how different service boundaries affect system behavior.
-
-By combining these two perspectives, Service Slicer directly addresses a central challenge in software architecture: assessing whether a proposed decomposition will deliver measurable improvements in performance and scalability compared to the original monolith. This enables architects to move beyond speculative design and validate decomposition decisions using reproducible data collected under realistic workloads.
+This chapter presents the architecture and design of the ServiceSlicer platform, building on the decomposition challenges and methodologies discussed previously. It describes the system's structure, key components, and data flows, explaining how ServiceSlicer integrates static analysis and empirical benchmarking to support monolith decomposition. The following sections provide a detailed overview of each architectural element and their roles in enabling reproducible evaluation of candidate microservice boundaries.
 
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=0.9\textwidth]{figures/activityDiagram.png}
-  \caption{Diagram of the Workflows in Service Slicer}%
-  \label{fig:context}
+  \includegraphics[width=1\textwidth]{figures/high level flow.drawio.png}
+  \caption{High-level end-to-end workflow of the ServiceSlicer platform}%
+  \label{fig:highlevel_workflow}
 \end{figure}
+
+\section{Overview}
+
+ServiceSlicer is a research tool designed to assist software engineers in decomposing monolithic Java applications into microservice architectures. Rather than relying solely on static code inspection or expert intuition, the platform integrates \textbf{static dependency analysis} with \textbf{empirical performance testing} to generate quantitative, evidence-based insights into how different service boundaries affect system behavior.
+
+By combining these two perspectives, ServiceSlicer directly addresses a central challenge in software architecture: assessing whether a proposed decomposition will deliver measurable improvements in performance and scalability compared to the original monolith. This enables architects to move beyond speculative design and validate decomposition decisions using reproducible data collected under realistic workloads.
 
 \section{Workflows}
 
-Service Slicer orchestrates two primary workflows that together support the end-to-end decomposition and validation process.
+ServiceSlicer orchestrates two primary workflows that together support the end-to-end decomposition and validation process.
 
 The \textbf{static analysis workflow} accepts a monolithic application artefact and produces multiple decomposition candidates through a combination of structural analysis and semantic refinement. The workflow operates asynchronously: dependency extraction produces a graph representation, clustering algorithms identify candidate service boundaries, and optional AI-based refinement applies domain-driven or actor-driven decomposition strategies. Throughout this process, intermediate and final results are persisted to enable traceability and incremental exploration. Users retrieve consolidated decomposition results through queries that aggregate structural metrics, cluster assignments, and semantic annotations.
 
 The \textbf{benchmarking workflow} evaluates the runtime behavior of deployable system architectures under realistic load. Users supply deployment configurations and operational profiles that define expected usage patterns. The workflow operates in three phases: validation confirms conformance to the operational profile, execution deploys systems and runs controlled load tests at multiple concurrency levels, and analysis compares performance metrics against baseline thresholds to compute scalability indicators. Performance data collected during testing is aggregated and persisted, enabling comparative analysis across architectural variants through visualization and metric queries.
 
 Both workflows follow an event-driven model in which user-initiated commands trigger asynchronous processing pipelines. State transitions and intermediate outputs are persisted at each stage, ensuring traceability and enabling recovery from failures. While the workflows are independent—one produces candidate decompositions, the other validates them empirically—they are complementary: architects use static analysis to identify boundaries and benchmarking to assess their viability under realistic conditions. Detailed descriptions of each workflow, including the sequence of operations and interactions between components, are provided in Chapters~4 and~5. 
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/activityDiagram.png}
+  \caption{Detailed diagram of the two workflows supported in ServiceSlicer}%
+  \label{fig:context}
+\end{figure}
 
 \subsection{Alignment with the M2MDF Framework} 
 
@@ -329,30 +345,30 @@ Having established ServiceSlicer's positioning within the M2MDF framework, the f
 
 \section{System Assumptions and Operational Constraints}
 
-The design of Service Slicer is grounded in several assumptions and constraints that define the boundaries within which the platform operates. These conditions ensure that analyses and benchmarking results are both feasible and reproducible. Before detailing the system's internal mechanisms, it is therefore necessary to make explicit the expectations placed on user-provided artefacts, execution environments, and supported technologies.
+The design of ServiceSlicer is grounded in several assumptions and constraints that define the boundaries within which the platform operates. These conditions ensure that analyses and benchmarking results are both feasible and reproducible. Before detailing the system's internal mechanisms, it is therefore necessary to make explicit the expectations placed on user-provided artefacts, execution environments, and supported technologies.
 
 First, the static analysis workflow assumes that the application under study is a JVM-based system. Dependency extraction relies on bytecode inspection and thus requires the monolith to be provided as a compiled \texttt{.jar} file. Source-level parsing or non-JVM binaries fall outside the supported scope. 
 
-Second, all architectural variants evaluated during benchmarking must be deployable through Docker Compose. This requirement provides a uniform execution model that allows Service Slicer to control startup, resource allocation, health checks, and teardown in a consistent and automated manner. Each System Under Test (SUT) must also expose a REST API described by an OpenAPI specification. This specification is used to construct workload models and to derive the operational setting needed for multi-level scalability assessment. For data initialization, the platform currently supports only PostgreSQL as the database engine for loading seed datasets during benchmark execution.
+Second, all architectural variants evaluated during benchmarking must be deployable through Docker Compose. This requirement provides a uniform execution model that allows ServiceSlicer to control startup, resource allocation, health checks, and teardown in a consistent and automated manner. Each System Under Test (SUT) must also expose a REST API described by an OpenAPI specification. This specification is used to construct workload models and to derive the operational setting needed for multi-level scalability assessment. For data initialization, the platform currently supports only PostgreSQL as the database engine for loading seed datasets during benchmark execution.
 
 Operational settings are expected to reflect realistic system usage. Users should derive actor behavior, workload distributions, and concurrency profiles from empirical observations—such as logs or monitoring data—whenever possible. 
 
 Finally, benchmarking must be performed in a controlled single-host environment to ensure fair comparability across SUTs. Running all architectures under identical hardware and resource conditions eliminates environmental noise and isolates the architectural effects under study.
 
-These assumptions and constraints define the envelope within which Service Slicer produces consistent, interpretable, and reproducible results. Subsequent sections build upon this foundation to describe the system's internal architecture, workflows, and analytical capabilities.
+These assumptions and constraints define the envelope within which ServiceSlicer produces consistent, interpretable, and reproducible results. Subsequent sections build upon this foundation to describe the system's internal architecture, workflows, and analytical capabilities.
 
 \section{High-Level Architecture}
 
-Service Slicer is implemented as a web-based application that orchestrates the entire decomposition and evaluation workflow. It consists of multiple interconnected components responsible for dependency extraction, graph processing, automated deployment of architectural variants, and multi-level scalability assessment. Users interact with the platform through a browser interface, while backend services handle analysis, benchmarking execution, and results aggregation. All generated artefacts—such as dependency graphs, metrics, benchmark outputs, and operational profiles—are stored persistently, ensuring traceability, repeatability, and consistent comparison across multiple decomposition candidates.
+ServiceSlicer is implemented as a web-based application that orchestrates the entire decomposition and evaluation workflow. It consists of multiple interconnected components responsible for dependency extraction, graph processing, automated deployment of architectural variants, and multi-level scalability assessment. Users interact with the platform through a browser interface, while backend services handle analysis, benchmarking execution, and results aggregation. All generated artefacts—such as dependency graphs, metrics, benchmark outputs, and operational profiles—are stored persistently, ensuring traceability, repeatability, and consistent comparison across multiple decomposition candidates.
 
 \begin{figure}[ht]
   \centering
   \includegraphics[width=0.9\textwidth]{figures/systemArchitecture.drawio.png} 
-  \caption{High-Level Architecture of Service Slicer}%
+  \caption{High-Level Architecture of ServiceSlicer}%
   \label{fig:architecture}
 \end{figure}
 
-Service Slicer integrates several cooperating components and external tools, as depicted in Figure~\ref{fig:architecture}. The system follows a client-server architecture: a React-based frontend communicates with a Kotlin/Spring Boot backend via a REST API\@. The backend orchestrates all analytical and benchmarking workflows, coordinating interactions with four persistent storage systems—PostgreSQL\footnote{\url{https://www.postgresql.org/}} for domain entities and workflow state, Neo4j\footnote{\url{https://neo4j.com/}} for dependency graphs, MinIO\footnote{\url{https://min.io/}} for large binary artefacts, and Prometheus\footnote{\url{https://prometheus.io/}} for performance metrics. During benchmarking, the backend automatically deploys Systems Under Test using Docker Compose, executes load tests with k6\footnote{\url{https://grafana.com/docs/k6/latest/}}, and collects metrics for comparative analysis. The architecture is designed to support both local execution (for development) and remote deployment (for reproducible testing environments). 
+ServiceSlicer integrates several cooperating components and external tools, as depicted in Figure~\ref{fig:architecture}. The system follows a client-server architecture: a React-based frontend communicates with a Kotlin/Spring Boot backend via a REST API\@. The backend orchestrates all analytical and benchmarking workflows, coordinating interactions with four persistent storage systems—PostgreSQL\footnote{\url{https://www.postgresql.org/}} for domain entities and workflow state, Neo4j\footnote{\url{https://neo4j.com/}} for dependency graphs, MinIO\footnote{\url{https://min.io/}} for large binary artefacts, and Prometheus\footnote{\url{https://prometheus.io/}} for performance metrics. During benchmarking, the backend automatically deploys Systems Under Test using Docker Compose, executes load tests with k6\footnote{\url{https://grafana.com/docs/k6/latest/}}, and collects metrics for comparative analysis. The architecture is designed to support both local execution (for development) and remote deployment (for reproducible testing environments). 
 
 \section{Component Overview}
 
@@ -403,16 +419,16 @@ K6 executes behavior-model-driven test scenarios during benchmarking, generating
 
 This layered architecture separates concerns between user interaction, persistent state management, and execution infrastructure, enabling independent evolution of each layer while maintaining clear contracts between them.
 
-\chapter{Static Code Analysis Workflow}
+\chapter{Static Code Analysis Workflow}\label{chap:static-analysis}
 
 The static code analysis workflow extracts structural dependencies from a monolithic Java application and identifies candidate microservice boundaries using graph-based clustering algorithms. This process provides architects with data-driven insights into how the system's components interact, enabling informed decisions about service partitioning.
 
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=1\textwidth]{figures/static_analysis_placeholder.png}
+  \includegraphics[width=0.8\textwidth]{figures/static-analysis-sequence.png}
   \caption{Static Analysis Sequence Diagram}%
   \label{fig:ai-decomposition-configuration}
-\end{figure}
+\end{figure}\FloatBarrier
 
 \section{Workflow Overview}
 
@@ -421,13 +437,6 @@ The workflow is structured around the concept of a decomposition job, which enca
 \subsection{Phase 1: Job Initialization and Configuration}
 
 Users initiate a decomposition job through the web interface (Figure~\ref{fig:static-code-analysis-workflow}) by uploading a compiled JAR file representing the monolithic application and specifying configuration parameters such as the base package namespace and optional exclusion patterns. The ability to exclude specific packages or patterns addresses a practical concern: many codebases contain automatically generated artefacts—such as persistence layer code, API schema definitions, or database access objects—that do not reflect meaningful domain relationships. Including such artefacts in the dependency analysis would introduce structural noise and potentially distort the resulting service boundary recommendations. Once submitted, the job is queued for asynchronous processing, enabling the analysis of large codebases without blocking the user interface.
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=1\textwidth]{figures/ServiceSlicer_createDecompositionJobPage.jpeg}
-  \caption{Create Decomposition Job page}%
-  \label{fig:static-code-analysis-workflow}
-\end{figure}
 
 \subsection{Phase 2: Dependency Extraction and Graph Construction}
 
@@ -444,9 +453,9 @@ Following dependency extraction, the workflow applies graph-based community dete
 The system applies three distinct community detection algorithms to the dependency graph, each offering different trade-offs between computational efficiency, partition quality, and sensitivity to graph topology:
 
 \begin{enumerate}
-  \item \textbf{Leiden Algorithm}: A hierarchical community detection method that optimizes modularity—a quality metric measuring the density of intra-community edges relative to a random baseline—while incorporating refinement mechanisms to prevent the formation of poorly connected communities.
+  \item \textbf{Leiden Algorithm}~\cite{traag2019leiden}: A hierarchical community detection method that optimizes modularity—a quality metric measuring the density of intra-community edges relative to a random baseline—while incorporating refinement mechanisms to prevent the formation of poorly connected communities.
 
-  \item \textbf{Louvain Algorithm}: An iterative modularity maximization approach that operates in two phases: local optimization, where nodes are reassigned to communities to maximize modularity gain, followed by aggregation, where communities are collapsed into super-nodes. This process repeats until no further improvement is possible.
+  \item \textbf{Louvain Algorithm}~\cite{blondel2008louvain}: An iterative modularity maximization approach that operates in two phases: local optimization, where nodes are reassigned to communities to maximize modularity gain, followed by aggregation, where communities are collapsed into super-nodes. This process repeats until no further improvement is possible.
 
   \item \textbf{Label Propagation}: A computationally efficient network clustering algorithm in which each node iteratively adopts the most common label among its neighbors. Convergence typically occurs rapidly, making this approach suitable for large graphs, though the results may be non-deterministic.
 \end{enumerate}
@@ -457,33 +466,11 @@ For each algorithm, the system constructs an in-memory graph projection filtered
 
 The final phase applies semantic analysis to complement the purely structural clustering performed in the previous phase. While graph-based community detection identifies groups of classes with strong structural coupling, it operates without awareness of domain concepts, business capabilities, or actor interactions. To address this limitation, the workflow integrates large language model-based analysis to refine service boundaries according to domain-driven design (DDD) or actor-driven decomposition (ADD) principles.
 
-% This phase applies two distinct decomposition strategies in parallel, each producing an independent set of service boundaries:
+The phase sequentially applies two decomposition strategies. \textbf{Domain-Driven Decomposition} identifies bounded contexts and business capabilities, grouping functionality into services with names reflecting domain concepts. \textbf{Actor-Driven Decomposition} identifies user roles and workflows, grouping functionality according to which actors interact with it. Each strategy produces an independent set of service boundaries, enabling architects to compare structural, domain-driven, and actor-driven perspectives side by side.
 
-% \begin{itemize}
-%   \item \textbf{Domain-Driven Decomposition}: The model is instructed to identify bounded contexts, aggregates, domain entities, value objects, and business capabilities within the dependency graph. The resulting decomposition groups functionality that encapsulates cohesive business logic, with service names reflecting domain concepts such as ``Order Management Service'' or ``Inventory Service''.
+The dependency graph is transformed into a structured representation and submitted to the language model with strategy-specific prompts. Responses are validated against an expected schema and persisted to storage, with class nodes updated to reflect the assigned service boundaries.
 
-%   \item \textbf{Actor-Driven Decomposition}: The model is instructed to identify user roles, personas, external systems, and actor-initiated workflows. Functionality is grouped according to which actors interact with it, producing service boundaries aligned with operational scenarios or actor types, such as ``Customer Portal Service'' or ``Admin Dashboard Service''.
-% \end{itemize}
-
-% The semantic refinement process proceeds through four sequential steps. First, the complete dependency graph is retrieved from persistent storage and transformed into a structured representation suitable for language model consumption. This transformation preserves package hierarchies, class relationships, and dependency patterns while abstracting implementation details irrelevant to semantic understanding.
-
-% Second, the structured graph is submitted to the language model along with a carefully constructed prompt that specifies the desired decomposition strategy. The system employs structured output formatting to ensure consistent and parseable responses. Third, the model's response is validated against an expected schema to confirm that each proposed service boundary includes a unique identifier, a descriptive name, an explanation of the service's responsibilities, and the complete list of classes assigned to that boundary.
-
-% Fourth, the validated decomposition is persisted to storage. Class nodes are updated with community identifiers corresponding to the selected strategy, and complete decomposition candidates—including service names, descriptions, and quality metrics—are stored in the relational database. By maintaining separate storage for domain-driven and actor-driven results, the system enables architects to compare both perspectives without data loss.
-
-% The integration with external AI services is implemented through an abstraction layer that decouples the workflow logic from the specific language model provider. This design permits the substitution of alternative implementations—such as locally hosted models, different API providers, or rule-based expert systems—without requiring changes to the orchestration logic. Infrastructure concerns such as error handling, retry mechanisms, rate limiting, and timeout management are encapsulated within the adapter layer.
-
-% \subsection{Metrics Computation}
-
-% Throughout the workflow, quantitative metrics are computed to evaluate the structural quality of proposed decompositions. These metrics provide objective indicators of service boundary quality and enable systematic comparison of alternative decomposition strategies. The computed metrics include:
-
-% \begin{itemize}
-%   \item \textbf{Service Coupling}: The number of external dependencies for each service, measured as the count of inter-service edges in the dependency graph. Lower coupling values indicate better service isolation and reduced coordination overhead.
-
-%   \item \textbf{Service Size}: The number of classes assigned to each service, indicating granularity. Highly uneven distributions may signal over-decomposition or under-decomposition.
-% \end{itemize}
-
-% These metrics are computed automatically for each decomposition candidate and stored in the relational database alongside the service boundary definitions, enabling architects to filter, rank, and compare candidates based on quantitative criteria.
+It is important to note that AI-generated decompositions are not perfect solutions. Language models lack deep domain expertise and contextual understanding of the specific business requirements, team structures, and operational constraints that influence real-world decomposition decisions. The generated candidates should therefore be viewed as a starting point for exploration rather than definitive recommendations, requiring validation and refinement by architects with domain knowledge.
 
 \section{Workflow Output and Visualization}
 
@@ -500,7 +487,7 @@ To support intuitive analysis, ServiceSlicer provides an interactive visualizati
 
 \FloatBarrier
 
-\chapter{Performance Benchmarking Workflow}
+\chapter{Performance Benchmarking Workflow}\label{chap:benchmarking}
 
 The automated performance benchmarking workflow evaluates the scalability characteristics of different architectural variants under realistic load conditions. By executing controlled load tests and collecting detailed performance metrics, this workflow provides empirical data to inform architectural decisions based on observed system behavior rather than theoretical assumptions or intuition.
 
@@ -609,7 +596,7 @@ Computed metrics and test case metadata are persisted to the relational database
 
 \FloatBarrier
 
-\chapter{Demonstration of ServiceSlicer in Practice}
+\chapter{Demonstration of ServiceSlicer in Practice}\label{chap:demonstration}
 
 This chapter demonstrates the practical application of ServiceSlicer through two representative examples that illustrate how the platform supports monolith decomposition workflows. Rather than presenting a formal empirical evaluation with controlled experiments and statistical analysis, this chapter provides a hands-on preview of the tool's capabilities, showing how architects can use it to explore decomposition strategies and assess their viability through automated performance testing.
 
@@ -696,7 +683,7 @@ The extracted request sequences served as the basis for constructing the operati
     o1 $\rightarrow$ o2 $\rightarrow$ o3 $\rightarrow$ o4 $\rightarrow$ o1 $\rightarrow$ o2 $\rightarrow$ o3 $\rightarrow$ o4 \\
     \hline
     Reader & reader-active & 0.3 &
-    o1 $\rightarrow$ o3 $\rightarrow$ o5 $\rightarrow$ o10 $\rightarrow$ o2 $\rightarrow$ o1 $\rightarrow$ o2 $\rightarrow$ o3 $\rightarrow$ o4 $\rightarrow$ o7 $\rightarrow$ o8 $\rightarrow$ 06 \\
+    o1 $\rightarrow$ o3 $\rightarrow$ o5 $\rightarrow$ o10 $\rightarrow$ o2 $\rightarrow$ o1 $\rightarrow$ o2 $\rightarrow$ o3 $\rightarrow$ o4 $\rightarrow$ o7 $\rightarrow$ o8 $\rightarrow$ o6 \\
     \hline
     Writer & writer & 0.2 &
     o5 $\rightarrow$ o10 $\rightarrow$ o2 $\rightarrow$ o9 $\rightarrow$ o3 $\rightarrow$ o4 \\
@@ -810,7 +797,7 @@ These behavior models formalize the workflows performed by each actor type, incl
   \vspace{0.2em}
 \end{table}
 
-TODO: The steps had a configured wait time either between 0-200 for automatic operations or 1000-5000ms for human-operated steps.
+Each step in the behavior models includes a configurable think time to simulate realistic interaction delays. Automated operations (such as data synchronization) use short delays of 0--200ms, while human-operated steps (such as form submissions) use longer delays of 1000--5000ms to reflect typical user pauses during interactive workflows.
 
 Load levels were specified to reflect realistic operational conditions, ranging from 0 to 300 concurrent users distributed across the two actor types. This range encompasses both typical daily usage patterns and peak load scenarios observed during periods of high field activity.
 
@@ -825,26 +812,32 @@ The benchmarking workflow was executed following the same procedure as for RealW
 
 \subsection{Limitations Encountered}
 
-- modifying existing operational settings will break the already finished or running benchmarks. Need to implement better separation of configurations.
-- maybe we could use better graph algorithms in the future with more configurable options
-- lot of failing requests during load testing due to improper variable bindings in behavior models, POST /transactions returned a lot of 400 errors because of missconfigured request bodies
+Several practical limitations emerged during the Technika demonstration that inform future development priorities:
 
-[TODO: Discuss effort required, configuration challenges, and tool applicability. Address trade-offs between decomposition granularity and performance, operational complexity considerations, and guidance on selecting decomposition strategies.]
-[TODO: Discuss issues discovered during demonstrations, such as implementation quality of decomposed variants, database schema decisions, and workload representativeness.]
+\begin{itemize}
+  \item \textbf{Configuration coupling}: Modifying existing operational settings affects already completed or running benchmarks. The current implementation lacks sufficient separation between configuration snapshots and benchmark runs, requiring careful version management of operational profiles.
 
-\subsection{Representativeness of Demonstrated Systems}
+  \item \textbf{Limited algorithm configurability}: The graph clustering algorithms expose minimal configuration options. More advanced parameterization—such as resolution settings for modularity optimization or seed control for Label Propagation—would enable finer-grained exploration of decomposition alternatives.
 
-[TODO: Discuss what these examples do and do not represent. Address limitations related to system selection, domains, and scale.]
+  \item \textbf{Behavior model sensitivity}: Load testing revealed a high rate of failing requests due to improper variable bindings in behavior models. For example, \texttt{POST /transactions} returned numerous 400 errors because of misconfigured request bodies. This highlights the importance of thorough validation runs and the need for improved debugging support in the operational setting configuration interface.
+  \item \text{Scalability gap and performance offset visualization}: The current reporting interface lacks intuitive visualizations for interpreting some of the metrics. Graphical representations of scalability gaps and performance offsets across load levels would enhance result interpretability.
+\end{itemize}
 
-\subsection{Methodological Constraints}
+These limitations reflect the prototype nature of the current implementation and identify concrete areas for engineering refinement in future development cycles.
 
-[TODO: Discuss limitations of the demonstration approach compared to formal evaluation. Address appropriateness of metrics, accuracy of operational profiles, and validity of scalability thresholds as performance indicators.]
+\subsection{Scope and Representativeness}
+
+The two demonstrated systems represent different points on the complexity spectrum but share certain characteristics that may limit generalizability. Both are relatively small (fewer than 100 classes), built on similar technology stacks (Spring Boot, PostgreSQL), and follow conventional layered architectures. They do not exhibit the extreme coupling, legacy complexity, or polyglot characteristics typical of large enterprise monoliths. Furthermore, single-host benchmarking cannot capture the network latency and distributed coordination overhead that emerge in production-scale deployments. These demonstrations validate that ServiceSlicer functions correctly on representative applications, but additional case studies on larger and more diverse systems would strengthen confidence in the tool's broader applicability.
 
 \section{Summary}
 
-[TODO: Synthesize key findings from both demonstrations, emphasizing general insights and patterns that emerged across different systems and domains.]
+The demonstrations presented in this chapter validate that ServiceSlicer can successfully process real applications, generate meaningful decomposition candidates, and execute automated benchmarks against containerized deployments. Both RealWorld Conduit and Technika progressed through the complete workflow—from static dependency extraction through algorithmic clustering to multi-level scalability assessment—producing actionable insights for architectural decision-making.
 
-\chapter{Conclusions \& Future Directions}
+Key observations emerged across both systems. Static analysis consistently identified structurally cohesive clusters, though these required interpretation through domain knowledge to yield practical service boundaries. The actor-aligned decomposition approach proved effective for the industrial system, demonstrating that organizing services around user personas can balance architectural clarity with operational feasibility. Operational profile construction required substantial domain expertise, highlighting the importance of realistic workload modeling for meaningful scalability assessment.
+
+The practical limitations encountered—configuration coupling, algorithm configurability constraints, and behavior model sensitivity—identify concrete areas for future engineering refinement and strengthen the platform's applicability to a broader range of decomposition scenarios.
+
+\chapter{Conclusions \& Future Directions}\label{chap:conclusions}
 
 This thesis presents ServiceSlicer, a platform combining static analysis with automated benchmarking to support monolith decomposition. ServiceSlicer helps architects explore decomposition strategies and test them under realistic conditions using dependency extraction, graph clustering, AI-assisted semantic analysis, and multi-level scalability assessment.
 
@@ -905,5 +898,291 @@ This work makes three primary contributions:
 The transition from monolithic to microservices architectures remains one of the most challenging decisions in modern software engineering. Poor decomposition decisions can result in systems that are more complex, less performant, and harder to operate than the monoliths they replaced. ServiceSlicer contributes to addressing this challenge by providing integrated tooling that spans boundary identification, semantic refinement, and empirical validation.
 
 The demonstrations validate the feasibility of the approach and illustrate its application to real systems. While significant work remains—particularly in extending language support, automating code extraction, and conducting formal evaluation—ServiceSlicer represents a step toward making systematic, data-driven monolith decomposition accessible to practitioners. As organizations continue to grapple with architectural modernization, tools that reduce uncertainty, accelerate learning, and provide empirical validation will become increasingly valuable.
+
+\appendix
+
+\chapter{REST API Reference}\label{app:api}
+
+This appendix provides a reference of the REST API endpoints exposed by the ServiceSlicer backend. The API follows RESTful conventions and uses JSON for request and response payloads. Complete OpenAPI documentation is available at \texttt{/swagger-ui.html} when the backend is running.
+
+\section{Decomposition Jobs}
+
+Endpoints for managing static code analysis jobs that extract dependencies and identify candidate microservice boundaries.
+
+\begin{table}[ht]
+  \centering
+  \footnotesize
+  \caption{Decomposition Job Endpoints}
+  \begin{tabularx}{\textwidth}{>{\ttfamily}l >{\raggedright\arraybackslash}p{4.5cm} X}
+  \hline
+  \normalfont\textbf{Method} & \textbf{Path} & \textbf{Description} \\
+  \hline
+  GET  & /decomposition-jobs & List all jobs with pagination \\
+  GET  & /decomposition-jobs/\{id\} & Get job details with candidates and metrics \\
+  POST & /decomposition-jobs & Create a new job from uploaded JAR \\
+  POST & /decomposition-jobs/\{id\}/restart & Restart a failed job \\
+  \hline
+  \end{tabularx}
+\end{table}
+
+\section{Systems Under Test}
+
+Endpoints for managing deployable system configurations used in benchmarking.
+
+\begin{table}[ht]
+  \centering
+  \footnotesize
+  \caption{System Under Test Endpoints}
+  \begin{tabularx}{\textwidth}{>{\ttfamily}l >{\raggedright\arraybackslash}p{4.5cm} X}
+  \hline
+  \normalfont\textbf{Method} & \textbf{Path} & \textbf{Description} \\
+  \hline
+  GET    & /systems-under-test & List all SUTs with pagination \\
+  GET    & /systems-under-test/\{id\} & Get SUT details with Docker config \\
+  POST   & /systems-under-test & Create a new SUT \\
+  PUT    & /systems-under-test/\{id\} & Update an existing SUT \\
+  DELETE & /systems-under-test/\{id\} & Delete a SUT \\
+  \hline
+  \end{tabularx}
+\end{table}
+
+\section{Operational Settings}
+
+Endpoints for managing workload specifications including behavior models and operational profiles.
+
+\begin{table}[ht]
+  \centering
+  \footnotesize
+  \caption{Operational Setting Endpoints}
+  \begin{tabularx}{\textwidth}{>{\ttfamily}l >{\raggedright\arraybackslash}p{4.5cm} X}
+  \hline
+  \normalfont\textbf{Method} & \textbf{Path} & \textbf{Description} \\
+  \hline
+  GET    & /operational-settings & List all settings with pagination \\
+  GET    & /operational-settings/\{id\} & Get setting details \\
+  GET    & /operational-settings/\{id\}/ usage-profile & Get behavior models \\
+  POST   & /operational-settings & Create a new setting \\
+  PUT    & /operational-settings/\{id\} & Update an existing setting \\
+  DELETE & /operational-settings/\{id\} & Delete a setting \\
+  \hline
+  \end{tabularx}
+\end{table}
+
+\section{Benchmarks}
+
+Endpoints for managing benchmark definitions that link SUTs with operational settings.
+
+\begin{table}[ht]
+  \centering
+  \footnotesize
+  \caption{Benchmark Endpoints}
+  \begin{tabularx}{\textwidth}{>{\ttfamily}l >{\raggedright\arraybackslash}p{4.5cm} X}
+  \hline
+  \normalfont\textbf{Method} & \textbf{Path} & \textbf{Description} \\
+  \hline
+  GET  & /benchmarks & List all benchmarks with pagination \\
+  GET  & /benchmarks/\{id\} & Get benchmark details with test suites \\
+  POST & /benchmarks & Create a new benchmark \\
+  PUT  & /benchmarks/\{id\} & Update an existing benchmark \\
+  POST & /benchmarks/\{id\}/generate-bm & Generate behavior models using AI \\
+  POST & /benchmarks/\{id\}/sut/ \{sutId\}/validate & Validate SUT configuration \\
+  \hline
+  \end{tabularx}
+\end{table}
+
+\section{Benchmark Runs}
+
+Endpoints for executing and monitoring benchmark runs.
+
+\begin{table}[ht]
+  \centering
+  \footnotesize
+  \caption{Benchmark Run Endpoints}
+  \begin{tabularx}{\textwidth}{>{\ttfamily}l >{\raggedright\arraybackslash}p{4.5cm} X}
+  \hline
+  \normalfont\textbf{Method} & \textbf{Path} & \textbf{Description} \\
+  \hline
+  GET  & /benchmark-runs & List runs for a benchmark \\
+  GET  & /benchmark-runs/\{id\} & Get run details with test results \\
+  GET  & /benchmark-runs/\{id\}/ usage-profile & Get behavior models used in run \\
+  POST & /benchmark-runs & Create and start a new run \\
+  POST & /benchmark-runs/\{id\}/restart & Restart a failed run \\
+  \hline
+  \end{tabularx}
+\end{table}
+
+\section{Files}
+
+Endpoints for managing file uploads using a three-step upload flow (initiate, upload to presigned URL, complete).
+
+\begin{table}[ht]
+  \centering
+  \footnotesize
+  \caption{File Endpoints}
+  \begin{tabularx}{\textwidth}{>{\ttfamily}l >{\raggedright\arraybackslash}p{4.5cm} X}
+  \hline
+  \normalfont\textbf{Method} & \textbf{Path} & \textbf{Description} \\
+  \hline
+  GET  & /files & List all uploaded files with pagination \\
+  GET  & /files/\{id\}/download & Get a presigned download URL \\
+  POST & /files & Initiate upload, returns presigned URL \\
+  POST & /files/\{id\}/complete & Mark file upload as complete \\
+  \hline
+  \end{tabularx}
+\end{table}
+
+\section{API Operations}
+
+Endpoints for parsing and managing API operations extracted from OpenAPI specifications.
+
+\begin{table}[ht]
+  \centering
+  \footnotesize
+  \caption{API Operation Endpoints}
+  \begin{tabularx}{\textwidth}{>{\ttfamily}l >{\raggedright\arraybackslash}p{4.5cm} X}
+  \hline
+  \normalfont\textbf{Method} & \textbf{Path} & \textbf{Description} \\
+  \hline
+  GET  & /api-operations & List operations for an OpenAPI file \\
+  POST & /api-operations & Parse and create operations from OpenAPI \\
+  \hline
+  \end{tabularx}
+\end{table}
+
+\chapter{Deployment and Configuration}\label{app:deployment}
+
+This appendix provides instructions for deploying and running the ServiceSlicer platform locally. The complete source code is available in the accompanying repository.
+
+\section{Prerequisites}
+
+The following software must be installed:
+
+\begin{itemize}
+  \item \textbf{Docker} and \textbf{Docker Compose} — for running infrastructure services
+  \item \textbf{Java 21} or later — for running the backend
+  \item \textbf{Maven 3.9+} — for building the backend
+  \item \textbf{Node.js 18+} and \textbf{npm} — for running the frontend
+\end{itemize}
+
+\section{Infrastructure Services}
+
+ServiceSlicer requires four infrastructure services, configured via Docker Compose. The following listing shows the complete \texttt{compose.yaml} file located in the \texttt{backend/} directory:
+
+\begin{lstlisting}[language=bash,caption={Docker Compose configuration (backend/compose.yaml)},label={lst:compose}]
+services:
+  postgres:
+    image: 'postgres:17.4-alpine'
+    environment:
+      - 'POSTGRES_DB=serviceslicer'
+      - 'POSTGRES_PASSWORD=postgres'
+      - 'POSTGRES_USER=postgres'
+    ports:
+      - '33771:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  neo4j:
+    image: 'neo4j:5.26.13-community'
+    environment:
+      NEO4J_AUTH: neo4j/password
+      NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
+      NEO4J_dbms_security_procedures_unrestricted: "gds.*,apoc.*"
+      NEO4J_dbms_security_procedures_allowlist: "gds.*,apoc.*"
+      NEO4J_apoc_export_file_enabled: "true"
+      NEO4J_apoc_import_file_enabled: "true"
+    ports:
+      - '7474:7474'
+      - '7687:7687'
+    volumes:
+      - neo4j-data:/data
+
+  minio:
+    image: 'minio/minio:latest'
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio-data:/data
+
+  prometheus:
+    image: 'prom/prometheus:v3.0.1'
+    ports:
+      - '9091:9090'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--enable-feature=native-histograms'
+      - '--web.enable-remote-write-receiver'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres-data:
+  neo4j-data:
+  minio-data:
+  prometheus-data:
+\end{lstlisting}
+
+The services provide the following functionality:
+
+\begin{itemize}
+  \item \textbf{PostgreSQL} (port 33771): Stores domain entities, job metadata, and benchmark results
+  \item \textbf{Neo4j} (ports 7474, 7687): Stores dependency graphs and executes community detection algorithms via the Graph Data Science plugin
+  \item \textbf{MinIO} (ports 9000, 9001): S3-compatible object storage for JAR files, Docker Compose configurations, and other artifacts
+  \item \textbf{Prometheus} (port 9091): Collects and stores performance metrics from k6 load tests
+\end{itemize}
+
+\section{Running the Application}
+
+\subsection{Starting the Backend}
+
+From the \texttt{backend/} directory, run:
+
+\begin{lstlisting}[language=bash]
+mvn spring-boot:run
+\end{lstlisting}
+
+This command automatically starts the Docker Compose services (if not already running) and launches the Spring Boot application. The backend API will be available at \texttt{http://localhost:8080}. API documentation is accessible at \texttt{http://localhost:8080/swagger-ui.html}.
+
+\subsection{Starting the Frontend}
+
+From the \texttt{frontend/} directory, run:
+
+\begin{lstlisting}[language=bash]
+npm install
+npm run generate:api
+npm run dev
+\end{lstlisting}
+
+The \texttt{generate:api} command generates TypeScript API client code from the backend's OpenAPI specification (requires the backend to be running). The frontend development server will be available at \texttt{http://localhost:3000}.
+
+\section{Service Endpoints Summary}
+
+\begin{table}[ht]
+  \centering
+  \footnotesize
+  \caption{Service endpoints after deployment}
+  \begin{tabularx}{\textwidth}{l >{\raggedright\arraybackslash}p{5.5cm} X}
+  \hline
+  \textbf{Service} & \textbf{URL} & \textbf{Purpose} \\
+  \hline
+  Frontend      & http://localhost:3000 & Web UI \\
+  Backend API   & http://localhost:8080 & REST API \\
+  Swagger UI    & http://localhost:8080/swagger-ui.html & API docs \\
+  Neo4j Browser & http://localhost:7474 & Graph DB UI \\
+  MinIO Console & http://localhost:9001 & Object storage UI \\
+  Prometheus    & http://localhost:9091 & Metrics \\
+  \hline
+  \end{tabularx}
+\end{table}
+
+\printindex
 
 \end{document}

@@ -538,170 +538,235 @@ export function BenchmarkRunDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {/* Selection Controls */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">System Under Test</label>
-                <Select value={selectedSutId} onValueChange={setSelectedSutId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select system" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {data.testSuites.map((suite: TestSuiteDto) => (
-                      <SelectItem key={suite.systemUnderTest.id} value={suite.systemUnderTest.id}>
-                        {suite.systemUnderTest.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Load Level</label>
-                <Select value={selectedLoad} onValueChange={setSelectedLoad}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select load" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(() => {
-                      const selectedSuite = data.testSuites.find(s => s.systemUnderTest.id === selectedSutId)
-                      return selectedSuite?.testCases.sort((a, b) => a.load - b.load).map((tc: TestCaseDto) => (
-                        <SelectItem key={tc.load} value={tc.load.toString()}>
-                          {tc.load} users
-                        </SelectItem>
-                      ))
-                    })()}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* System Under Test Selection */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium">System Under Test</label>
+              <Select value={selectedSutId} onValueChange={setSelectedSutId}>
+                <SelectTrigger className="w-[280px] h-8 text-sm">
+                  <SelectValue placeholder="Select system" />
+                </SelectTrigger>
+                <SelectContent>
+                  {data.testSuites.map((suite: TestSuiteDto) => (
+                    <SelectItem key={suite.systemUnderTest.id} value={suite.systemUnderTest.id}>
+                      {suite.systemUnderTest.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {(() => {
               const selectedSuite = data.testSuites.find(s => s.systemUnderTest.id === selectedSutId)
               const selectedTestCase = selectedSuite?.testCases.find(tc => tc.load.toString() === selectedLoad)
 
-              if (!selectedSuite || !selectedTestCase) {
-                return <p className="text-muted-foreground text-center py-8">Select a system and load to view metrics</p>
+              if (!selectedSuite) {
+                return <p className="text-muted-foreground text-center py-8">Select a system to view metrics</p>
               }
 
-              const operationMetrics = Object.values(selectedTestCase.operationMetrics)
+              const overallOperationResults = selectedSuite.testSuiteResults?.operationExperimentResults
+                ? Object.values(selectedSuite.testSuiteResults.operationExperimentResults)
+                : []
+
+              const operationMetrics = selectedTestCase ? Object.values(selectedTestCase.operationMetrics) : []
 
               return (
-                <div className="space-y-4">
-                  {/* Summary Information */}
-                  <div className="bg-muted/30 rounded-lg p-4">
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Status:</span>
-                        <Badge variant={getStateColor(selectedTestCase.status)} className={`flex items-center gap-1 ${getStateClassName(selectedTestCase.status)}`}>
-                          {getStateIcon(selectedTestCase.status)}
-                          {selectedTestCase.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Load Frequency:</span>
-                        <span className="font-mono font-medium">{Number(selectedTestCase.loadFrequency.toFixed(2))}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">RDM:</span>
-                        <span className="font-mono font-medium">
-                          {selectedTestCase.relativeDomainMetric !== undefined && selectedTestCase.relativeDomainMetric !== null
-                            ? Number(selectedTestCase.relativeDomainMetric.toFixed(4))
-                            : 'N/A'}
-                        </span>
-                      </div>
-                      {selectedTestCase.startTimestamp && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">Started:</span>
-                          <span className="font-medium">{format(new Date(selectedTestCase.startTimestamp), 'Pp')}</span>
-                        </div>
-                      )}
-                        {selectedTestCase.endTimestamp && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">Ended:</span>
-                          <span className="font-medium">{format(new Date(selectedTestCase.endTimestamp), 'Pp')}</span>
-                        </div>
-                      )}
-                      {selectedTestCase.startTimestamp && selectedTestCase.endTimestamp && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">Duration:</span>
-                          <span className="font-medium">
-                            {(() => {
-                              const start = new Date(selectedTestCase.startTimestamp)
-                              const end = new Date(selectedTestCase.endTimestamp)
-                              const durationMs = end.getTime() - start.getTime()
-                              const durationSec = Math.floor(durationMs / 1000)
-                              const minutes = Math.floor(durationSec / 60)
-                              const seconds = durationSec % 60
-                              return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
-                            })()}
-                          </span>
-                        </div>
-                      )}
+                <div className="space-y-6">
+                  {/* Overall SUT Results Table */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold">Overall Results for {selectedSuite.systemUnderTest.name}</h3>
+                      <Badge variant="outline" className="text-xs">Aggregated across all loads</Badge>
                     </div>
+                    {overallOperationResults.length > 0 ? (
+                      <div className="overflow-x-auto border rounded-lg">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/50">
+                              <TableHead className="py-2">Operation</TableHead>
+                              <TableHead className="py-2 text-right">Total Requests</TableHead>
+                              <TableHead className="py-2 text-right">Failed Requests</TableHead>
+                              <TableHead className="py-2 text-right bg-green-50 dark:bg-green-950/30">Scalability Footprint</TableHead>
+                              <TableHead className="py-2 text-right bg-green-50 dark:bg-green-950/30">Scalability Gap</TableHead>
+                              <TableHead className="py-2 text-right bg-green-50 dark:bg-green-950/30">Performance Offset</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {overallOperationResults.map((result) => (
+                              <TableRow key={result.operationId}>
+                                <TableCell className="py-1.5 font-mono text-xs">{result.operationId}</TableCell>
+                                <TableCell className="py-1.5 text-right font-mono">{result.totalRequests}</TableCell>
+                                <TableCell className="py-1.5 text-right font-mono">{result.failedRequests}</TableCell>
+                                <TableCell className="py-1.5 text-right font-mono bg-green-50 dark:bg-green-950/30">
+                                  {result.scalabilityFootprint !== undefined && result.scalabilityFootprint !== null
+                                    ? result.scalabilityFootprint
+                                    : 'N/A'}
+                                </TableCell>
+                                <TableCell className="py-1.5 text-right font-mono bg-green-50 dark:bg-green-950/30">
+                                  {result.scalabilityGap !== undefined && result.scalabilityGap !== null
+                                    ? result.scalabilityGap.toFixed(4)
+                                    : 'N/A'}
+                                </TableCell>
+                                <TableCell className="py-1.5 text-right font-mono bg-green-50 dark:bg-green-950/30">
+                                  {result.performanceOffset !== undefined && result.performanceOffset !== null
+                                    ? result.performanceOffset.toFixed(4)
+                                    : 'N/A'}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm py-4 text-center bg-muted/20 rounded-lg">
+                        No overall results available yet. Results will appear when the test suite completes.
+                      </p>
+                    )}
                   </div>
 
-                  {/* Operation Metrics Table */}
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Operation</TableHead>
-                          <TableHead className="text-right">Total Requests</TableHead>
-                          <TableHead className="text-right">Failed Requests</TableHead>
-                          <TableHead className="text-right">Std Dev (ms)</TableHead>
-                          <TableHead className="text-right">P95 (ms)</TableHead>
-                          <TableHead className="text-right">P99 (ms)</TableHead>
-                          <TableHead className="text-right bg-blue-50 dark:bg-blue-950/30">Mean Response (ms)</TableHead>
-                          <TableHead className="text-right bg-amber-50 dark:bg-amber-950/30">Scalability Threshold (ms)</TableHead>
-                          <TableHead className="text-center bg-amber-50 dark:bg-amber-950/30">Passes Threshold</TableHead>
-                          <TableHead className="text-right bg-amber-50 dark:bg-amber-950/30">Scalability Share</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {operationMetrics.map((metric) => (
-                          <TableRow key={metric.operationId}>
-                            <TableCell className="font-mono text-xs">{metric.operationId}</TableCell>
-                            <TableCell className="text-right font-mono">{metric.totalRequests}</TableCell>
-                            <TableCell className="text-right font-mono">{metric.failedRequests}</TableCell>
-                            <TableCell className="text-right font-mono">{metric.stdDevResponseTimeMs.toFixed(2)}</TableCell>
-                            <TableCell className="text-right font-mono">{metric.p95DurationMs.toFixed(2)}</TableCell>
-                            <TableCell className="text-right font-mono">{metric.p99DurationMs.toFixed(2)}</TableCell>
-                            <TableCell className="text-right font-mono bg-blue-50 dark:bg-blue-950/30">{metric.meanResponseTimeMs.toFixed(2)}</TableCell>
-                            <TableCell className="text-right font-mono bg-amber-50 dark:bg-amber-950/30">{data.scalabilityThresholds ? data.scalabilityThresholds[metric.operationId].toFixed(2) : 'N/A'}</TableCell>
-                            <TableCell className="text-center bg-amber-50 dark:bg-amber-950/30">
-                              {metric.passScalabilityThreshold ? (
-                                <CheckCircle className="h-4 w-4 text-green-600 inline" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-red-600 inline" />
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right font-mono bg-amber-50 dark:bg-amber-950/30">{metric.scalabilityShare.toFixed(4)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                  {/* Divider */}
+                  <div className="border-t" />
 
-                  {/* K6 Output Section */}
-                  {selectedTestCase.k6Output && (
-                    <div className="mt-6">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowK6Output(!showK6Output)}
-                        className="mb-3"
-                      >
-                        {showK6Output ? 'Hide K6 Output' : 'Show K6 Output'}
-                      </Button>
-
-                      {showK6Output && (
-                        <div className="bg-muted/50 rounded-lg p-4 overflow-auto max-h-96">
-                          <pre className="text-xs font-mono whitespace-pre-wrap">{selectedTestCase.k6Output}</pre>
-                        </div>
-                      )}
+                  {/* Per-Load Test Case Metrics Section */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm font-medium">Metrics at Load Level</label>
+                      <Select value={selectedLoad} onValueChange={setSelectedLoad}>
+                        <SelectTrigger className="w-[140px] h-8 text-sm">
+                          <SelectValue placeholder="Select load" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedSuite.testCases.sort((a, b) => a.load - b.load).map((tc: TestCaseDto) => (
+                            <SelectItem key={tc.load} value={tc.load.toString()}>
+                              {tc.load} users
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )}
+
+                    {!selectedTestCase ? (
+                      <p className="text-muted-foreground text-sm py-4 text-center bg-muted/20 rounded-lg">
+                        Select a load level to view per-load metrics
+                      </p>
+                    ) : (
+                      <>
+                        {/* Summary Information */}
+                        <div className="bg-muted/30 rounded-lg p-3">
+                          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Status:</span>
+                              <Badge variant={getStateColor(selectedTestCase.status)} className={`flex items-center gap-1 ${getStateClassName(selectedTestCase.status)}`}>
+                                {getStateIcon(selectedTestCase.status)}
+                                {selectedTestCase.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">Load Frequency:</span>
+                              <span className="font-mono font-medium">{Number(selectedTestCase.loadFrequency.toFixed(2))}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">RDM:</span>
+                              <span className="font-mono font-medium">
+                                {selectedTestCase.relativeDomainMetric !== undefined && selectedTestCase.relativeDomainMetric !== null
+                                  ? Number(selectedTestCase.relativeDomainMetric.toFixed(4))
+                                  : 'N/A'}
+                              </span>
+                            </div>
+                            {selectedTestCase.startTimestamp && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Started:</span>
+                                <span className="font-medium">{format(new Date(selectedTestCase.startTimestamp), 'Pp')}</span>
+                              </div>
+                            )}
+                            {selectedTestCase.endTimestamp && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Ended:</span>
+                                <span className="font-medium">{format(new Date(selectedTestCase.endTimestamp), 'Pp')}</span>
+                              </div>
+                            )}
+                            {selectedTestCase.startTimestamp && selectedTestCase.endTimestamp && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Duration:</span>
+                                <span className="font-medium">
+                                  {(() => {
+                                    const start = new Date(selectedTestCase.startTimestamp)
+                                    const end = new Date(selectedTestCase.endTimestamp)
+                                    const durationMs = end.getTime() - start.getTime()
+                                    const durationSec = Math.floor(durationMs / 1000)
+                                    const minutes = Math.floor(durationSec / 60)
+                                    const seconds = durationSec % 60
+                                    return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
+                                  })()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Operation Metrics Table */}
+                        <div className="overflow-x-auto border rounded-lg">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="py-2">Operation</TableHead>
+                                <TableHead className="py-2 text-right">Total Requests</TableHead>
+                                <TableHead className="py-2 text-right">Failed Requests</TableHead>
+                                <TableHead className="py-2 text-right">Std Dev (ms)</TableHead>
+                                <TableHead className="py-2 text-right">P95 (ms)</TableHead>
+                                <TableHead className="py-2 text-right">P99 (ms)</TableHead>
+                                <TableHead className="py-2 text-right bg-blue-50 dark:bg-blue-950/30">Mean Response (ms)</TableHead>
+                                <TableHead className="py-2 text-right bg-amber-50 dark:bg-amber-950/30">Scalability Threshold (ms)</TableHead>
+                                <TableHead className="py-2 text-center bg-amber-50 dark:bg-amber-950/30">Passes Threshold</TableHead>
+                                <TableHead className="py-2 text-right bg-amber-50 dark:bg-amber-950/30">Scalability Share</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {operationMetrics.map((metric) => (
+                                <TableRow key={metric.operationId}>
+                                  <TableCell className="py-1.5 font-mono text-xs">{metric.operationId}</TableCell>
+                                  <TableCell className="py-1.5 text-right font-mono">{metric.totalRequests}</TableCell>
+                                  <TableCell className="py-1.5 text-right font-mono">{metric.failedRequests}</TableCell>
+                                  <TableCell className="py-1.5 text-right font-mono">{metric.stdDevResponseTimeMs.toFixed(2)}</TableCell>
+                                  <TableCell className="py-1.5 text-right font-mono">{metric.p95DurationMs.toFixed(2)}</TableCell>
+                                  <TableCell className="py-1.5 text-right font-mono">{metric.p99DurationMs.toFixed(2)}</TableCell>
+                                  <TableCell className="py-1.5 text-right font-mono bg-blue-50 dark:bg-blue-950/30">{metric.meanResponseTimeMs.toFixed(2)}</TableCell>
+                                  <TableCell className="py-1.5 text-right font-mono bg-amber-50 dark:bg-amber-950/30">{data.scalabilityThresholds ? data.scalabilityThresholds[metric.operationId].toFixed(2) : 'N/A'}</TableCell>
+                                  <TableCell className="py-1.5 text-center bg-amber-50 dark:bg-amber-950/30">
+                                    {metric.passScalabilityThreshold ? (
+                                      <CheckCircle className="h-4 w-4 text-green-600 inline" />
+                                    ) : (
+                                      <XCircle className="h-4 w-4 text-red-600 inline" />
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-1.5 text-right font-mono bg-amber-50 dark:bg-amber-950/30">{metric.scalabilityShare.toFixed(4)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+
+                        {/* K6 Output Section */}
+                        {selectedTestCase.k6Output && (
+                          <div className="mt-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowK6Output(!showK6Output)}
+                              className="mb-2"
+                            >
+                              {showK6Output ? 'Hide K6 Output' : 'Show K6 Output'}
+                            </Button>
+
+                            {showK6Output && (
+                              <div className="bg-muted/50 rounded-lg p-4 overflow-auto max-h-96">
+                                <pre className="text-xs font-mono whitespace-pre-wrap">{selectedTestCase.k6Output}</pre>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               )
             })()}
