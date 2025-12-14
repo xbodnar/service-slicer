@@ -3,6 +3,7 @@ package cz.bodnor.serviceslicer.adapter.`in`.web.benchmarkrun
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.command.RestartBenchmarkRunCommand
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.query.GetBenchmarkRunQuery
 import cz.bodnor.serviceslicer.application.module.benchmarkrun.query.ListBenchmarkRunsQuery
+import cz.bodnor.serviceslicer.domain.operationalsetting.BehaviorModel
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryBus
 import org.springframework.web.bind.annotation.GetMapping
@@ -40,4 +41,11 @@ class BenchmarkRunController(
     @GetMapping("/{benchmarkRunId}")
     fun getBenchmarkRun(@PathVariable benchmarkRunId: UUID): BenchmarkRunDto =
         mapper.toDto(queryBus(GetBenchmarkRunQuery(benchmarkRunId)))
+
+    @GetMapping("/{benchmarkRunId}/usage-profile")
+    fun getUsageProfile(@PathVariable benchmarkRunId: UUID): List<BehaviorModel> {
+        val benchmarkRun = queryBus(GetBenchmarkRunQuery(benchmarkRunId))
+
+        return benchmarkRun.usageProfile
+    }
 }

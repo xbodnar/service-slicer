@@ -4,7 +4,7 @@ import jsonpath from 'https://jslib.k6.io/jsonpath/1.0.2/index.js';
 
 // --- CONFIG FROM ORCHESTRATOR / GENERATED ---
 const BASE_URL = __ENV.BASE_URL;
-const CONFIG_URL = __ENV.CONFIG_URL;
+const USAGE_PROFILE_URL = __ENV.USAGE_PROFILE_URL;
 
 // Use per-vu-iterations executor to run all behavior models once
 export const options = {
@@ -210,12 +210,12 @@ function executeBehaviorModel(bm) {
 
 // Setup function - fetch configuration from CONFIG_URL
 export function setup() {
-    console.log(`Fetching configuration from: ${CONFIG_URL}`);
+    console.log(`Fetching Usage Profile from: ${USAGE_PROFILE_URL}`);
 
-    const res = http.get(CONFIG_URL);
+    const res = http.get(USAGE_PROFILE_URL);
 
     if (res.status !== 200) {
-        throw new Error(`Failed to fetch config from ${CONFIG_URL}: status ${res.status}, body: ${res.body}`);
+        throw new Error(`Failed to fetch Usage Profile from ${USAGE_PROFILE_URL}: status ${res.status}, body: ${res.body}`);
     }
 
     const operationalSetting = res.json();
@@ -225,8 +225,7 @@ export function setup() {
 }
 
 // Main test function - run all behavior models sequentially
-export default function (operationalSetting) {
-    const usageProfile = operationalSetting.usageProfile;
+export default function (usageProfile) {
     console.log(`Starting validation run for ${usageProfile.length} behavior models`);
 
     for (const bm of usageProfile) {

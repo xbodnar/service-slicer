@@ -3,6 +3,7 @@ package cz.bodnor.serviceslicer.adapter.`in`.web.operationalsetting
 import cz.bodnor.serviceslicer.application.module.operationalsetting.command.DeleteOperationalSettingCommand
 import cz.bodnor.serviceslicer.application.module.operationalsetting.query.GetOperationalSettingQuery
 import cz.bodnor.serviceslicer.application.module.operationalsetting.query.ListOperationalSettingsQuery
+import cz.bodnor.serviceslicer.domain.operationalsetting.BehaviorModel
 import cz.bodnor.serviceslicer.infrastructure.cqrs.command.CommandBus
 import cz.bodnor.serviceslicer.infrastructure.cqrs.query.QueryBus
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -33,6 +34,10 @@ class OperationalSettingController(
     @GetMapping("/{operationalSettingId}")
     fun getOperationalSetting(@PathVariable operationalSettingId: UUID): OperationalSettingDto =
         mapper.toDto(queryBus(GetOperationalSettingQuery(operationalSettingId = operationalSettingId)))
+
+    @GetMapping("/{operationalSettingId}/usage-profile")
+    fun getUsageProfile(@PathVariable operationalSettingId: UUID): List<BehaviorModel> =
+        queryBus(GetOperationalSettingQuery(operationalSettingId = operationalSettingId)).usageProfile
 
     @PostMapping
     fun createOperationalSetting(@RequestBody request: CreateOperationalSettingRequest): OperationalSettingDto =

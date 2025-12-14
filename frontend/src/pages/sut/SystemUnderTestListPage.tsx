@@ -2,14 +2,15 @@ import { Link } from 'react-router-dom'
 import { useListSystemsUnderTest } from '@/api/generated/system-under-test-controller/system-under-test-controller'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Loader2, Server, ArrowRight, Calendar } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Loader2, Server, ArrowRight, Calendar, Container, Database, Clock, Activity } from 'lucide-react'
 import {Pagination} from "@/components/ui/pagination.tsx";
 import {useState} from "react";
 import {formatDistance} from "date-fns";
 
 export function SystemUnderTestListPage() {
   const [page, setPage] = useState(0)
-  const [size] = useState(12)
+  const [size] = useState(6)
   const { data, isLoading, error } = useListSystemsUnderTest({ page, size })
 
   if (isLoading) {
@@ -84,8 +85,49 @@ export function SystemUnderTestListPage() {
                     </CardDescription>
                   )}
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CardContent className="space-y-3">
+                  {/* Docker Config */}
+                  {system.dockerConfig && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Container className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Docker Configuration</span>
+                      </div>
+                      <div className="space-y-1 pl-6 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-3 w-3" />
+                          <span>Health check: {system.dockerConfig.healthCheckPath}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Server className="h-3 w-3" />
+                          <span>App port: {system.dockerConfig.appPort}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-3 w-3" />
+                          <span>Startup timeout: {system.dockerConfig.startupTimeoutSeconds}s</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Database Seed Configs */}
+                  {system.databaseSeedConfigs && system.databaseSeedConfigs.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t">
+                      <div className="flex items-center gap-2">
+                        <Database className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Database Seeds ({system.databaseSeedConfigs.length})</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 pl-6">
+                        {system.databaseSeedConfigs.map((config, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {config.dbContainerName}:{config.dbPort}/{config.dbName}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
                     <Calendar className="h-3.5 w-3.5" />
                     <span>{formatDistance(new Date(system.createdAt), new Date(), { addSuffix: true })}</span>
                   </div>

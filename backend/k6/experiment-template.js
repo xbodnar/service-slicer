@@ -4,7 +4,7 @@ import jsonpath from 'https://jslib.k6.io/jsonpath/1.0.2/index.js';
 
 // --- CONFIG FROM ORCHESTRATOR / GENERATED ---
 const BASE_URL = __ENV.BASE_URL;
-const CONFIG_URL = __ENV.CONFIG_URL;
+const USAGE_PROFILE_URL = __ENV.USAGE_PROFILE_URL;
 
 const TARGET_VUS = parseInt(__ENV.TARGET_VUS);
 const DURATION = __ENV.DURATION;
@@ -41,8 +41,7 @@ function randomThinkTime(thinkFromMs, thinkToMs) {
     return ms / 1000.0; // seconds
 }
 
-function pickBehaviorModel(operationalSetting) {
-    const usageProfile = operationalSetting.usageProfile;
+function pickBehaviorModel(usageProfile) {
     const r = Math.random();
     let cumulative = 0.0;
     for (const bm of usageProfile) {
@@ -197,28 +196,40 @@ function executeStep(step, ctx) {
     return ok;
 }
 
-// Setup function - fetch configuration from CONFIG_URL
+// Setup function - fetch UsageProfile from USAGE_PROFILE_URL
 export function setup() {
+    if (BASE_URL === undefined) {
+        throw new Error('BASE_URL is not defined');
+    }
+    if (USAGE_PROFILE_URL === undefined) {
+        throw new Error('USAGE_PROFILE_URL is not defined');
+    }
+    if (TARGET_VUS === undefined) {
+        throw new Error('TARGET_VUS is not defined');
+    }
+    if (DURATION === undefined) {
+        throw new Error('DURATION is not defined');
+    }
     if (TEST_CASE_ID === undefined) {
         throw new Error('TEST_CASE_ID is not defined');
     }
 
-    console.log(`Fetching configuration from: ${CONFIG_URL}`);
+    console.log(`Fetching usageProfile from: ${USAGE_PROFILE_URL}`);
 
-    const res = http.get(CONFIG_URL);
+    const res = http.get(USAGE_PROFILE_URL);
 
     if (res.status !== 200) {
-        throw new Error(`Failed to fetch config from ${CONFIG_URL}: status ${res.status}, body: ${res.body}`);
+        throw new Error(`Failed to fetch usageProfile from ${USAGE_PROFILE_URL}: status ${res.status}, body: ${res.body}`);
     }
 
-    const operationalSetting = res.json();
-    console.log(`Configuration loaded successfully`);
+    const usageProfile = res.json();
+    console.log(`Usage Profile loaded successfully`);
 
-    return operationalSetting;
+    return usageProfile;
 }
 
-export default function (operationalSetting) {
-    const bm = pickBehaviorModel(operationalSetting);
+export default function (usageProfile) {
+    const bm = pickBehaviorModel(usageProfile);
 
     const context = {
         behaviorId: bm.id,

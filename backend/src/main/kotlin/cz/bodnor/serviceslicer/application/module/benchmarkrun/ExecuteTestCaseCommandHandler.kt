@@ -93,6 +93,8 @@ class ExecuteTestCaseCommandHandler(
                 result.performanceMetrics,
                 result.k6Output,
                 result.jsonSummary,
+                result.startTimestamp,
+                result.endTimestamp,
                 scalabilityThresholds,
             )
 

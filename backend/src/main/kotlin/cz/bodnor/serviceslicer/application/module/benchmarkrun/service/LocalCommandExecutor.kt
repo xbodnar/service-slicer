@@ -39,4 +39,6 @@ class LocalCommandExecutor : CommandExecutor {
     }
 
     override fun getTargetHost(): String = "localhost"
+
+    override fun getProjectWorkDir(projectName: String): File? = null // No project directories for local execution
 }

@@ -71,26 +71,32 @@ class TestCase(
         performanceMetrics: List<QueryLoadTestMetrics.PerformanceMetrics>,
         k6Output: String,
         jsonSummary: JsonNode?,
+        k6StartTimestamp: Instant,
+        k6EndTimestamp: Instant,
         // Can be null only if this is the baseline test case
         scalabilityThresholds: Map<OperationId, BigDecimal>?,
     ) {
         this.status = JobStatus.COMPLETED
-        this.endTimestamp = Instant.now()
+        // Override the actual timestamps with the k6 timestamps so the test case matches the metrics time window
+        this.startTimestamp = k6StartTimestamp
+        this.endTimestamp = k6EndTimestamp
         require(testSuite.isBaseline || scalabilityThresholds != null) {
             "Scalability thresholds must be provided for target test case"
         }
 
         val totalRequests = performanceMetrics.sumOf { it.totalRequests }
 
-        this.operationMetrics = performanceMetrics.map { metrics ->
-            val passScalabilityThreshold = when (scalabilityThresholds) {
-                null -> true
+        this.operationMetrics = performanceMetrics.mapNotNull { metrics ->
+            val passScalabilityThreshold = if (scalabilityThresholds == null) { // Only for baseline test case
+                // Baseline test case passes the threshold by definition
+                true
+            } else {
+                // Skip operations without a threshold
+                val opScalabilityThreshold = scalabilityThresholds[metrics.operationId] ?: return@mapNotNull null
 
-                else -> metrics.meanResponseTimeMs <= (
-                    scalabilityThresholds[metrics.operationId]
-                        ?: error("Scalability thresholds not found for operation: ${metrics.operationId}")
-                    )
+                metrics.meanResponseTimeMs <= opScalabilityThreshold
             }
+
             val invocationFreq = when (totalRequests) {
                 0L -> BigDecimal.ZERO
                 else -> metrics.totalRequests.toBigDecimal().divide(totalRequests.toBigDecimal(), MathContext.DECIMAL32)

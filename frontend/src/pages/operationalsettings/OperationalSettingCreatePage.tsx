@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileSelector } from '@/components/ui/file-selector'
 import { useToast } from '@/components/ui/use-toast'
 import { type UploadedFile } from '@/hooks/useFileUpload'
-import { useCreateOperationalSetting } from '@/api/generated/operational-setting-controller/operational-setting-controller'
+import { useCreateOperationalSetting, useGetOperationalSetting } from '@/api/generated/operational-setting-controller/operational-setting-controller'
 import { useListApiOperations, useCreateApiOperations } from '@/api/generated/api-operation-controller/api-operation-controller'
 import { type ApiOperation } from '@/api/generated/openAPIDefinition.schemas'
+import { OperationAutocomplete } from '@/components/ui/operation-autocomplete'
+import { AutocompleteInput } from '@/components/ui/autocomplete-input'
 import { ArrowLeft, Plus, Trash2, Check, Activity, FileJson, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 
 type BehaviorModelInputMode = 'manual' | 'json' | 'auto-generate'
@@ -89,62 +91,6 @@ const benchmarkConfigSchema = z.object({
 })
 
 type BenchmarkConfigFormData = z.infer<typeof benchmarkConfigSchema>
-
-interface AutocompleteInputProps {
-  value: string
-  onChange: (value: string) => void
-  suggestions: string[]
-  placeholder?: string
-  className?: string
-}
-
-function AutocompleteInput({ value, onChange, suggestions, placeholder, className }: AutocompleteInputProps) {
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
-
-  useEffect(() => {
-    if (value && suggestions.length > 0) {
-      const filtered = suggestions.filter(s =>
-        s.toLowerCase().includes(value.toLowerCase())
-      ).slice(0, 8)
-      setFilteredSuggestions(filtered)
-      setShowSuggestions(filtered.length > 0 && value.length > 0)
-    } else {
-      setFilteredSuggestions([])
-      setShowSuggestions(false)
-    }
-  }, [value, suggestions])
-
-  return (
-    <div className="relative flex-1">
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => value && setShowSuggestions(filteredSuggestions.length > 0)}
-        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-        placeholder={placeholder}
-        className={className}
-      />
-      {showSuggestions && filteredSuggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-auto">
-          {filteredSuggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              className="w-full px-2 py-1.5 text-left text-xs hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-              onClick={() => {
-                onChange(suggestion)
-                setShowSuggestions(false)
-              }}
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 interface KeyValuePairListProps {
   name: string
@@ -233,68 +179,6 @@ function KeyValuePairList({ name, control, label, keyPlaceholder = 'Key', valueP
   )
 }
 
-interface OperationAutocompleteProps {
-  value: string
-  onChange: (value: string) => void
-  onSelectOperation: (operation: ApiOperation) => void
-  operations: ApiOperation[]
-  placeholder?: string
-  error?: string
-}
-
-function OperationAutocomplete({ value, onChange, onSelectOperation, operations, placeholder, error }: OperationAutocompleteProps) {
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [filteredOps, setFilteredOps] = useState<ApiOperation[]>([])
-
-  useEffect(() => {
-    if (value && operations.length > 0) {
-      const filtered = operations.filter(op =>
-        op.operationId.toLowerCase().includes(value.toLowerCase()) ||
-        op.path.toLowerCase().includes(value.toLowerCase())
-      ).slice(0, 10)
-      setFilteredOps(filtered)
-      setShowSuggestions(filtered.length > 0 && value.length > 0)
-    } else {
-      setFilteredOps([])
-      setShowSuggestions(false)
-    }
-  }, [value, operations])
-
-  return (
-    <div className="relative">
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => value && setShowSuggestions(filteredOps.length > 0)}
-        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-        placeholder={placeholder}
-        className={error ? 'border-destructive' : ''}
-      />
-      {showSuggestions && filteredOps.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-          {filteredOps.map((op) => (
-            <button
-              key={op.id}
-              type="button"
-              className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-              onClick={() => {
-                onSelectOperation(op)
-                setShowSuggestions(false)
-              }}
-            >
-              <div className="font-medium text-sm">{op.operationId}</div>
-              <div className="text-xs text-muted-foreground">
-                <span className="font-mono">{op.method}</span> {op.path}
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-      {error && <p className="text-sm text-destructive mt-1">{error}</p>}
-    </div>
-  )
-}
-
 interface BehaviorModelStepsProps {
   behaviorIndex: number
   control: any
@@ -327,7 +211,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors, apiOpera
               </Button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-[2fr_1fr_2fr] gap-3">
               <div className="space-y-2">
                 <Label>Operation ID</Label>
                 <OperationAutocomplete
@@ -374,7 +258,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors, apiOpera
 
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label>Component (optional)</Label>
+                <Label>Component</Label>
                 <Input
                   {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.component`)}
                   placeholder="user-service"
@@ -420,7 +304,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors, apiOpera
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Body (JSON)</Label>
+                <Label className="text-xs">Body (JSON)</Label>
                 <Textarea
                   {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.body`)}
                   placeholder='{"key": "value"}'
@@ -472,6 +356,9 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors, apiOpera
 export function OperationalSettingCreatePage() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const [searchParams] = useSearchParams()
+  const duplicateId = searchParams.get('duplicate')
+
   const createOperationalSetting = useCreateOperationalSetting()
   const createApiOperationsMutation = useCreateApiOperations()
 
@@ -483,6 +370,14 @@ export function OperationalSettingCreatePage() {
   const [actors, setActors] = useState<string[]>([])
   const [newActor, setNewActor] = useState('')
   const [collapsedModels, setCollapsedModels] = useState<Set<number>>(new Set())
+  const [isDuplicating, setIsDuplicating] = useState(false)
+
+  // Fetch the operational setting to duplicate
+  const { data: duplicateConfig } = useGetOperationalSetting(duplicateId || '', {
+    query: {
+      enabled: !!duplicateId,
+    }
+  })
 
   // Fetch API operations when openApiFile changes
   const { refetch: refetchApiOperations } = useListApiOperations(
@@ -532,6 +427,66 @@ export function OperationalSettingCreatePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openApiFile?.fileId])
 
+  // Pre-fill form when duplicating
+  useEffect(() => {
+    if (duplicateConfig && !isDuplicating) {
+      setIsDuplicating(true)
+
+      // Set OpenAPI file
+      if (duplicateConfig.openApiFile) {
+        setOpenApiFile({
+          fileId: duplicateConfig.openApiFile.id,
+          filename: duplicateConfig.openApiFile.filename,
+          size: duplicateConfig.openApiFile.fileSize,
+        })
+      }
+
+      // Convert operational profile from object to array
+      const operationalProfileArray = duplicateConfig.operationalProfile
+        ? Object.entries(duplicateConfig.operationalProfile).map(([load, frequency]) => ({
+            load: Number(load),
+            frequency: Number(frequency),
+          }))
+        : [{ load: 25, frequency: 1.0 }]
+
+      // Pre-fill form values
+      form.setValue('name', `${duplicateConfig.name} (Copy)`)
+      form.setValue('description', duplicateConfig.description || '')
+      form.setValue('operationalProfile', operationalProfileArray)
+
+      // Set behavior models
+      if (duplicateConfig.usageProfile && duplicateConfig.usageProfile.length > 0) {
+        // Extract unique actors
+        const uniqueActors = Array.from(new Set(duplicateConfig.usageProfile.map((m: any) => m.actor).filter(Boolean)))
+        setActors(uniqueActors)
+
+        // Convert to manual format
+        const manualModels = duplicateConfig.usageProfile.map((model: any) => ({
+          id: model.id || '',
+          actor: model.actor || '',
+          frequency: model.frequency || 0.5,
+          commonHeaders: [],
+          steps: (model.steps || []).map((step: any) => ({
+            method: step.method || 'GET',
+            path: step.path || '/',
+            operationId: step.operationId || '',
+            component: step.component || '',
+            waitMsFrom: step.waitMsFrom || 0,
+            waitMsTo: step.waitMsTo || 0,
+            headers: objectToKeyValuePairs(step.headers),
+            params: objectToKeyValuePairs(step.params),
+            body: typeof step.body === 'string' ? step.body : JSON.stringify(step.body || {}, null, 2),
+            save: objectToKeyValuePairs(step.save),
+          }))
+        }))
+
+        form.setValue('behaviorModels', manualModels)
+        setBehaviorModelInputMode('manual')
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duplicateConfig])
+
   const form = useForm<BenchmarkConfigFormData>({
     resolver: zodResolver(benchmarkConfigSchema),
     defaultValues: {
@@ -561,6 +516,68 @@ export function OperationalSettingCreatePage() {
       }
       return acc
     }, {} as Record<string, string>)
+  }
+
+  const objectToKeyValuePairs = (obj: Record<string, string> | undefined): { key: string; value: string }[] => {
+    if (!obj) return []
+    return Object.entries(obj).map(([key, value]) => ({ key, value }))
+  }
+
+  // Convert manual models to JSON format
+  const convertManualToJson = (models: any[]): string => {
+    if (!models || models.length === 0) return ''
+
+    const jsonModels = models.map((model: any) => ({
+      id: model.id,
+      actor: model.actor,
+      frequency: model.frequency,
+      steps: (model.steps || []).map((step: any) => ({
+        method: step.method,
+        path: step.path,
+        operationId: step.operationId,
+        ...(step.component && { component: step.component }),
+        waitMsFrom: Number(step.waitMsFrom) || 0,
+        waitMsTo: Number(step.waitMsTo) || 0,
+        headers: keyValuePairsToObject(step.headers || []),
+        params: keyValuePairsToObject(step.params || []),
+        body: step.body && step.body.trim() !== '' ? (typeof step.body === 'string' ? JSON.parse(step.body) : step.body) : {},
+        save: keyValuePairsToObject(step.save || []),
+      }))
+    }))
+
+    return JSON.stringify(jsonModels, null, 2)
+  }
+
+  // Convert JSON to manual models format
+  const convertJsonToManual = (jsonString: string): any[] => {
+    if (!jsonString || jsonString.trim() === '') return []
+
+    try {
+      const parsed = JSON.parse(jsonString)
+      if (!Array.isArray(parsed)) return []
+
+      return parsed.map((model: any) => ({
+        id: model.id || '',
+        actor: model.actor || '',
+        frequency: model.frequency || 0.5,
+        commonHeaders: [], // Common headers are not stored in JSON
+        steps: (model.steps || []).map((step: any) => ({
+          method: step.method || 'GET',
+          path: step.path || '/',
+          operationId: step.operationId || '',
+          component: step.component || '',
+          waitMsFrom: step.waitMsFrom || 0,
+          waitMsTo: step.waitMsTo || 0,
+          headers: objectToKeyValuePairs(step.headers),
+          params: objectToKeyValuePairs(step.params),
+          body: typeof step.body === 'string' ? step.body : JSON.stringify(step.body || {}, null, 2),
+          save: objectToKeyValuePairs(step.save),
+        }))
+      }))
+    } catch (e) {
+      console.error('Failed to convert JSON to manual format:', e)
+      return []
+    }
   }
 
   const validateBehaviorModelsJson = (jsonString: string) => {
@@ -706,7 +723,7 @@ export function OperationalSettingCreatePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link to="/operational-settings">
           <Button variant="ghost" size="icon">
@@ -714,8 +731,12 @@ export function OperationalSettingCreatePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Create Operational Setting</h1>
-          <p className="text-muted-foreground">Create a reusable load test configuration</p>
+          <h1 className="text-3xl font-bold">
+            {duplicateId ? 'Duplicate Operational Setting' : 'Create Operational Setting'}
+          </h1>
+          <p className="text-muted-foreground">
+            {duplicateId ? 'Create a copy of an existing load test configuration' : 'Create a reusable load test configuration'}
+          </p>
         </div>
       </div>
 
@@ -780,6 +801,25 @@ export function OperationalSettingCreatePage() {
                         variant={behaviorModelInputMode === 'manual' ? 'default' : 'outline'}
                         className="w-full"
                         onClick={() => {
+                            // Convert JSON to manual if switching from JSON mode
+                            if (behaviorModelInputMode === 'json') {
+                              const currentJson = form.watch('behaviorModelsJson')
+                              if (currentJson && currentJson.trim() !== '' && !jsonValidationError) {
+                                const manualModels = convertJsonToManual(currentJson)
+                                form.setValue('behaviorModels', manualModels)
+
+                                // Extract and sync actors from JSON
+                                try {
+                                  const parsed = JSON.parse(currentJson)
+                                  if (Array.isArray(parsed)) {
+                                    const uniqueActors = Array.from(new Set(parsed.map((m: any) => m.actor).filter(Boolean)))
+                                    setActors(uniqueActors)
+                                  }
+                                } catch (e) {
+                                  console.error('Failed to extract actors from JSON:', e)
+                                }
+                              }
+                            }
                             setBehaviorModelInputMode('manual')
                             form.setValue('generateBehaviorModels', false)
                             setJsonValidationError(null)
@@ -792,10 +832,28 @@ export function OperationalSettingCreatePage() {
                     variant={behaviorModelInputMode === 'json' ? 'default' : 'outline'}
                     className="w-full"
                     onClick={() => {
+                      // Convert manual to JSON if switching from manual mode
+                      if (behaviorModelInputMode === 'manual') {
+                        const currentModels = form.watch('behaviorModels')
+                        if (currentModels && currentModels.length > 0) {
+                          try {
+                            const jsonString = convertManualToJson(currentModels)
+                            form.setValue('behaviorModelsJson', jsonString)
+                            validateBehaviorModelsJson(jsonString)
+
+                            // Extract and sync actors from manual models
+                            const uniqueActors = Array.from(new Set(currentModels.map((m: any) => m.actor).filter(Boolean)))
+                            setActors(uniqueActors)
+                          } catch (e) {
+                            console.error('Failed to convert manual to JSON:', e)
+                          }
+                        }
+                      } else {
+                        const currentJson = form.watch('behaviorModelsJson')
+                        if (currentJson) validateBehaviorModelsJson(currentJson)
+                      }
                       setBehaviorModelInputMode('json')
                       form.setValue('generateBehaviorModels', false)
-                      const currentJson = form.watch('behaviorModelsJson')
-                      if (currentJson) validateBehaviorModelsJson(currentJson)
                     }}
                   >
                     <FileJson className="h-4 w-4 mr-2" />
@@ -960,40 +1018,37 @@ export function OperationalSettingCreatePage() {
 
                           {!isCollapsed && (
                             <>
-                              <div className="flex items-end gap-2">
-                                <div className="flex-1 grid grid-cols-2 gap-3">
-                                  <div className="space-y-2">
-                                    <Label>ID</Label>
-                                    <Input {...form.register(`behaviorModels.${index}.id`)} placeholder="checkout-flow" />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label>Actor</Label>
-                                    {actors.length > 0 ? (
-                                      <Select
-                                        value={currentModel?.actor || ''}
-                                        onValueChange={(value) => form.setValue(`behaviorModels.${index}.actor`, value)}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Select actor" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {actors.map((actor) => (
-                                            <SelectItem key={actor} value={actor}>
-                                              {actor}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    ) : (
-                                      <Input {...form.register(`behaviorModels.${index}.actor`)} placeholder="Add actors above first" disabled />
-                                    )}
-                                  </div>
+                              <div className="grid grid-cols-3 gap-3">
+                                <div className="space-y-2">
+                                  <Label>ID</Label>
+                                  <Input {...form.register(`behaviorModels.${index}.id`)} placeholder="checkout-flow" />
                                 </div>
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label>Behavior Model Frequency (0-1)</Label>
-                                <Input type="number" step="0.01" min="0" max="1" {...form.register(`behaviorModels.${index}.frequency`)} />
+                                <div className="space-y-2">
+                                  <Label>Actor</Label>
+                                  {actors.length > 0 ? (
+                                    <Select
+                                      value={currentModel?.actor || ''}
+                                      onValueChange={(value) => form.setValue(`behaviorModels.${index}.actor`, value)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select actor" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {actors.map((actor) => (
+                                          <SelectItem key={actor} value={actor}>
+                                            {actor}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <Input {...form.register(`behaviorModels.${index}.actor`)} placeholder="Add actors above first" disabled />
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Frequency (0-1)</Label>
+                                  <Input type="number" step="0.01" min="0" max="1" {...form.register(`behaviorModels.${index}.frequency`)} />
+                                </div>
                               </div>
 
                               <div className="space-y-2">

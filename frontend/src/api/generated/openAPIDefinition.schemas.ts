@@ -349,6 +349,8 @@ export interface CreateBenchmarkRunRequest {
   testDuration?: string;
 }
 
+export type BenchmarkRunDtoOperationalProfile = {[key: string]: number};
+
 export type BenchmarkRunDtoStatus = typeof BenchmarkRunDtoStatus[keyof typeof BenchmarkRunDtoStatus];
 
 
@@ -371,6 +373,8 @@ export interface BenchmarkRunDto {
   updatedAt: string;
   benchmarkId: string;
   testDuration: string;
+  usageProfile: BehaviorModel[];
+  operationalProfile: BenchmarkRunDtoOperationalProfile;
   status: BenchmarkRunDtoStatus;
   testSuites: TestSuiteDto[];
   scalabilityThresholds?: BenchmarkRunDtoScalabilityThresholds;

@@ -31,7 +31,7 @@ class K6CommandExecutor(
             "--rm",
             networkCommandOption, networkCommandValue,
             "-e", "BASE_URL=${getBaseUrl(sutPort)}",
-            "-e", "CONFIG_URL=${getConfigUrl(operationalSettingId)}",
+            "-e", "USAGE_PROFILE_URL=${getUsageProfileUrlFromOperationalSetting(operationalSettingId)}",
             k6Properties.dockerImage,
             "run",
             ScriptFile.VALIDATION.file.toString(),
@@ -40,8 +40,8 @@ class K6CommandExecutor(
         return localCommandExecutor.execute(command, null)
     }
 
-    fun runK6WarmUp(
-        operationalSettingId: UUID,
+    fun executeK6WarmUp(
+        benchmarkRunId: UUID,
         testCaseId: UUID,
         sutPort: Int,
         load: Int,
@@ -60,7 +60,7 @@ class K6CommandExecutor(
             "--rm",
             networkCommandOption, networkCommandValue,
             "-e", "BASE_URL=${getBaseUrl(sutPort)}",
-            "-e", "CONFIG_URL=${getConfigUrl(operationalSettingId)}",
+            "-e", "USAGE_PROFILE_URL=${getUsageProfileUrlFromBenchmarkRun(benchmarkRunId)}",
             "-e", "TEST_CASE_ID=$testCaseId",
             "-e", "TARGET_VUS=$load",
             "-e", "DURATION=30s",
@@ -72,8 +72,8 @@ class K6CommandExecutor(
         return localCommandExecutor.execute(command, null)
     }
 
-    fun runK6Test(
-        operationalSettingId: UUID,
+    fun executeK6Test(
+        benchmarkRunId: UUID,
         testCaseId: UUID,
         sutPort: Int,
         load: Int,
@@ -93,7 +93,7 @@ class K6CommandExecutor(
             "--rm",
             networkCommandOption, networkCommandValue,
             "-e", "BASE_URL=${getBaseUrl(sutPort)}",
-            "-e", "CONFIG_URL=${getConfigUrl(operationalSettingId)}",
+            "-e", "USAGE_PROFILE_URL=${getUsageProfileUrlFromBenchmarkRun(benchmarkRunId)}",
             "-e", "TEST_CASE_ID=$testCaseId",
             "-e", "TARGET_VUS=$load",
             "-e", "DURATION=$duration",
@@ -115,9 +115,14 @@ class K6CommandExecutor(
         return "http://$sutHost:$appPort"
     }
 
-    private fun getConfigUrl(operationalSettingId: UUID): String {
+    private fun getUsageProfileUrlFromOperationalSetting(operationalSettingId: UUID): String {
         val host = k6Properties.dockerNetworkConfig?.containerName ?: "host.docker.internal"
-        return "http://$host:8080/api/operational-settings/$operationalSettingId"
+        return "http://$host:8080/api/operational-settings/$operationalSettingId/usage-profile"
+    }
+
+    private fun getUsageProfileUrlFromBenchmarkRun(benchmarkRunId: UUID): String {
+        val host = k6Properties.dockerNetworkConfig?.containerName ?: "host.docker.internal"
+        return "http://$host:8080/api/benchmark-runs/$benchmarkRunId/usage-profile"
     }
 }
 

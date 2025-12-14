@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, ArrowLeft, Trash2, FileJson, Activity, Users, ChevronDown, ChevronRight, Pencil } from 'lucide-react'
+import { Loader2, ArrowLeft, Trash2, FileJson, Activity, Users, ChevronDown, ChevronRight, Pencil, Clock } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -192,10 +192,19 @@ export function OperationalSettingDetailPage() {
                           const hasSave = step.save && Object.keys(step.save).length > 0
                           const hasDetails = hasHeaders || hasParams || hasBody || hasSave
 
+                          // Build path with query parameters
+                          let pathWithParams = step.path
+                          if (hasParams) {
+                            const queryString = Object.entries(step.params)
+                              .map(([key, value]) => `${key}=${value}`)
+                              .join('&')
+                            pathWithParams = `${step.path}?${queryString}`
+                          }
+
                           return (
                             <div key={stepIdx} className="rounded bg-background border">
                               <div
-                                className={`flex items-center gap-2 text-sm p-2 transition-colors ${hasDetails ? 'cursor-pointer hover:bg-muted/50' : ''}`}
+                                className={`grid grid-cols-[16px_minmax(150px,200px)_1fr_minmax(80px,120px)] gap-2 items-center text-sm p-2 transition-colors ${hasDetails ? 'cursor-pointer hover:bg-muted/50' : ''}`}
                                 onClick={() => hasDetails && toggleStepExpanded(idx, stepIdx)}
                               >
                                 <div className="w-4 h-4 flex-shrink-0">
@@ -207,9 +216,23 @@ export function OperationalSettingDetailPage() {
                                     )
                                   )}
                                 </div>
-                                <Badge variant="outline" className="font-mono text-xs">{step.method}</Badge>
-                                <span className="font-mono text-xs flex-1">{step.path}</span>
-                                <span className="text-xs text-muted-foreground">{step.operationId}</span>
+                                <span className="text-xs text-muted-foreground truncate" title={step.operationId}>{step.operationId}</span>
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Badge variant="outline" className="font-mono text-xs flex-shrink-0">{step.method}</Badge>
+                                  <span className="font-mono text-xs truncate" title={pathWithParams}>{pathWithParams}</span>
+                                </div>
+                                <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+                                  {(step.waitMsFrom > 0 || step.waitMsTo > 0) ? (
+                                    <>
+                                      <Clock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                      <span className="text-xs font-medium">
+                                        {step.waitMsFrom === step.waitMsTo ? `${step.waitMsFrom / 1000}s` : `${step.waitMsFrom/1000}-${step.waitMsTo/1000}s`}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  )}
+                                </div>
                               </div>
 
                               {expanded && hasDetails && (

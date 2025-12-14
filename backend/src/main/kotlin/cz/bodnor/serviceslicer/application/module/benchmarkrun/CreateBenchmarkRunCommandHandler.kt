@@ -26,6 +26,8 @@ class CreateBenchmarkRunCommandHandler(
         val benchmarkRun = BenchmarkRun(
             benchmark = benchmark,
             testDuration = Duration.parse(command.testDuration ?: k6Properties.testDuration),
+            usageProfile = benchmark.operationalSetting.usageProfile,
+            operationalProfile = benchmark.operationalSetting.operationalProfile,
         )
 
         // Create a TestSuite for each SystemUnderTest in the Benchmark

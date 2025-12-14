@@ -3,6 +3,7 @@ package cz.bodnor.serviceslicer.domain.benchmarkrun
 import cz.bodnor.serviceslicer.domain.benchmark.Benchmark
 import cz.bodnor.serviceslicer.domain.common.UpdatableEntity
 import cz.bodnor.serviceslicer.domain.job.JobStatus
+import cz.bodnor.serviceslicer.domain.operationalsetting.BehaviorModel
 import cz.bodnor.serviceslicer.domain.sut.SystemUnderTest
 import cz.bodnor.serviceslicer.domain.testcase.OperationId
 import cz.bodnor.serviceslicer.domain.testcase.TestCase
@@ -14,6 +15,8 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -29,6 +32,14 @@ class BenchmarkRun(
     val benchmark: Benchmark,
 
     val testDuration: Duration,
+
+    // Copy of Behavior models from the OperationalSetting representing user flows/scenarios
+    @JdbcTypeCode(SqlTypes.JSON)
+    val usageProfile: List<BehaviorModel>,
+
+    // Copy of Operational profile from the OperationalSetting defining load patterns and weights
+    @JdbcTypeCode(SqlTypes.JSON)
+    val operationalProfile: Map<Int, BigDecimal>,
 ) : UpdatableEntity() {
 
     @Enumerated(EnumType.STRING)
@@ -44,8 +55,10 @@ class BenchmarkRun(
     @OneToMany(cascade = [CascadeType.ALL], orphanRemoval = true, mappedBy = "benchmarkRun", fetch = FetchType.EAGER)
     private val _testSuites: MutableList<TestSuite> = mutableListOf()
 
-    val testSuites: Set<TestSuite>
-        get() = _testSuites.toSet()
+    val testSuites: List<TestSuite>
+        get() = _testSuites.sortedWith(
+            compareByDescending<TestSuite> { it.isBaseline }.thenBy { it.systemUnderTest.name },
+        )
 
     fun getTestDurationString() = testDuration.toString()
 

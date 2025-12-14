@@ -25,22 +25,20 @@ class QueryLoadTestMetricsPrometheus(
     ): List<QueryLoadTestMetrics.PerformanceMetrics> {
         // Build label filter for k6 metrics
         val labelFilter = """test_case_id="$testCaseId""""
-        val startEpoch = start.epochSecond
-        val endEpoch = end.epochSecond
-        val durationSeconds = endEpoch - startEpoch
-        val durationRange = "${durationSeconds}s"
 
-        // Use increase() for counters to get delta over time range
-        // This is more reliable than point-in-time subtraction with @ modifier
-        // Query 1: Get total requests count per operation (increase over time range)
-        val totalRequestsQuery = "sum by (operation) (increase(k6_http_reqs_total{$labelFilter}[$durationRange] @ $endEpoch))"
+        // k6 counters and histograms reset to 0 for each test run, so the raw value
+        // at the end timestamp IS the total for this test. No need for increase().
+        // We use the 'time' parameter to query at the specific end timestamp.
 
-        // Query 2: Get failed requests count per operation (increase over time range)
-        val failedRequestsQuery = "sum by (operation) (increase(k6_http_reqs_total{$labelFilter,status!~\"2..\"}[$durationRange] @ $endEpoch))"
+        // Query 1: Get total requests count per operation (raw counter value)
+        val totalRequestsQuery = "sum by (operation) (k6_http_reqs_total{$labelFilter})"
 
-        // Query 3-6: For native histograms, use increase() over the time range
-        // This works because k6 writes cumulative native histograms (like counters)
-        val histogramBase = "sum by (operation) (increase(k6_http_req_duration_seconds{$labelFilter}[$durationRange] @ $endEpoch))"
+        // Query 2: Get failed requests count per operation (raw counter value)
+        val failedRequestsQuery = "sum by (operation) (k6_http_reqs_total{$labelFilter,status!~\"2..\"})"
+
+        // Query 3-6: For native histograms, use the raw cumulative histogram at end time
+        // k6 resets histograms for each test run, so the value at end IS the test total
+        val histogramBase = "sum by (operation) (k6_http_req_duration_seconds{$labelFilter})"
 
         // Query 3: Get mean response time from native histogram per operation
         val meanResponseTimeQuery = "histogram_avg($histogramBase)"
@@ -54,28 +52,28 @@ class QueryLoadTestMetricsPrometheus(
         // Query 6: 99th percentile response time from native histogram
         val p99ResponseTimeQuery = "histogram_quantile(0.99, $histogramBase)"
 
-        // Execute instant queries
-        val totalRequests = prometheusConnector.query(totalRequestsQuery)
+        // Execute instant queries at the end timestamp
+        val totalRequests = prometheusConnector.query(totalRequestsQuery, end)
             .also { logger.debug { "Total requests response: $it" } }
             .parseVectorResult()
 
-        val failedRequests = prometheusConnector.query(failedRequestsQuery)
+        val failedRequests = prometheusConnector.query(failedRequestsQuery, end)
             .also { logger.debug { "Failed requests response: $it" } }
             .parseVectorResult()
 
-        val meanResponseTimeResponse = prometheusConnector.query(meanResponseTimeQuery)
+        val meanResponseTimeResponse = prometheusConnector.query(meanResponseTimeQuery, end)
             .also { logger.debug { "Mean response time response: $it" } }
             .parseVectorResult()
 
-        val stdDevResponseTimeResponse = prometheusConnector.query(stdDevResponseTimeQuery)
+        val stdDevResponseTimeResponse = prometheusConnector.query(stdDevResponseTimeQuery, end)
             .also { logger.debug { "StdDev response time response: $it" } }
             .parseVectorResult()
 
-        val p95ResponseTimeResponse = prometheusConnector.query(p95ResponseTimeQuery)
+        val p95ResponseTimeResponse = prometheusConnector.query(p95ResponseTimeQuery, end)
             .also { logger.debug { "P95 response time response: $it" } }
             .parseVectorResult()
 
-        val p99ResponseTimeResponse = prometheusConnector.query(p99ResponseTimeQuery)
+        val p99ResponseTimeResponse = prometheusConnector.query(p99ResponseTimeQuery, end)
             .also { logger.debug { "P99 response time response: $it" } }
             .parseVectorResult()
 

@@ -24,6 +24,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BehaviorModel,
   CreateOperationalSettingRequest,
   ListOperationalSettingsParams,
   ListOperationalSettingsResponse,
@@ -382,4 +383,89 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const getUsageProfile = (
+    operationalSettingId: string,
+ options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<BehaviorModel[]>(
+      {url: `/operational-settings/${operationalSettingId}/usage-profile`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetUsageProfileQueryKey = (operationalSettingId?: string,) => {
+    return [
+    `/operational-settings/${operationalSettingId}/usage-profile`
+    ] as const;
+    }
+
     
+export const getGetUsageProfileQueryOptions = <TData = Awaited<ReturnType<typeof getUsageProfile>>, TError = unknown>(operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsageProfileQueryKey(operationalSettingId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsageProfile>>> = ({ signal }) => getUsageProfile(operationalSettingId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(operationalSettingId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUsageProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getUsageProfile>>>
+export type GetUsageProfileQueryError = unknown
+
+
+export function useGetUsageProfile<TData = Awaited<ReturnType<typeof getUsageProfile>>, TError = unknown>(
+ operationalSettingId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsageProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getUsageProfile>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsageProfile<TData = Awaited<ReturnType<typeof getUsageProfile>>, TError = unknown>(
+ operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsageProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getUsageProfile>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsageProfile<TData = Awaited<ReturnType<typeof getUsageProfile>>, TError = unknown>(
+ operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetUsageProfile<TData = Awaited<ReturnType<typeof getUsageProfile>>, TError = unknown>(
+ operationalSettingId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUsageProfileQueryOptions(operationalSettingId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+

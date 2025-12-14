@@ -40,7 +40,6 @@ class TestCaseRunner(
         val load = testCase.load
         val sut = testCase.testSuite.systemUnderTest
         val duration = testCase.testSuite.benchmarkRun.testDuration
-        val operationalSetting = testCase.testSuite.benchmarkRun.benchmark.operationalSetting
 
         logger.info {
             "Executing TestCase for SUT ${sut.id} [${sut.name}] with load=$load and duration=$duration"
@@ -50,7 +49,7 @@ class TestCaseRunner(
 
         try {
             val k6Result = k6Runner.runTest(
-                operationalSettingId = operationalSetting.id,
+                benchmarkRunId = testCase.testSuite.benchmarkRun.id,
                 testCaseId = testCase.id,
                 appPort = sut.dockerConfig.appPort,
                 load = load,

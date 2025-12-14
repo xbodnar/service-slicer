@@ -91,6 +91,8 @@ class SshCommandExecutor(
 
     override fun getTargetHost(): String = remoteProperties.host
 
+    override fun getProjectWorkDir(projectName: String): File = File("${remoteProperties.workDir}/$projectName")
+
     private fun <T> withSession(block: (Session) -> T): T {
         val session = jsch.getSession(
             remoteProperties.username,

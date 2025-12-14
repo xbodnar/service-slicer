@@ -13,6 +13,8 @@ import { useToast } from '@/components/ui/use-toast'
 import { useGetOperationalSetting, useUpdateOperationalSetting } from '@/api/generated/operational-setting-controller/operational-setting-controller'
 import { useListApiOperations } from '@/api/generated/api-operation-controller/api-operation-controller'
 import { type ApiOperation } from '@/api/generated/openAPIDefinition.schemas'
+import { OperationAutocomplete } from '@/components/ui/operation-autocomplete'
+import { AutocompleteInput } from '@/components/ui/autocomplete-input'
 import { ArrowLeft, Plus, Trash2, Check, FileJson, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 
 type BehaviorModelInputMode = 'manual' | 'json'
@@ -85,62 +87,6 @@ const editConfigSchema = z.object({
 })
 
 type EditConfigFormData = z.infer<typeof editConfigSchema>
-
-interface AutocompleteInputProps {
-  value: string
-  onChange: (value: string) => void
-  suggestions: string[]
-  placeholder?: string
-  className?: string
-}
-
-function AutocompleteInput({ value, onChange, suggestions, placeholder, className }: AutocompleteInputProps) {
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([])
-
-  useEffect(() => {
-    if (value && suggestions.length > 0) {
-      const filtered = suggestions.filter(s =>
-        s.toLowerCase().includes(value.toLowerCase())
-      ).slice(0, 8)
-      setFilteredSuggestions(filtered)
-      setShowSuggestions(filtered.length > 0 && value.length > 0)
-    } else {
-      setFilteredSuggestions([])
-      setShowSuggestions(false)
-    }
-  }, [value, suggestions])
-
-  return (
-    <div className="relative flex-1">
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => value && setShowSuggestions(filteredSuggestions.length > 0)}
-        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-        placeholder={placeholder}
-        className={className}
-      />
-      {showSuggestions && filteredSuggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-auto">
-          {filteredSuggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              className="w-full px-2 py-1.5 text-left text-xs hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-              onClick={() => {
-                onChange(suggestion)
-                setShowSuggestions(false)
-              }}
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 interface KeyValuePairListProps {
   name: string
@@ -228,68 +174,6 @@ function KeyValuePairList({ name, control, label, keyPlaceholder = 'Key', valueP
   )
 }
 
-interface OperationAutocompleteProps {
-  value: string
-  onChange: (value: string) => void
-  onSelectOperation: (operation: ApiOperation) => void
-  operations: ApiOperation[]
-  placeholder?: string
-  error?: string
-}
-
-function OperationAutocomplete({ value, onChange, onSelectOperation, operations, placeholder, error }: OperationAutocompleteProps) {
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [filteredOps, setFilteredOps] = useState<ApiOperation[]>([])
-
-  useEffect(() => {
-    if (value && operations.length > 0) {
-      const filtered = operations.filter(op =>
-        op.operationId.toLowerCase().includes(value.toLowerCase()) ||
-        op.path.toLowerCase().includes(value.toLowerCase())
-      ).slice(0, 10)
-      setFilteredOps(filtered)
-      setShowSuggestions(filtered.length > 0 && value.length > 0)
-    } else {
-      setFilteredOps([])
-      setShowSuggestions(false)
-    }
-  }, [value, operations])
-
-  return (
-    <div className="relative">
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => value && setShowSuggestions(filteredOps.length > 0)}
-        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-        placeholder={placeholder}
-        className={error ? 'border-destructive' : ''}
-      />
-      {showSuggestions && filteredOps.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-          {filteredOps.map((op) => (
-            <button
-              key={op.id}
-              type="button"
-              className="w-full px-3 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-              onClick={() => {
-                onSelectOperation(op)
-                setShowSuggestions(false)
-              }}
-            >
-              <div className="font-medium text-sm">{op.operationId}</div>
-              <div className="text-xs text-muted-foreground">
-                <span className="font-mono">{op.method}</span> {op.path}
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-      {error && <p className="text-sm text-destructive mt-1">{error}</p>}
-    </div>
-  )
-}
-
 interface BehaviorModelStepsProps {
   behaviorIndex: number
   control: any
@@ -322,7 +206,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors, apiOpera
               </Button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-[2fr_1fr_2fr] gap-3">
               <div className="space-y-2">
                 <Label>Operation ID</Label>
                 <OperationAutocomplete
@@ -369,7 +253,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors, apiOpera
 
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label>Component (optional)</Label>
+                <Label>Component</Label>
                 <Input
                   {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.component`)}
                   placeholder="user-service"
@@ -415,7 +299,7 @@ function BehaviorModelSteps({ behaviorIndex, control, register, errors, apiOpera
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Body (JSON)</Label>
+                <Label className="text-xs">Body (JSON)</Label>
                 <Textarea
                   {...register(`behaviorModels.${behaviorIndex}.steps.${stepIndex}.body`)}
                   placeholder='{"key": "value"}'
@@ -726,7 +610,7 @@ export function OperationalSettingEditPage() {
 
   if (!config) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Link to="/operational-settings">
             <Button variant="ghost" size="icon">
@@ -742,7 +626,7 @@ export function OperationalSettingEditPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link to={`/operational-settings/${configId}`}>
           <Button variant="ghost" size="icon">
@@ -947,40 +831,37 @@ export function OperationalSettingEditPage() {
 
                           {!isCollapsed && (
                             <>
-                              <div className="flex items-end gap-2">
-                                <div className="flex-1 grid grid-cols-2 gap-3">
-                                  <div className="space-y-2">
-                                    <Label>ID</Label>
-                                    <Input {...form.register(`behaviorModels.${index}.id`)} placeholder="checkout-flow" />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label>Actor</Label>
-                                    {actors.length > 0 ? (
-                                      <Select
-                                        value={currentModel?.actor || ''}
-                                        onValueChange={(value) => form.setValue(`behaviorModels.${index}.actor`, value)}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Select actor" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {actors.map((actor) => (
-                                            <SelectItem key={actor} value={actor}>
-                                              {actor}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    ) : (
-                                      <Input {...form.register(`behaviorModels.${index}.actor`)} placeholder="Add actors above first" disabled />
-                                    )}
-                                  </div>
+                              <div className="grid grid-cols-3 gap-3">
+                                <div className="space-y-2">
+                                  <Label>ID</Label>
+                                  <Input {...form.register(`behaviorModels.${index}.id`)} placeholder="checkout-flow" />
                                 </div>
-                              </div>
-
-                              <div className="space-y-2">
-                                <Label>Behavior Model Frequency (0-1)</Label>
-                                <Input type="number" step="0.01" min="0" max="1" {...form.register(`behaviorModels.${index}.frequency`)} />
+                                <div className="space-y-2">
+                                  <Label>Actor</Label>
+                                  {actors.length > 0 ? (
+                                    <Select
+                                      value={currentModel?.actor || ''}
+                                      onValueChange={(value) => form.setValue(`behaviorModels.${index}.actor`, value)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select actor" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {actors.map((actor) => (
+                                          <SelectItem key={actor} value={actor}>
+                                            {actor}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <Input {...form.register(`behaviorModels.${index}.actor`)} placeholder="Add actors above first" disabled />
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>Frequency (0-1)</Label>
+                                  <Input type="number" step="0.01" min="0" max="1" {...form.register(`behaviorModels.${index}.frequency`)} />
+                                </div>
                               </div>
 
                               <div className="space-y-2">

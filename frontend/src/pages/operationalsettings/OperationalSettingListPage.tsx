@@ -1,16 +1,17 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useListOperationalSettings } from '@/api/generated/operational-setting-controller/operational-setting-controller'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Plus, Settings, ArrowRight, Calendar } from 'lucide-react'
+import { Loader2, Plus, Settings, ArrowRight, Calendar, Copy, User, GitBranch, Gauge } from 'lucide-react'
 import { formatDistance } from 'date-fns'
 import { Pagination } from '@/components/ui/pagination'
 import { useState } from 'react'
 
 export function OperationalSettingListPage() {
+  const navigate = useNavigate()
   const [page, setPage] = useState(0)
-  const [size] = useState(12)
+  const [size] = useState(6)
   const { data, isLoading, error } = useListOperationalSettings({ page, size })
 
   if (isLoading) {
@@ -67,8 +68,8 @@ export function OperationalSettingListPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {data.items.map((config) => (
-            <Link key={config.id} to={`/operational-settings/${config.id}`}>
-              <Card className="group border-2 hover:border-primary/50 hover:shadow-lg transition-all h-full cursor-pointer">
+            <Card key={config.id} className="group border-2 hover:border-primary/50 hover:shadow-lg transition-all h-full flex flex-col">
+              <Link to={`/operational-settings/${config.id}`} className="cursor-pointer flex-1 flex flex-col">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
@@ -86,20 +87,61 @@ export function OperationalSettingListPage() {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-muted-foreground">Behavior Models:</span>
-                    <Badge variant="secondary">
-                      {config.usageProfile?.length ?? 0}
-                    </Badge>
+                  {/* Behavior Models */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Behavior Models ({config.usageProfile?.length ?? 0})</span>
+                    </div>
+                    {config.usageProfile && config.usageProfile.length > 0 ? (
+                      <div className="space-y-1.5 pl-6">
+                        {config.usageProfile.map((model: any, idx: number) => (
+                          <div key={idx} className="flex items-start gap-2 text-xs">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{model.id}</span>
+                                <Badge variant="outline" className="text-xs px-1.5 py-0">
+                                  {model.actor}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-1 text-muted-foreground mt-0.5">
+                                <GitBranch className="h-3 w-3" />
+                                <span>{model.steps?.length ?? 0} steps</span>
+                                <span className="mx-1">•</span>
+                                <span>{(model.frequency * 100).toFixed(0)}% frequency</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic pl-6">No behavior models defined</p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-muted-foreground">Load Levels:</span>
-                    <Badge variant="secondary">
-                      {config.operationalProfile ? Object.keys(config.operationalProfile).length : 0}
-                    </Badge>
+
+                  {/* Operational Profile */}
+                  <div className="space-y-2 pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      <Gauge className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Operational Profile</span>
+                    </div>
+                    {config.operationalProfile && Object.keys(config.operationalProfile).length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 pl-6">
+                        {Object.entries(config.operationalProfile)
+                          .sort(([a], [b]) => Number(a) - Number(b))
+                          .map(([load, frequency]) => (
+                            <Badge key={load} variant="secondary" className="text-xs">
+                              {load} users ({(Number(frequency) * 100).toFixed(0)}%)
+                            </Badge>
+                          ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic pl-6">No load levels defined</p>
+                    )}
                   </div>
+
                   {config.createdAt && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1 border-t">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
                       <Calendar className="h-3.5 w-3.5" />
                       <span>
                         {formatDistance(new Date(config.createdAt), new Date(), { addSuffix: true })}
@@ -107,8 +149,23 @@ export function OperationalSettingListPage() {
                     </div>
                   )}
                 </CardContent>
-              </Card>
-            </Link>
+              </Link>
+              <CardContent className="pt-0 mt-auto">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    navigate(`/operational-settings/new?duplicate=${config.id}`)
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicate
+                </Button>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

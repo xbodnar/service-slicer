@@ -96,16 +96,56 @@ class SystemUnderTestRunner(
     @PreDestroy
     fun stopSUT() {
         val info = currentRun.get() ?: return
+        logger.info { "Stopping SUT: ${info.project}" }
 
-        runCatching {
-            commandExecutor.execute(
+        try {
+            val workDir = commandExecutor.getProjectWorkDir(info.project)
+
+            // 1. Stop and remove containers, networks, and volumes
+            logger.debug { "Running docker compose down -v for project ${info.project}..." }
+            val downResult = commandExecutor.execute(
                 listOf("docker", "compose", "-p", info.project, "down", "-v"),
+                workDir,
+            )
+            if (downResult.exitCode != 0) {
+                logger.warn { "docker compose down failed (exit=${downResult.exitCode}):\n${downResult.output}" }
+            } else {
+                logger.debug { "Docker compose down successful" }
+            }
+
+            // 2. Prune dangling volumes (belt-and-suspenders approach)
+            logger.debug { "Pruning dangling Docker volumes..." }
+            val pruneResult = commandExecutor.execute(
+                listOf("docker", "volume", "prune", "-f"),
                 null,
             )
-            logger.info { "SUT stopped" }
-        }
+            if (pruneResult.exitCode != 0) {
+                logger.warn { "docker volume prune failed (exit=${pruneResult.exitCode}):\n${pruneResult.output}" }
+            }
 
-        currentRun.set(null)
+            // 3. Delete project directory (only for remote execution)
+            if (workDir != null) {
+                logger.debug { "Deleting project directory: ${workDir.absolutePath}" }
+                val rmResult = commandExecutor.execute(
+                    listOf("rm", "-rf", workDir.absolutePath),
+                    null,
+                )
+                if (rmResult.exitCode != 0) {
+                    logger.warn {
+                        "Failed to delete project directory " +
+                            "(exit=${rmResult.exitCode}):\n${rmResult.output}"
+                    }
+                } else {
+                    logger.debug { "Project directory deleted successfully" }
+                }
+            }
+
+            logger.info { "SUT cleanup completed for ${info.project}" }
+        } catch (e: Exception) {
+            logger.error(e) { "Error during SUT cleanup for ${info.project}" }
+        } finally {
+            currentRun.set(null)
+        }
     }
 
     data class SUTContainer(

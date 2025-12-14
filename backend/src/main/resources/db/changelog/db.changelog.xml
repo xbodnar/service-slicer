@@ -195,4 +195,15 @@
 
         <dropColumn tableName="benchmark_system_under_test" columnName="validation_result"/>
     </changeSet>
+
+    <changeSet id="add-immutable-copies-of-operational-settings-to-benchmark-run" author="Norbert Bodnar">
+        <addColumn tableName="benchmark_run">
+            <column name="usage_profile" type="jsonb" defaultValue="[]">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operational_profile" type="jsonb" defaultValue="{}">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

@@ -38,4 +38,11 @@ sealed interface CommandExecutor {
      * Get the hostname that should be used for health checks and connectivity.
      */
     fun getTargetHost(): String
+
+    /**
+     * Get the working directory for a given project name.
+     * @param projectName Name of the project (e.g., "ss_run_uuid")
+     * @return Working directory path, or null if not applicable (local execution)
+     */
+    fun getProjectWorkDir(projectName: String): File?
 }

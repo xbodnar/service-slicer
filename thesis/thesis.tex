@@ -97,7 +97,7 @@
 
 \chapter{Introduction}
 
-Software systems have evolved significantly over the past decades, with many organizations initially building large monolithic applications that served their business needs. However, as these systems grew in complexity and size, they began to present numerous challenges in terms of maintenance, scalability, and deployment~\cite{msyesterday}. This has led to a significant shift towards microservices architecture~\cite{msAdoption}, which promises better scalability, maintainability, and deployment flexibility~\cite{buildingMicroservices}. 
+Organizations initially built large monolithic systems to serve their business needs. As these systems grew, they became difficult to maintain, scale, and deploy~\cite{msyesterday}. This challenge has driven adoption of microservices architecture~\cite{msAdoption}, which offers better scalability, maintainability, and operational flexibility~\cite{buildingMicroservices}. 
 
 The process of decomposing monolithic applications into microservices is full of challenges, trade-offs, and uncertainties~\cite{fowler-microservice-tradeoffs}. This thesis introduces a tool for supporting the monolith decomposition process, focusing on both static analysis methods for discovering service boundaries and empirical performance benchmarking to validate decomposition quality.
 
@@ -105,18 +105,18 @@ The process of decomposing monolithic applications into microservices is full of
 
 The transition from monolithic to microservices architecture is not straightforward. It requires careful planning, deep understanding of the existing system, and systematic approaches to decomposition. Moreover, it is difficult to predict how a proposed decomposition will behave under realistic workload conditions. While microservices offer potential advantages in scalability, maintainability, and operational flexibility, the path toward achieving these benefits is uncertain and often costly~\cite{M2MDF}~\cite{fromMonolithToMicroservices}~\cite{taibi}.
 
-Recent industry observations highlight the uncertainty surrounding architectural transitions. O'Reilly's Technology Trends for 2024~\cite{loukides2024TechnologyTrends} reports that although 61\% of surveyed enterprises have adopted microservices, 29\% have encountered difficulties severe enough to initiate a return to monolithic architectures. This demonstrates that architectural transitions carry substantial risks: the resulting system may become more complex to operate, exhibit worse performance characteristics, or fail to deliver the expected improvements. These outcomes often stem from poorly chosen service boundaries, increased inter-service communication overhead, or unforeseen distributed-system bottlenecks~\cite{fowler-microservice-tradeoffs}—issues that are difficult to detect through static design analysis alone.
+Architectural transitions carry substantial risk. O'Reilly's Technology Trends for 2024~\cite{loukides2024TechnologyTrends} reports that 61\% of surveyed enterprises adopted microservices, but 29\% encountered difficulties severe enough to return to monolithic architectures. The resulting systems often become more complex to operate, exhibit worse performance, or fail to deliver expected improvements. These outcomes often stem from poorly chosen service boundaries, increased inter-service communication overhead, or unforeseen distributed-system bottlenecks~\cite{fowler-microservice-tradeoffs}—issues that are difficult to detect through static design analysis alone.
 
-A key source of uncertainty lies in scalability under realistic load. Even when a decomposition appears logically sound, its runtime behavior may diverge significantly once services are deployed and subjected to operational traffic. Communication patterns, serialization costs, database contention, and service fan-out can degrade performance~\cite{msyesterday} in ways that are not apparent during design. As a result, architects lack a reliable basis for evaluating the impact of decomposition decisions before committing to a costly migration.
+A key source of uncertainty lies in scalability under realistic load. Even when a decomposition looks sound, runtime behavior often diverges once services go into production and handle real traffic. Communication patterns, serialization costs, database contention, and service fan-out can degrade performance~\cite{msyesterday} in ways that are not apparent during design. As a result, architects lack a reliable basis for evaluating the impact of decomposition decisions before committing to a costly migration.
 
 A tool capable of validating target architectures empirically-by generating representative workloads and benchmarking alternative designs-can address this gap. Such a tool enables architects to compare monolithic and decomposed variants using consistent, reproducible metrics and to identify scalability regressions early in the transition process. By grounding architectural decisions in measured behavior rather than assumptions or intuition, organizations can reduce migration risk, prioritize viable decomposition strategies, and make data-driven choices about how to evolve their systems.
 
 
 \section{Problem Statement}
 
-Despite the growing interest in decomposing monolithic systems into microservices~\cite{M2MDF}~\cite{fromMonolithToMicroservices}~\cite{msyesterday}, organizations often lack systematic and reliable means to evaluate the quality and viability of proposed decompositions before committing to large-scale architectural changes. Many existing approaches emphasize static analysis techniques for identifying potential service boundaries, yet these techniques provide only limited insight into how a decomposed architecture might behave under realistic runtime conditions. As a result, architects may be required to make decisions without sufficient empirical evidence regarding scalability, performance characteristics, or operational risks.
+Despite growing interest in microservices~\cite{M2MDF}~\cite{fromMonolithToMicroservices}~\cite{msyesterday}, organizations lack systematic ways to evaluate whether proposed decompositions will work before making large-scale architectural changes. Many existing approaches emphasize static analysis techniques for identifying potential service boundaries, yet these techniques provide only limited insight into how a decomposed architecture might behave under realistic runtime conditions. As a result, architects may be required to make decisions without sufficient empirical evidence regarding scalability, performance characteristics, or operational risks.
 
-Furthermore, practical tooling that combines static decomposition analysis with automated, reproducible benchmarking of multiple architectural variants appears to be scarce~\cite{M2MDF}. Current practices frequently depend on intuition, ad-hoc experiments, or manual prototyping, which makes it challenging to compare alternatives consistently or detect performance regressions introduced by decomposition choices. This lack of structured methodological support may increase the risk of producing architectures that are more complex, less performant, or misaligned with real-world workloads.
+Furthermore, tools that combine static analysis with automated benchmarking of multiple architectures are scarce~\cite{M2MDF}. Current practices rely on intuition, ad-hoc experiments, or manual prototyping, making it difficult to compare alternatives fairly or detect performance degradation from decomposition decisions. This lack of structured methodological support may increase the risk of producing architectures that are more complex, less performant, or misaligned with real-world workloads.
 
 \section{Thesis Objective}
 
@@ -308,7 +308,7 @@ The \textbf{static analysis workflow} accepts a monolithic application artefact 
 
 The \textbf{benchmarking workflow} evaluates the runtime behavior of deployable system architectures under realistic load. Users supply deployment configurations and operational profiles that define expected usage patterns. The workflow operates in three phases: validation confirms conformance to the operational profile, execution deploys systems and runs controlled load tests at multiple concurrency levels, and analysis compares performance metrics against baseline thresholds to compute scalability indicators. Performance data collected during testing is aggregated and persisted, enabling comparative analysis across architectural variants through visualization and metric queries.
 
-Both workflows follow an event-driven model in which user-initiated commands trigger asynchronous processing pipelines. State transitions and intermediate outputs are persisted at each stage, ensuring traceability and enabling recovery from failures. While the workflows are independent—one produces candidate decompositions, the other validates them empirically—they are complementary: architects use static analysis to identify boundaries and benchmarking to assess their viability under realistic conditions. Detailed descriptions of each workflow, including the sequence of operations and interactions between components, are provided in Chapters~4 and~5.
+Both workflows follow an event-driven model in which user-initiated commands trigger asynchronous processing pipelines. State transitions and intermediate outputs are persisted at each stage, ensuring traceability and enabling recovery from failures. While the workflows are independent—one produces candidate decompositions, the other validates them empirically—they are complementary: architects use static analysis to identify boundaries and benchmarking to assess their viability under realistic conditions. Detailed descriptions of each workflow, including the sequence of operations and interactions between components, are provided in Chapters~4 and~5. 
 
 \subsection{Alignment with the M2MDF Framework} 
 
@@ -595,62 +595,17 @@ The workflow executes test suites sequentially, starting with the baseline test 
 
 \subsubsection{Test Case Execution Procedure}
 
-Each test case follows a standardized execution procedure comprising deployment, workload execution, metrics collection, and teardown phases:
-
-\paragraph{System Deployment and Initialization}
-
-The first step in each test case deploys the designated SUT and verifies its operational readiness. For remote execution scenarios, all required deployment artefacts—Docker Compose descriptors, database seed scripts, and configuration files—are transferred to the target host. The deployment process instantiates all application and infrastructure containers as specified in the Docker Compose file, allocating the necessary compute, memory, and network resources.
-
-Once containers are running, the health-check endpoint is polled repeatedly until the system signals readiness or the configured startup timeout is reached. This verification step ensures that the application has completed initialization, established database connections, and is prepared to accept requests before load testing commences, preventing measurement artifacts caused by initialization overhead.
-
-If database seeding is configured, initialization scripts are executed against the designated database instances to populate them with representative application state. Seeding occurs after successful health checks to ensure that database schemas have been initialized. This mechanism guarantees that each test run begins from a consistent and reproducible data state, eliminating variability introduced by differences in data volume or distribution across test cases.
-
-\paragraph{Workload Generation and Execution}
-
-Following successful deployment, the load testing framework executes the workload defined in the operational setting. The workload generator is configured with the operational setting, the architecture identifier, the target concurrency level, the test duration, and a ramp-up period during which transient startup effects are excluded from measurement.
-
-The load test simulates realistic user interactions by spawning multiple concurrent virtual users, each executing behavior models repeatedly for the duration of the test. Virtual users probabilistically select behaviors according to the usage profile weights specified in the operational setting, ensuring that the aggregate workload reflects realistic usage distributions. Each virtual user executes the selected behavior as a sequence of API operations, following the temporal ordering and data dependencies defined in the behavior model.
-
-For each operation, the load generator constructs an HTTP request by substituting path and query parameters with values extracted from prior responses or predefined constants, and including the specified headers and request body. The request is dispatched to the SUT, and response timing information is recorded. All requests are tagged with metadata identifying the operation, actor, behavior, architecture variant, and load level, enabling subsequent fine-grained metric aggregation and multi-level scalability analysis.
-
-Between consecutive operations, virtual users pause for a stochastic think time sampled from the configured inter-operation delay interval. This introduces realistic temporal patterns that reflect user reading, decision-making, or external processing activities, preventing the artificially synchronized request bursts that would result from continuous, uninterrupted operation execution. Once a behavior sequence completes, the virtual user repeats the workflow, continuing until the configured test duration elapses. This continuous execution model ensures sustained load generation and enables observation of steady-state system behavior under realistic operational conditions.
+Each test case follows a standardized execution procedure. The designated SUT is deployed and validated for operational readiness. The workload generator then executes the operational profile, spawning concurrent virtual users that repeatedly execute behavior models according to configured frequencies and load levels. Each operation invocation is instrumented to capture response times and invocation counts. Following test completion, performance metrics are computed from steady-state measurements, excluding ramp-up periods. Results are persisted and the SUT is systematically torn down to ensure isolation between test cases.
 
 \paragraph{Performance Metric Computation}
 
-Upon test completion, the load testing framework computes aggregated performance statistics from the collected response time measurements. Data recorded during the ramp-up period is excluded to ensure that only steady-state performance is captured. For each operation $j$, the following metrics are computed:
+Upon test completion, the framework computes aggregated performance statistics from steady-state measurements. Key metrics include mean response time and standard deviation for each operation, invocation frequency across the workload, and pass/fail classification based on scalability thresholds established by the baseline architecture at minimal load.
 
-\begin{itemize}
-\item \textbf{Mean response time} ($\mu_j$): The arithmetic mean of all steady-state response time samples for operation $j$.
-
-\item \textbf{Standard deviation} ($\sigma_j$): A measure of response time variability, computed as the square root of the variance of the collected samples.
-
-\item \textbf{Invocation frequency} ($\nu_j$): The relative frequency of operation $j$ within the workload, representing its contribution to the overall operational profile.
-
-\item \textbf{Scalability threshold}: For the baseline architecture at the lowest load level, a threshold is computed for each operation as a function of its mean response time and standard deviation. These thresholds define acceptable performance bounds and are reused for all subsequent evaluations.
-
-\item \textbf{Operation pass/fail status}: For each architecture and load level, an operation is classified as passing or failing depending on whether its mean response time exceeds the corresponding scalability threshold.
-
-\item \textbf{Scalability share}: The contribution of operation $j$ to overall scalability at a given load, computed as the product of its invocation frequency and pass/fail status.
-
-\item \textbf{Scalability footprint}: An operation-level metric that captures the maximum load level at which each operation remains scalable, providing insight into how individual operations degrade under increasing load.
-
-\item \textbf{Scalability gap}: A load-level metric that quantifies the loss of scalability due to failing operations by comparing the achieved scalability share with the ideal case in which all operations pass.
-
-\item \textbf{Performance offset}: For failing operations, the amount by which the observed mean response time exceeds the scalability threshold, indicating the severity of the scalability violation.
-
-\item \textbf{Relative domain metric}: An architecture-level metric that expresses how well a system satisfies scalability requirements relative to the baseline architecture. It is computed by normalizing the architecture's aggregated scalability shares against those of the baseline.
-
-\item \textbf{Total domain metric}: An aggregate metric obtained by combining the relative domain metrics across all evaluated architectures, weighted by the operational profile, to provide a holistic view of scalability within the benchmark.
-
-\end{itemize}
-
-Formal definitions and mathematical details are provided in the original Multi-Level Scalability Assessment methodology~\cite{scalabilityAssessment}.
+The methodology derives multi-level scalability indicators at three levels of granularity. \textbf{Operation-level metrics} capture the maximum sustainable load per operation (scalability footprint) and the severity of threshold violations (performance offset). \textbf{Load-level metrics} quantify scalability loss at specific concurrency levels (scalability gap). \textbf{Architecture-level metrics} aggregate operation-level results into a relative domain metric expressing overall scalability satisfaction compared to the baseline. Formal definitions and mathematical formulations of these metrics are provided in the Multi-Level Scalability Assessment methodology~\cite{scalabilityAssessment}.
 
 \paragraph{Result Persistence and System Teardown}
 
-Once all metrics have been collected, the test case is marked as completed and its results are persisted to the relational database. Each test case record stores a comprehensive set of performance data.
-
-Following result persistence, the SUT is systematically torn down: all running containers are stopped and their associated storage volumes are removed. This cleanup ensures a pristine execution environment for subsequent test cases, preventing state leakage or residual data from contaminating later measurements. The teardown procedure is guaranteed to execute even in the event of test failures, maintaining environmental hygiene throughout the benchmark run.
+Computed metrics and test case metadata are persisted to the relational database. The SUT is then systematically torn down to ensure clean isolation between successive test cases.
 
 \FloatBarrier
 
@@ -855,6 +810,8 @@ These behavior models formalize the workflows performed by each actor type, incl
   \vspace{0.2em}
 \end{table}
 
+TODO: The steps had a configured wait time either between 0-200 for automatic operations or 1000-5000ms for human-operated steps.
+
 Load levels were specified to reflect realistic operational conditions, ranging from 0 to 300 concurrent users distributed across the two actor types. This range encompasses both typical daily usage patterns and peak load scenarios observed during periods of high field activity.
 
 The operational profile was validated through diagnostic runs to confirm correct API interaction patterns, verify data dependencies between sequential operations, and ensure that the modeled workload accurately represented production usage characteristics.
@@ -870,6 +827,7 @@ The benchmarking workflow was executed following the same procedure as for RealW
 
 - modifying existing operational settings will break the already finished or running benchmarks. Need to implement better separation of configurations.
 - maybe we could use better graph algorithms in the future with more configurable options
+- lot of failing requests during load testing due to improper variable bindings in behavior models, POST /transactions returned a lot of 400 errors because of missconfigured request bodies
 
 [TODO: Discuss effort required, configuration challenges, and tool applicability. Address trade-offs between decomposition granularity and performance, operational complexity considerations, and guidance on selecting decomposition strategies.]
 [TODO: Discuss issues discovered during demonstrations, such as implementation quality of decomposed variants, database schema decisions, and workload representativeness.]
@@ -888,7 +846,7 @@ The benchmarking workflow was executed following the same procedure as for RealW
 
 \chapter{Conclusions \& Future Directions}
 
-This thesis has presented ServiceSlicer, a platform for supporting monolith decomposition through integrated static analysis and automated performance benchmarking. By combining dependency extraction, graph-based clustering, AI-assisted semantic decomposition, and multi-level scalability assessment within a unified workflow, ServiceSlicer enables architects to explore decomposition strategies and validate their viability under realistic operational conditions.
+This thesis presents ServiceSlicer, a platform combining static analysis with automated benchmarking to support monolith decomposition. ServiceSlicer helps architects explore decomposition strategies and test them under realistic conditions using dependency extraction, graph clustering, AI-assisted semantic analysis, and multi-level scalability assessment.
 
 The platform addresses a critical gap identified in recent systematic reviews~\cite{M2MDF}: the lack of integrated tooling that spans from boundary identification through deployment-based validation. While existing approaches typically focus on either static analysis or runtime evaluation in isolation, ServiceSlicer combines both perspectives, enabling architects to ground architectural decisions in empirical performance data.
 

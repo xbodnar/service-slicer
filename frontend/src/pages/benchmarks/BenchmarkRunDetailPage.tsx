@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Loader2, CheckCircle, XCircle, Clock, PlayCircle, Activity, RotateCcw } from 'lucide-react'
 import { format } from 'date-fns'
 import {useGetBenchmarkRun, useRestartBenchmarkRun} from "@/api/generated/benchmark-run-controller/benchmark-run-controller.ts";
-import { useGetBenchmark } from "@/api/generated/benchmark-controller/benchmark-controller.ts";
 import { useToast } from '@/components/ui/use-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -68,11 +67,6 @@ export function BenchmarkRunDetailPage() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { data, isLoading, error, refetch } = useGetBenchmarkRun(runId!)
-  const { data: benchmarkData } = useGetBenchmark(data?.benchmarkId || '', {
-    query: {
-      enabled: !!data?.benchmarkId,
-    },
-  })
 
   // State for selected SUT and load
   const [selectedSutId, setSelectedSutId] = useState<string>('')
@@ -170,15 +164,14 @@ export function BenchmarkRunDetailPage() {
   }
 
   // Calculate key metrics for dashboard
-  const totalTestSuites = data.testSuites?.length || 0
-  const completedTestSuites = data.testSuites?.filter((suite: TestSuiteDto) => suite.status === 'COMPLETED').length || 0
-  const failedTestSuites = data.testSuites?.filter((suite: TestSuiteDto) => suite.status === 'FAILED').length || 0
-
-  // Count total operations from first suite with results
-  const totalOperations = data.testSuites?.find(suite => suite.testSuiteResults?.operationExperimentResults)
-    ?.testSuiteResults?.operationExperimentResults
-    ? Object.keys(data.testSuites.find(suite => suite.testSuiteResults?.operationExperimentResults)!.testSuiteResults!.operationExperimentResults).length
-    : 0
+  const numArchitectures = data.testSuites?.length || 0
+  const numLoads = data.operationalProfile ? Object.keys(data.operationalProfile).length : 0
+  const totalTestCases = data.testSuites?.reduce((sum, suite: TestSuiteDto) => sum + (suite.testCases?.length || 0), 0) || 0
+  const completedTestCases = data.testSuites?.reduce((sum, suite: TestSuiteDto) =>
+    sum + (suite.testCases?.filter((tc: TestCaseDto) => tc.status === 'COMPLETED').length || 0), 0) || 0
+  const numOperations = new Set(
+    data.usageProfile?.flatMap(bm => bm.steps.map(step => step.operationId)) || []
+  ).size
 
   return (
     <div className="space-y-6">
@@ -225,24 +218,27 @@ export function BenchmarkRunDetailPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Number of Tested Architectures</p>
-              <p className="text-3xl font-bold mt-2">{totalTestSuites}</p>
+              <p className="text-sm font-medium text-muted-foreground">Architectures</p>
+              <p className="text-3xl font-bold mt-2">{numArchitectures}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Completed</p>
-              <p className="text-3xl font-bold mt-2 text-green-600">{completedTestSuites}</p>
+              <p className="text-sm font-medium text-muted-foreground">Load Levels</p>
+              <p className="text-3xl font-bold mt-2">{numLoads}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-muted-foreground">Failed</p>
-              <p className="text-3xl font-bold mt-2 text-red-600">{failedTestSuites}</p>
+              <p className="text-sm font-medium text-muted-foreground">Completed Test Cases</p>
+              <p className="text-3xl font-bold mt-2">
+                <span className={completedTestCases === totalTestCases ? 'text-green-600' : ''}>{completedTestCases}</span>
+                <span className="text-muted-foreground text-xl"> / {totalTestCases}</span>
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -250,7 +246,7 @@ export function BenchmarkRunDetailPage() {
           <CardContent className="pt-6">
             <div className="text-center">
               <p className="text-sm font-medium text-muted-foreground">Operations</p>
-              <p className="text-3xl font-bold mt-2">{totalOperations}</p>
+              <p className="text-3xl font-bold mt-2">{numOperations}</p>
             </div>
           </CardContent>
         </Card>
@@ -366,12 +362,12 @@ export function BenchmarkRunDetailPage() {
           </CardHeader>
           <CardContent>
             {(() => {
-              if (!benchmarkData?.operationalSetting?.operationalProfile) {
+              if (!data.operationalProfile) {
                 return <p className="text-muted-foreground text-center py-8">No operational profile available</p>
               }
 
               // Get all loads from operational profile
-              const loads = Object.keys(benchmarkData.operationalSetting.operationalProfile)
+              const loads = Object.keys(data.operationalProfile)
                 .map(load => Number(load))
                 .sort((a, b) => a - b)
 
@@ -379,7 +375,7 @@ export function BenchmarkRunDetailPage() {
               const chartData = loads.map(load => {
                 const dataPoint: any = {
                   load,
-                  frequency: benchmarkData.operationalSetting.operationalProfile[load]
+                  frequency: data.operationalProfile[load]
                 }
 
                 data.testSuites.forEach((suite: TestSuiteDto) => {
@@ -420,7 +416,7 @@ export function BenchmarkRunDetailPage() {
                 return null
               }
 
-              const maxRelativeDomainMetric = Math.max(...Object.values(benchmarkData.operationalSetting.operationalProfile).map(load => Number(load)))
+              const maxRelativeDomainMetric = Math.max(...Object.values(data.operationalProfile).map(load => Number(load)))
               const maxY = Math.min(maxRelativeDomainMetric + 0.05, 1)
 
               return chartData.length > 0 ? (

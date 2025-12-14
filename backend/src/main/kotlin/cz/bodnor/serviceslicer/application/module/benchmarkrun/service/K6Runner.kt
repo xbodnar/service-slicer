@@ -47,7 +47,7 @@ class K6Runner(
     }
 
     fun runTest(
-        operationalSettingId: UUID,
+        benchmarkRunId: UUID,
         testCaseId: UUID,
         appPort: Int,
         load: Int,
@@ -58,17 +58,24 @@ class K6Runner(
         return sshTunnelManager.withOptionalTunnel(appPort) { port ->
 
             // Warmup run
-            k6CommandExecutor.runK6WarmUp(operationalSettingId, testCaseId, port, load)
+            k6CommandExecutor.executeK6WarmUp(benchmarkRunId, testCaseId, port, load)
 
             // Main run
             val startTime = Instant.now()
-            val result = k6CommandExecutor.runK6Test(
-                operationalSettingId,
+            val result = k6CommandExecutor.executeK6Test(
+                benchmarkRunId,
                 testCaseId,
                 port,
                 load,
                 testDuration,
             )
+
+            // Wait for k6 Prometheus Remote Write to flush all metrics
+            // k6 pushes metrics in batches (default 5s interval), so we need to wait
+            // for the final batch to be written to Prometheus before querying
+            logger.info { "Waiting ${PROMETHEUS_FLUSH_DELAY_MS}ms for metrics to be flushed to Prometheus..." }
+            Thread.sleep(PROMETHEUS_FLUSH_DELAY_MS)
+
             val endTime = Instant.now()
 
             if (result.exitCode != 0) {
@@ -103,5 +110,8 @@ class K6Runner(
     companion object {
         private const val SUMMARY_FILENAME = "summary.json"
         private const val CONTAINER_WORKDIR = "/scripts"
+
+        // Delay to wait for k6 Prometheus Remote Write to flush final metrics batch
+        private const val PROMETHEUS_FLUSH_DELAY_MS = 15_000L
     }
 }

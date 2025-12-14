@@ -24,6 +24,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BehaviorModel,
   BenchmarkRunDto,
   CreateBenchmarkRunRequest,
   ListBenchmarkRunsParams,
@@ -313,6 +314,92 @@ export function useGetBenchmarkRun<TData = Awaited<ReturnType<typeof getBenchmar
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetBenchmarkRunQueryOptions(benchmarkRunId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getUsageProfile1 = (
+    benchmarkRunId: string,
+ options?: SecondParameter<typeof apiClient>,signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<BehaviorModel[]>(
+      {url: `/benchmark-runs/${benchmarkRunId}/usage-profile`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getGetUsageProfile1QueryKey = (benchmarkRunId?: string,) => {
+    return [
+    `/benchmark-runs/${benchmarkRunId}/usage-profile`
+    ] as const;
+    }
+
+    
+export const getGetUsageProfile1QueryOptions = <TData = Awaited<ReturnType<typeof getUsageProfile1>>, TError = unknown>(benchmarkRunId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile1>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUsageProfile1QueryKey(benchmarkRunId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsageProfile1>>> = ({ signal }) => getUsageProfile1(benchmarkRunId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(benchmarkRunId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile1>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetUsageProfile1QueryResult = NonNullable<Awaited<ReturnType<typeof getUsageProfile1>>>
+export type GetUsageProfile1QueryError = unknown
+
+
+export function useGetUsageProfile1<TData = Awaited<ReturnType<typeof getUsageProfile1>>, TError = unknown>(
+ benchmarkRunId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile1>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsageProfile1>>,
+          TError,
+          Awaited<ReturnType<typeof getUsageProfile1>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsageProfile1<TData = Awaited<ReturnType<typeof getUsageProfile1>>, TError = unknown>(
+ benchmarkRunId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile1>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUsageProfile1>>,
+          TError,
+          Awaited<ReturnType<typeof getUsageProfile1>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetUsageProfile1<TData = Awaited<ReturnType<typeof getUsageProfile1>>, TError = unknown>(
+ benchmarkRunId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile1>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetUsageProfile1<TData = Awaited<ReturnType<typeof getUsageProfile1>>, TError = unknown>(
+ benchmarkRunId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsageProfile1>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetUsageProfile1QueryOptions(benchmarkRunId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
