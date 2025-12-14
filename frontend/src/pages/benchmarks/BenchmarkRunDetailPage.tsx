@@ -425,7 +425,7 @@ export function BenchmarkRunDetailPage() {
 
               return chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={400}>
-                  <ComposedChart data={chartData} margin={{ left: 10, right: 10, top: 20 }}>
+                  <ComposedChart data={chartData} margin={{ left: 10, right: 10, top: 20, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="load"
