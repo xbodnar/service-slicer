@@ -31,6 +31,8 @@ data class BenchmarkRunDto(
     val usageProfile: List<BehaviorModel>,
     val operationalProfile: Map<Int, BigDecimal>,
     val status: JobStatus,
+    val startTimestamp: Instant?,
+    val endTimestamp: Instant?,
     val testSuites: List<TestSuiteDto>,
     val scalabilityThresholds: Map<OperationId, BigDecimal>?,
 )

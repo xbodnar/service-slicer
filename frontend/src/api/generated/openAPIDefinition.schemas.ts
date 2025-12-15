@@ -376,6 +376,8 @@ export interface BenchmarkRunDto {
   usageProfile: BehaviorModel[];
   operationalProfile: BenchmarkRunDtoOperationalProfile;
   status: BenchmarkRunDtoStatus;
+  startTimestamp?: string;
+  endTimestamp?: string;
   testSuites: TestSuiteDto[];
   scalabilityThresholds?: BenchmarkRunDtoScalabilityThresholds;
 }

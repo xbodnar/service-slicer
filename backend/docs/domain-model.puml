@@ -1,0 +1,390 @@
+@startuml Domain Model
+!theme plain
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam packageFontSize 14
+
+title Service Slicer - Domain Model
+
+' ==================== BASE ENTITIES ====================
+package "common" #EEEEEE {
+    abstract class DomainEntity {
+        +id: UUID
+        +version: Ints t
+    }
+
+    abstract class CreatableEntity extends DomainEntity {
+        +createdAt: Instant
+    }
+
+    abstract class UpdatableEntity extends CreatableEntity {
+        +updatedAt: Instant
+    }
+
+    abstract class DeletableEntity extends UpdatableEntity {
+        -deletedAt: Instant?
+        +isDeleted: Boolean
+        +delete(clock: Clock)
+    }
+}
+
+' ==================== FILE ====================
+package "file" #E3F2FD {
+    class File extends UpdatableEntity {
+        +filename: String
+        +fileSize: Long
+        +mimeType: String
+        +storageKey: String
+        +status: FileStatus
+        +markAsReady()
+        +markAsFailed()
+    }
+
+    enum FileStatus {
+        PENDING
+        READY
+        FAILED
+    }
+
+    File --> FileStatus
+}
+
+' ==================== JOB STATUS ====================
+package "job" #FFF3E0 {
+    enum JobStatus {
+        PENDING
+        RUNNING
+        COMPLETED
+        FAILED
+    }
+}
+
+' ==================== GRAPH (Neo4j) ====================
+package "graph" #E8F5E9 {
+    class ClassNode <<Neo4j @Node>> {
+        +id: UUID
+        +type: ClassNodeType
+        +simpleClassName: String
+        +fullyQualifiedClassName: String
+        +decompositionJobId: UUID
+        +communityLeiden: Long?
+        +communityLouvain: Long?
+        +communityLabelPropagation: Long?
+        +domainDrivenClusterId: String?
+        +actorDrivenClusterId: String?
+        +addDependency(...)
+    }
+
+    class ClassNodeDependency <<@RelationshipProperties>> {
+        +id: String?
+        +weight: Int
+        +methodCalls: Int
+        +fieldAccesses: Int
+        +objectCreations: Int
+        +typeReferences: Int
+    }
+
+    enum ClassNodeType {
+        CLASS
+        INTERFACE
+        ENUM
+        UNKNOWN
+    }
+
+    ClassNode --> ClassNodeType
+    ClassNode "1" --> "*" ClassNodeDependency : dependencies
+    ClassNodeDependency --> "1" ClassNode : target
+}
+
+' ==================== DECOMPOSITION ====================
+package "decomposition" #FCE4EC {
+    class MonolithArtifact extends CreatableEntity {
+        +basePackageName: String
+        +excludePackages: List<String>
+    }
+
+    class DecompositionJob extends UpdatableEntity {
+        +name: String
+        +status: JobStatus
+        +startTimestamp: Instant?
+        +endTimestamp: Instant?
+        +started()
+        +queued()
+        +completed()
+        +failed()
+    }
+
+    class DecompositionCandidate extends UpdatableEntity {
+        +method: DecompositionMethod
+        +modularity: BigDecimal?
+        +addServiceBoundary(...)
+    }
+
+    class ServiceBoundary extends UpdatableEntity {
+        +name: String
+        +typeNames: List<String>
+    }
+
+    class BoundaryMetrics <<@Embeddable>> {
+        +size: Int
+        +cohesion: Double
+        +coupling: Int
+        +internalDependencies: Int
+        +externalDependencies: Int
+    }
+
+    enum DecompositionMethod {
+        COMMUNITY_DETECTION_LABEL_PROPAGATION
+        COMMUNITY_DETECTION_LOUVAIN
+        COMMUNITY_DETECTION_LEIDEN
+        DOMAIN_DRIVEN_DECOMPOSITION
+        ACTOR_DRIVEN_DECOMPOSITION
+    }
+
+    MonolithArtifact "1" --> "1" File : jarFile
+    DecompositionJob "*" --> "1" MonolithArtifact : monolithArtifact
+    DecompositionJob --> JobStatus
+    DecompositionCandidate "*" --> "1" DecompositionJob : decompositionJob
+    DecompositionCandidate --> DecompositionMethod
+    DecompositionCandidate "1" --> "*" ServiceBoundary : serviceBoundaries
+    ServiceBoundary "*" --> "1" DecompositionCandidate : decompositionCandidate
+    ServiceBoundary *-- BoundaryMetrics : metrics
+}
+
+' ==================== API OPERATIONS ====================
+package "apiop" #F3E5F5 {
+    class ApiOperation extends UpdatableEntity {
+        +openApiFileId: UUID
+        +operationId: String
+        +method: String
+        +path: String
+        +parameters: List<ApiParameter>
+        +requestBody: Map<String, Schema>?
+        +responses: Map<String, ApiResponse>
+    }
+
+    class ApiParameter <<JSON>> {
+        +name: String
+        +in: String
+        +required: Boolean
+        +schema: Schema
+    }
+
+    class ApiResponse <<JSON>> {
+        +content: Map<String, Schema>
+    }
+
+    ApiOperation *-- ApiParameter
+    ApiOperation *-- ApiResponse
+}
+
+' ==================== OPERATIONAL SETTING ====================
+package "operationalsetting" #E0F7FA {
+    class OperationalSetting extends UpdatableEntity {
+        +name: String
+        +description: String?
+        +operationalProfile: Map<Int, BigDecimal>
+    }
+
+    class BehaviorModel <<JSON>> {
+        +id: String
+        +actor: String
+        +frequency: BigDecimal
+    }
+
+    class ApiRequest <<JSON>> {
+        +operationId: String
+        +method: String
+        +path: String
+        +component: String?
+        +headers: Map<String, String>
+        +params: Map<String, String>
+        +body: Map<String, Any?>
+        +save: Map<String, String>
+        +waitMsFrom: Int
+        +waitMsTo: Int
+    }
+
+    OperationalSetting "1" --> "1" File : openApiFile
+    OperationalSetting *-- "*" BehaviorModel : usageProfile
+    BehaviorModel *-- "*" ApiRequest : steps
+}
+
+' ==================== SYSTEM UNDER TEST ====================
+package "sut" #FFF8E1 {
+    class SystemUnderTest extends UpdatableEntity {
+        +name: String
+        +description: String?
+        +getFileIds(): Set<UUID>
+    }
+
+    class DockerConfig <<JSON>> {
+        +composeFileId: UUID
+        +healthCheckPath: String
+        +appPort: Int
+        +startupTimeoutSeconds: Long
+    }
+
+    class DatabaseSeedConfig <<JSON>> {
+        +sqlSeedFileId: UUID
+        +dbContainerName: String
+        +dbPort: Int
+        +dbName: String
+        +dbUsername: String
+    }
+
+    SystemUnderTest *-- "1" DockerConfig : dockerConfig
+    SystemUnderTest *-- "*" DatabaseSeedConfig : databaseSeedConfigs
+}
+
+' ==================== BENCHMARK ====================
+package "benchmark" #FFEBEE {
+    class Benchmark extends UpdatableEntity {
+        +name: String
+        +description: String?
+        +addSystemUnderTest(...)
+        +removeSystemUnderTest(...)
+    }
+
+    class BenchmarkSystemUnderTest <<Join Entity>> {
+        +isBaseline: Boolean
+    }
+
+    class BenchmarkSystemUnderTestId <<@Embeddable>> {
+        +benchmarkId: UUID
+        +systemUnderTestId: UUID
+    }
+
+    enum ValidationState {
+        PENDING
+        VALID
+        INVALID
+    }
+
+    Benchmark "1" --> "1" OperationalSetting : operationalSetting
+    Benchmark "1" --> "*" BenchmarkSystemUnderTest : systemsUnderTest
+    BenchmarkSystemUnderTest "*" --> "1" Benchmark : benchmark
+    BenchmarkSystemUnderTest "*" --> "1" SystemUnderTest : systemUnderTest
+    BenchmarkSystemUnderTest *-- BenchmarkSystemUnderTestId : id
+}
+
+' ==================== BENCHMARK VALIDATION ====================
+package "benchmarkvalidation" #E8EAF6 {
+    class BenchmarkSutValidationRun extends UpdatableEntity {
+        +status: JobStatus
+        +errorMessage: String?
+        +k6Output: String?
+        +startTimestamp: Instant?
+        +endTimestamp: Instant?
+        +queued()
+        +started()
+        +completed(k6Output)
+        +failed(errorMessage)
+    }
+
+    BenchmarkSutValidationRun "1" --> "1" BenchmarkSystemUnderTest : benchmarkSystemUnderTest
+    BenchmarkSutValidationRun --> JobStatus
+    BenchmarkSystemUnderTest "1" --> "0..1" BenchmarkSutValidationRun : benchmarkSutValidationRun
+}
+
+' ==================== BENCHMARK RUN ====================
+package "benchmarkrun" #EFEBE9 {
+    class BenchmarkRun extends UpdatableEntity {
+        +testDuration: Duration
+        +usageProfile: List<BehaviorModel>
+        +operationalProfile: Map<Int, BigDecimal>
+        +status: JobStatus
+        +startTimestamp: Instant?
+        +endTimestamp: Instant?
+        +getTestDurationString()
+        +addTestSuite(...)
+        +queue()
+        +started()
+        +completed()
+        +failed()
+        +getBaselineTestCase()
+        +getScalabilityThresholds()
+    }
+
+    BenchmarkRun "*" --> "1" Benchmark : benchmark
+    BenchmarkRun --> JobStatus
+}
+
+' ==================== TEST SUITE ====================
+package "testsuite" #F1F8E9 {
+    class TestSuite extends UpdatableEntity {
+        +isBaseline: Boolean
+        +status: JobStatus
+        +startTimestamp: Instant?
+        +endTimestamp: Instant?
+        +started()
+        +failed()
+        +queued()
+        +completed(...)
+        +computeExperimentResults(...)
+        +findGsl(operation): Int?
+    }
+
+    class TestSuiteResults <<JSON>> {
+        +totalDomainMetric: BigDecimal
+    }
+
+    class OperationExperimentResults <<JSON>> {
+        +operationId: String
+        +totalRequests: Long
+        +failedRequests: Long
+        +scalabilityFootprint: Int?
+        +scalabilityGap: BigDecimal?
+        +performanceOffset: BigDecimal?
+    }
+
+    TestSuite "*" --> "1" BenchmarkRun : benchmarkRun
+    TestSuite "*" --> "1" SystemUnderTest : systemUnderTest
+    TestSuite --> JobStatus
+    BenchmarkRun "1" --> "*" TestSuite : testSuites
+    TestSuite *-- "0..1" TestSuiteResults : testSuiteResults
+    TestSuiteResults *-- "*" OperationExperimentResults : operationExperimentResults
+}
+
+' ==================== TEST CASE ====================
+package "testcase" #FBE9E7 {
+    class TestCase extends UpdatableEntity {
+        +load: Int
+        +loadFrequency: BigDecimal
+        +status: JobStatus
+        +startTimestamp: Instant?
+        +endTimestamp: Instant?
+        +k6Output: String?
+        +jsonSummary: JsonNode?
+        +relativeDomainMetric: BigDecimal?
+        +started()
+        +queued()
+        +failed()
+        +completed(...)
+    }
+
+    class OperationId <<@JvmInline>> {
+        +value: String
+    }
+
+    class TestCaseOperationMetrics <<JSON>> {
+        +totalRequests: Long
+        +failedRequests: Long
+        +invocationFrequency: BigDecimal
+        +meanResponseTimeMs: BigDecimal
+        +stdDevResponseTimeMs: BigDecimal
+        +p95DurationMs: BigDecimal
+        +p99DurationMs: BigDecimal
+        +passScalabilityThreshold: Boolean
+        +scalabilityShare: BigDecimal
+    }
+
+    TestCase "*" --> "1" TestSuite : testSuite
+    TestCase --> JobStatus
+    TestSuite "1" --> "*" TestCase : testCases
+    TestCase *-- "*" TestCaseOperationMetrics : operationMetrics
+    TestCaseOperationMetrics --> OperationId : operationId
+}
+
+@enduml

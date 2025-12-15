@@ -111,6 +111,29 @@ export function BenchmarkRunListPage() {
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>Created {format(new Date(run.createdAt), 'PPpp')}</span>
+                          {run.startTimestamp && run.endTimestamp && (
+                            <span>
+                              Duration: {(() => {
+                                const start = new Date(run.startTimestamp)
+                                const end = new Date(run.endTimestamp)
+                                const durationMs = end.getTime() - start.getTime()
+                                const durationSec = Math.floor(durationMs / 1000)
+                                const hours = Math.floor(durationSec / 3600)
+                                const minutes = Math.floor((durationSec % 3600) / 60)
+                                const seconds = durationSec % 60
+                                if (hours > 0) {
+                                  return `${hours}h ${minutes}m ${seconds}s`
+                                }
+                                return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
+                              })()}
+                            </span>
+                          )}
+                          {run.startTimestamp && !run.endTimestamp && (
+                            <span>Started {format(new Date(run.startTimestamp), 'Pp')}</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Test duration: {run.testDuration || 'Default (1ms)'}
                         </div>
                       </div>
                       <Button variant="ghost" size="sm">

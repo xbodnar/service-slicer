@@ -81,14 +81,17 @@ class BenchmarkRun(
 
     fun started() {
         this.status = JobStatus.RUNNING
+        this.startTimestamp = Instant.now()
     }
 
     fun completed() {
         this.status = JobStatus.COMPLETED
+        this.endTimestamp = Instant.now()
     }
 
     fun failed() {
         this.status = JobStatus.FAILED
+        this.endTimestamp = Instant.now()
     }
 
     fun getBaselineTestCase(): TestCase {

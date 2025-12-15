@@ -262,23 +262,45 @@ export function BenchmarkRunDetailPage() {
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div className="space-y-1">
-                <p className="text-muted-foreground">Created</p>
-                <p className="font-medium">{format(new Date(data.createdAt), 'PPp')}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">Last Updated</p>
-                <p className="font-medium">{format(new Date(data.updatedAt), 'PPp')}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">Test Duration</p>
-                <p className="font-medium">{data.testDuration || 'Default (1ms)'}</p>
-              </div>
-              <div className="space-y-1">
                 <p className="text-muted-foreground">Status</p>
                 <Badge variant={getStateColor(data.status)} className={`flex items-center gap-1 w-fit ${getStateClassName(data.status)}`}>
                   {getStateIcon(data.status)}
                   {data.status}
                 </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Test Duration (per test case)</p>
+                <p className="font-medium">{data.testDuration || 'Default (1ms)'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Started</p>
+                <p className="font-medium">
+                  {data.startTimestamp ? format(new Date(data.startTimestamp), 'PPp') : 'Not started'}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">Ended</p>
+                <p className="font-medium">
+                  {data.endTimestamp ? format(new Date(data.endTimestamp), 'PPp') : 'Not finished'}
+                </p>
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <p className="text-muted-foreground">Benchmark Duration (total run time)</p>
+                <p className="font-medium">
+                  {data.startTimestamp && data.endTimestamp ? (() => {
+                    const start = new Date(data.startTimestamp)
+                    const end = new Date(data.endTimestamp)
+                    const durationMs = end.getTime() - start.getTime()
+                    const durationSec = Math.floor(durationMs / 1000)
+                    const hours = Math.floor(durationSec / 3600)
+                    const minutes = Math.floor((durationSec % 3600) / 60)
+                    const seconds = durationSec % 60
+                    if (hours > 0) {
+                      return `${hours}h ${minutes}m ${seconds}s`
+                    }
+                    return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
+                  })() : data.startTimestamp ? 'Running...' : 'Not started'}
+                </p>
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <p className="text-muted-foreground">Benchmark ID</p>

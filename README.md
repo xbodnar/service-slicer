@@ -1,114 +1,71 @@
 # Service Slicer
 
-Service Slicer is a backend web application that helps developers decompose monolithic Java applications into microservices. It analyzes Java projects (uploaded as ZIP files or from GitHub repositories) and provides suggestions for microservice boundaries based on static code analysis.
+A tool for analyzing monolithic applications and comparing performance across different architectural strategies.
 
 ## Features
 
-- Upload Java projects as ZIP files or provide GitHub repository links
-- Perform static code analysis to identify dependencies between classes and packages
-- Generate dependency graphs to visualize relationships between components
-- Suggest microservice boundaries based on code analysis
-- Run analysis jobs in the background
-- View detailed analysis results through a REST API
+### Monolith Decomposition
+- Upload Java JAR files for static code analysis
+- Parses bytecode to extract class dependencies and builds a graph representation
+- Runs community detection algorithms (Louvain, Leiden, Label Propagation) to suggest microservice boundaries
+- AI-assisted refinement for cluster naming and merge/split recommendations
 
-## Architecture
+### Benchmarking & Load Testing
+- Define systems under test via Docker Compose configurations
+- Supports any application stack (not limited to Java)
+- Integrates with k6 for performance testing
+- Compare metrics across different deployment strategies
 
-The application follows a modular architecture:
+## Prerequisites
 
-1. **Static Analyzer Module**
-   - Parses Java code using JavaParser
-   - Extracts class and package dependencies
-   - Builds dependency graphs
+- Java 21+
+- Node.js 18+
+- Docker & Docker Compose
 
-2. **Dynamic Analyzer Module** (skeleton only, to be implemented later)
-   - Interface for future implementation of runtime analysis
+## Quick Start
 
-3. **Service Suggestion Engine**
-   - Uses package structure and dependencies to suggest microservice boundaries
-   - Calculates cohesion and coupling scores
-
-4. **Data Aggregation & Correlation Layer**
-   - Combines static analysis results
-   - Provides comprehensive view of the application structure
-
-## Technology Stack
-
-- **Backend**: Kotlin with Spring Boot
-- **Database**: PostgreSQL
-- **Static Analysis**: JavaParser
-- **Graph Processing**: Custom implementation
-- **API**: RESTful endpoints
-
-## Getting Started
-
-### Prerequisites
-
-- Java 21
-- Maven
-- PostgreSQL
-
-### Setup
-
-1. Clone the repository
-2. Create a PostgreSQL database named `serviceslicer`
-3. Update database credentials in `application.properties` if needed
-4. Build the project:
-   ```
-   mvn clean install
-   ```
-5. Run the application:
-   ```
-   mvn spring-boot:run
-   ```
-
-## API Endpoints
-
-### Projects
-
-- `GET /api/projects` - Get all projects
-- `GET /api/projects/{id}` - Get project by ID
-- `POST /api/projects/upload` - Upload a new project as ZIP file
-- `POST /api/projects/github` - Create a new project from GitHub repository
-- `DELETE /api/projects/{id}` - Delete a project
-
-### Analysis Jobs
-
-- `GET /api/analysis-jobs/project/{projectId}` - Get all analysis jobs for a project
-- `GET /api/analysis-jobs/{id}` - Get analysis job by ID
-- `POST /api/analysis-jobs` - Create a new analysis job
-- `GET /api/analysis-jobs/{id}/result` - Get analysis result for a job
-- `GET /api/analysis-jobs/{id}/result/detailed` - Get detailed analysis result for a job
-
-## Example Usage
-
-### Upload a Java project
+### Backend
 
 ```bash
-curl -X POST -F "file=@project.zip" -F "project={\"name\":\"My Project\",\"description\":\"My project description\"}" http://localhost:8080/api/projects/upload
+cd backend
+
+# Set OpenAI API key (required for AI-assisted features)
+export OPENAI_API_KEY=your-api-key-here
+
+# Build and run (Docker services start automatically)
+./mvnw spring-boot:run
 ```
 
-### Create a project from GitHub
+The backend will be available at http://localhost:8080
+
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- PostgreSQL: localhost:33771
+- Neo4j Browser: http://localhost:7474
+
+### Frontend
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"name":"GitHub Project","description":"Project from GitHub","repositoryUrl":"https://github.com/username/repo","branch":"main"}' http://localhost:8080/api/projects/github
+cd frontend
+
+# Install dependencies
+npm install
+
+# Generate API client (backend must be running)
+npm run generate:api
+
+# Start development server
+npm run dev
 ```
 
-### Create an analysis job
+The frontend will be available at http://localhost:3000
 
-```bash
-curl -X POST -H "Content-Type: application/json" -d '{"projectId":1,"analysisType":"STATIC"}' http://localhost:8080/api/analysis-jobs
-```
+## Tech Stack
 
-### Get analysis results
-
-```bash
-curl -X GET http://localhost:8080/api/analysis-jobs/1/result
-```
-
-## Future Enhancements
-
-- Implement dynamic code analysis
-- Add more sophisticated graph clustering algorithms
-- Provide visualization of dependency graphs
-- Support for other languages beyond Java
-- Integration with CI/CD pipelines
+| Layer | Technology |
+|-------|------------|
+| Backend | Kotlin, Spring Boot, Spring Batch |
+| Frontend | React, TypeScript, Vite, TanStack Query |
+| Databases | PostgreSQL, Neo4j |
+| Storage | MinIO (S3-compatible) |
+| Load Testing | k6 |
+| AI | OpenAI API |

@@ -66,7 +66,11 @@
     declaration = {
       Hereby I declare that this paper is my original authorial work, which I have worked out on my own. All sources, references, and literature used or excerpted during elaboration of this work are properly cited and listed in complete reference to the due source.
 
-      During the preparation of this thesis, I used large language models (OpenAI ChatGPT, Anthropic Claude, and GitHub Copilot) for brainstorming, research discussion, development and text editing. The final content was reviewed and revised by me, and I take full responsibility for the work presented.
+      During the preparation of this thesis, I used the following AI tools:
+      \begin{itemize}
+        \item OpenAI ChatGPT for brainstorming ideas, exploratory research, and identifying relevant tools and libraries,
+        \item Anthropic Claude for development assistance, code review and stylistic and structural refinement of the text.
+      \end{itemize}
     },
     thanks      = {%
       I would like to thank my advisor, doc. Bruno Rossi, PhD, for his guidance, valuable feedback, and support throughout the development of this thesis. I am also grateful to my family and friends for their encouragement and support during this journey.
@@ -163,23 +167,24 @@ To keep the scope focused and the evaluation reproducible, the tool operates und
 These assumptions ensure comparability across experiments while intentionally narrowing the scope to performance and scalability-related aspects of decomposition.
 
 \section{Thesis Structure}
-The remainder of this thesis is organized as follows:
 
-\textbf{Chapter~\ref{chap:challenges}} reviews the challenges associated with monolith decomposition and surveys existing methods, including static analysis, dynamic analysis, and domain-driven approaches. It also introduces the M2MDF framework and Multi-Level Scalability Assessment methodology as foundational concepts.
+The remainder of this thesis is organized into six chapters that progressively build from foundational concepts to practical demonstration:
 
-\textbf{Chapter~\ref{chap:architecture}} presents the architecture and design of the ServiceSlicer platform, detailing its components, data flows, and integration with external tools for static analysis and benchmarking.
+\textbf{Chapter~\ref{chap:challenges}} reviews and synthesizes the challenges associated with monolith decomposition and surveys existing methods, including static analysis, dynamic analysis, and domain-driven approaches. It also introduces the M2MDF framework and Multi-Level Scalability Assessment methodology as foundational concepts.
+
+\textbf{Chapter~\ref{chap:architecture}} presents the architecture and design of the ServiceSlicer platform, detailing its components, data flows, and integrated tools for static analysis and benchmarking.
 
 \textbf{Chapter~\ref{chap:static-analysis}} describes the static code analysis workflow, including dependency extraction, graph-based clustering algorithms, and AI-assisted semantic refinement.
 
 \textbf{Chapter~\ref{chap:benchmarking}} presents the performance benchmarking workflow, detailing the multi-level scalability assessment methodology and its automated implementation.
 
-\textbf{Chapter~\ref{chap:demonstration}} demonstrates ServiceSlicer through case studies on real-world monolithic applications, assessing its effectiveness in generating decomposition candidates and measuring scalability under load.
+\textbf{Chapter~\ref{chap:demonstration}} demonstrates the application of ServiceSlicer through experiments on two monolithic applications, assessing its effectiveness in generating decomposition candidates and measuring scalability under load.
 
 \textbf{Chapter~\ref{chap:conclusions}} concludes the thesis by summarizing contributions, reflecting on limitations, and outlining directions for future research.
 
 \chapter{Decomposition of Monolithic Systems: Challenges and Methods}\label{chap:challenges}
 
-Decomposition is a central but difficult step in migrating from monolithic to microservice architectures. This chapter examines why decomposition is challenging, surveys existing solution approaches, and identifies gaps that motivate the design of ServiceSlicer. We begin by exploring the multifaceted nature of decomposition challenges before reviewing how the research community has attempted to address them.
+Decomposition is a central but difficult step in migrating from monolithic to microservice architectures. This chapter examines why decomposition is challenging, introduces a framework that organizes existing research, surveys the principal analysis techniques, and identifies gaps that motivate the design of ServiceSlicer. We begin by exploring the multifaceted nature of decomposition challenges, then introduce the M2MDF framework as a lens for understanding the decomposition lifecycle, before examining specific analysis methods and the scalability assessment methodology that enables empirical validation.
 
 \section{The Decomposition Challenge}
 
@@ -210,41 +215,7 @@ Although various tools exist for static code analysis and dependency visualizati
 
 The review further observes that very little research examines how extracted services behave once implemented and executed in real or simulated environments. Empirical evaluation after deployment—where the actual suitability of a microservice design becomes apparent under realistic workloads—remains largely unexplored. Yet this is the point at which the strengths and weaknesses of a proposed decomposition can be most clearly understood. This empirical validation gap is a central motivation for this thesis.
 
-\section{Existing Solution Approaches}
-
-Despite these challenges, researchers have developed multiple approaches for identifying service boundaries. These methods differ in the types of information they analyze—domain models, code structure, runtime behavior, or version history—and in the granularity of boundaries they produce. Understanding their strengths and limitations provides context for the hybrid approach adopted in ServiceSlicer. The following subsections summarize the major categories identified in the M2MDF systematic review~\cite{M2MDF}.
-
-\subsection{Domain-Driven Analysis}
-
-Domain analysis approaches focus on understanding a monolithic system through the models and artefacts produced during its original requirements and design phases. Instead of examining the code directly, these methods rely on higher-level representations of system structure and behavior, such as data flow diagrams, activity diagrams, use case descriptions, entity relationship diagrams, and other UML artefacts.
-
-The central goal of domain analysis is to identify coherent functional areas—domains of interest—that naturally reflect how the system operates and how its capabilities are organized. These domains capture key business concepts, workflows, and responsibilities, making them strong candidates for microservice boundaries. Because of this, domain analysis is frequently referred to as model-driven or domain-driven decomposition.
-
-The most widely used method in this category is Domain-Driven Design (DDD~\cite{DDD}), which introduces concepts such as bounded contexts, aggregates, and domain models to align system structure with business capabilities. DDD produces boundaries that are meaningful and stable but may require substantial domain expertise—something often missing in legacy systems.
-
-A more recent method is Actor-Driven Decomposition (ADD~\cite{ADD}), which shifts the focus from business concepts to the actors interacting with the system. By analyzing user goals, workflows, and operational scenarios, ADD identifies behavioral patterns that reveal how the system is actually used. This makes ADD a useful complement to DDD, grounding decomposition decisions in real operational contexts. While domain-driven approaches produce semantically meaningful boundaries, they require substantial domain expertise and may not reflect the system's actual structural constraints.
-
-\subsection{Static Code Analysis}
-
-Static analysis approaches use structural information extracted directly from the codebase. They typically analyse package structures, class dependencies, call graphs, data access patterns, or architectural layers. Systems are often represented as graphs, and clustering or community-detection algorithms are applied to group elements that are tightly coupled and may form microservice candidates.
-
-These methods have several benefits: they are deterministic, easy to repeat, and work even when runtime data or domain documentation is missing. They are especially useful for legacy systems where observing real execution behavior is difficult. However, static analysis provides only a structural view of the system. It may group parts of the code that are structurally connected but not meaningful from a business perspective, or miss important runtime interactions that only appear under actual load. Static analysis excels at processing legacy systems where documentation is missing, but it captures only structural relationships—not business semantics or runtime behavior.
-
-\subsection{Dynamic Runtime Analysis}
-
-Dynamic analysis techniques observe a system's behavior at runtime by collecting execution traces, service invocation sequences, or user interaction logs. These methods group components based on how they are used together during typical workloads, identifying behavioral coupling that may not appear in static dependency graphs.
-
-Dynamic approaches capture real execution paths and operational hotspots, making them effective for detecting runtime clusters and usage patterns. They are particularly useful for large systems where static dependencies obscure actual behavior. However, they depend on high-quality trace data; if the collected workload does not reflect the full range of system behavior, the resulting decomposition may be incomplete or biased. Instrumentation overhead, limited observability, and the need for representative execution environments also restrict their applicability in some industrial settings. Dynamic approaches reveal operational patterns invisible in static code, but they require comprehensive trace data that captures the full range of system behavior—something that may be difficult to obtain in practice.
-
-\subsection{Version History Mining}
-
-Version analysis approaches study the evolution of a monolithic system by examining how its codebase changes over time. Instead of focusing only on the system's current structure or behavior, these methods use historical information—typically from version control systems—to identify components that tend to evolve together. The underlying assumption is that artifacts that frequently change together often implement related functionality and may therefore belong to the same microservice.
-
-Version analysis is rarely used on its own, but it is often combined with static analysis to enrich structural dependency graphs with evolutionary signals~\cite{M2MDF}. For example, a call graph produced through static analysis can be enriched with evolutionary coupling data, such as files or classes that were co-committed during development. This helps uncover relationships that may not be obvious from the code structure alone but become clearer when examining long-term change patterns.
-
-By looking at how the system has changed over time, version analysis adds a useful historical perspective to static and dynamic techniques. It can reveal groups of components that naturally belong together because they have evolved in similar ways, offering insights that may not appear from code structure or runtime behavior alone. Version analysis provides a temporal dimension to decomposition but is rarely sufficient on its own, typically serving as an enrichment signal for static or dynamic methods.
-
-Each approach addresses specific aspects of the decomposition problem, but none provides end-to-end support for the complete migration lifecycle. Recognizing this, recent research has attempted to synthesize these techniques into unified frameworks.
+Given these multifaceted challenges, a structured approach to decomposition is essential. The following section introduces a framework that consolidates existing research into a coherent process model, providing the conceptual foundation for understanding where current approaches succeed and where critical gaps remain.
 
 \section{The M2MDF Framework: A Structured Decomposition Process}
 
@@ -272,15 +243,76 @@ The final phase examines how extracted microservices behave when deployed in rea
 
 M2MDF's synthesis reveals a critical gap: while Phases I--V (input collection through evaluation) are well-represented in the literature, \textbf{Phase~VI (deployment-based validation) is nearly absent}. Only one of the 35 reviewed studies attempted to evaluate extracted microservices in a deployed environment~\cite{M2MDF}. This gap is particularly problematic because static metrics and theoretical analysis cannot predict how a decomposition will behave under realistic operational conditions. Addressing this gap requires both a methodological foundation for empirical evaluation and automated tooling to make such evaluation practical.
 
+\section{Existing Solution Approaches}
+
+Having established M2MDF as our organizing framework, we now examine the specific techniques that populate its Phase~II (Monolith Analysis). These methods differ in the types of information they analyze—domain models, code structure, runtime behavior, or version history—and in the granularity of boundaries they produce. Understanding their strengths and limitations provides context for the hybrid approach adopted in ServiceSlicer.
+
+\subsection{Domain-Driven Analysis}
+
+Domain analysis approaches focus on understanding a monolithic system through the models and artefacts produced during its original requirements and design phases. Instead of examining the code directly, these methods rely on higher-level representations of system structure and behavior, such as data flow diagrams, activity diagrams, use case descriptions, entity relationship diagrams, and other UML artefacts.
+
+The central goal of domain analysis is to identify coherent functional areas—domains of interest—that naturally reflect how the system operates and how its capabilities are organized. These domains capture key business concepts, workflows, and responsibilities, making them strong candidates for microservice boundaries. Because of this, domain analysis is frequently referred to as model-driven or domain-driven decomposition.
+
+The most widely used method in this category is Domain-Driven Design (DDD~\cite{DDD}), which introduces concepts such as bounded contexts, aggregates, and domain models to align system structure with business capabilities. DDD produces boundaries that are meaningful and stable but may require substantial domain expertise—something often missing in legacy systems.
+
+A more recent method is Actor-Driven Decomposition (ADD~\cite{ADD}), which shifts the focus from business concepts to the actors interacting with the system. By analyzing user goals, workflows, and operational scenarios, ADD identifies behavioral patterns that reveal how the system is actually used. This makes ADD a useful complement to DDD, grounding decomposition decisions in real operational contexts. While domain-driven approaches produce semantically meaningful boundaries, they require substantial domain expertise and may not reflect the system's actual structural constraints.
+
+\subsection{Static Code Analysis}
+
+Static analysis approaches use structural information extracted directly from the codebase. They typically analyse package structures, class dependencies, call graphs, data access patterns, or architectural layers. Systems are often represented as graphs, and clustering or community-detection algorithms are applied to group elements that are tightly coupled and may form microservice candidates.
+
+These methods have several benefits: they are deterministic, easy to repeat, and work even when runtime data or domain documentation is missing. They are especially useful for legacy systems where observing real execution behavior is difficult. However, static analysis provides only a structural view of the system. It may group parts of the code that are structurally connected but not meaningful from a business perspective, or miss important runtime interactions that only appear under actual load. Static analysis excels at processing legacy systems where documentation is missing, but it captures only structural relationships—not business semantics or runtime behavior.
+
+\subsection{Dynamic Runtime Analysis}
+
+Dynamic analysis techniques observe a system's behavior at runtime by collecting execution traces, service invocation sequences, or user interaction logs. These methods group components based on how they are used together during typical workloads, identifying behavioral coupling that may not appear in static dependency graphs.
+
+Dynamic approaches capture real execution paths and operational hotspots, making them effective for detecting runtime clusters and usage patterns. They are particularly useful for large systems where static dependencies obscure actual behavior. However, they depend on high-quality trace data; if the collected workload does not reflect the full range of system behavior, the resulting decomposition may be incomplete or biased. Instrumentation overhead, limited observability, and the need for representative execution environments also restrict their applicability in some industrial settings. Dynamic approaches reveal operational patterns invisible in static code, but they require comprehensive trace data that captures the full range of system behavior—something that may be difficult to obtain in practice.
+
+\subsection{Version History Analysis}
+
+Version analysis approaches study the evolution of a monolithic system by examining how its codebase changes over time. Instead of focusing only on the system's current structure or behavior, these methods use historical information—typically from version control systems—to identify components that tend to evolve together. The underlying assumption is that artifacts that frequently change together often implement related functionality and may therefore belong to the same microservice.
+
+Version analysis is rarely used on its own, but it is often combined with static analysis to enrich structural dependency graphs with evolutionary signals~\cite{M2MDF}. For example, a call graph produced through static analysis can be enriched with evolutionary coupling data, such as files or classes that were co-committed during development. This helps uncover relationships that may not be obvious from the code structure alone but become clearer when examining long-term change patterns.
+
+By looking at how the system has changed over time, version analysis adds a useful historical perspective to static and dynamic techniques. It can reveal groups of components that naturally belong together because they have evolved in similar ways, offering insights that may not appear from code structure or runtime behavior alone. Version analysis provides a temporal dimension to decomposition but is rarely sufficient on its own, typically serving as an enrichment signal for static or dynamic methods.
+
+Each of these analysis techniques addresses specific aspects of boundary identification. However, as the M2MDF review revealed, the critical weakness in the field lies not in the analysis methods themselves but in the near-complete absence of deployment-based validation. Even well-identified service boundaries remain unverified until the resulting architecture is tested under realistic conditions.
+
 \section{Evaluating Decomposition Quality Through Scalability Assessment}
 
-The lack of deployment-based validation identified in M2MDF stems partly from the absence of systematic methodologies for comparing architectural variants under realistic load. Multi-Level Scalability Assessment~\cite{scalabilityAssessment} provides such a methodology, enabling engineers to evaluate whether a proposed decomposition delivers measurable improvements over the original monolith.
+Addressing this validation gap requires a systematic methodology for comparing architectural variants under realistic load. Multi-Level Scalability Assessment~\cite{scalabilityAssessment} provides such a methodology, enabling engineers to compare alternative architectures and understand how they scale at different levels of granularity. This section introduces the key concepts from this methodology that ServiceSlicer implements; subsequent chapters reference these definitions.
 
-Rather than treating scalability as a single aggregate property, the methodology analyzes system behavior at three levels: \textbf{system-level} (overall throughput and response time), \textbf{component-level} (service or module performance), and \textbf{operation-level} (individual API endpoint behavior). This multi-level perspective enables engineers to identify not only whether a system scales, but which specific operations or components limit scalability.
+\subsection{Multi-Level Scalability}
 
-The methodology operates by defining an \textbf{operational profile} that captures realistic usage patterns through behavior models (sequences of API operations representing user workflows), behavior mix (relative frequencies of different workflows), and load distribution (concurrent user levels and their probabilities). Load tests are executed across multiple architectural variants at various concurrency levels. A baseline architecture establishes performance thresholds at minimal load, against which all architectures—including the baseline itself at higher loads—are evaluated. The framework computes metrics including domain metric (aggregate scalability satisfaction), scalability footprint (maximum sustainable load per operation), scalability gap (performance degradation at specific load levels), and performance offset (severity of threshold violations).
+Rather than treating scalability as a single aggregate property, the methodology analyzes system behavior at multiple levels of granularity: \textbf{system-level} metrics capture overall throughput and response time across the entire application, while \textbf{operation-level} metrics examine individual API endpoint behavior. This multi-level perspective enables engineers to identify not only whether a system scales, but which specific operations limit scalability.
 
-By analyzing scalability at multiple abstraction levels, this methodology enables architects to identify not just whether a system scales, but which specific operations or components limit scalability. However, applying this methodology manually is labor-intensive, requiring deployment automation, workload generation, metrics collection, and multi-level analysis. Integrating this methodology into an automated toolchain is a key contribution of this thesis.
+\subsection{Baseline Threshold Definition}
+
+The methodology establishes performance expectations through a \textbf{baseline threshold} for each operation. This threshold is computed from the baseline architecture (typically the original monolith) running at the minimum load level:
+\begin{equation}
+\Gamma_j^0 = \mu_j^0 + 3\sigma_j^0
+\end{equation}
+where $\mu_j^0$ is the mean response time and $\sigma_j^0$ is the standard deviation for operation $j$ at baseline load. This threshold serves as the performance reference against which all architectures—including the baseline itself at higher loads—are evaluated. An operation passes its scalability check if its mean response time remains below this threshold.
+
+\subsection{Domain Metric}
+
+The \textbf{Domain Metric (DM)} quantifies overall scalability satisfaction as a single value between 0 and 1. It aggregates operation-level results across all load levels, weighted by both the probability of each load level occurring and the relative frequency of each operation in the workload. A DM of 1.0 indicates perfect scalability (all operations meet their thresholds at all loads), while lower values indicate degradation. This metric enables direct comparison between architectural variants: a higher DM indicates better overall scalability for the given operational profile.
+
+\subsection{Supporting Metrics}
+
+The methodology defines additional metrics that provide diagnostic insight:
+\begin{itemize}
+  \item \textbf{Scalability footprint}: The maximum load level at which an operation consistently meets its threshold, indicating the operation's capacity limit.
+  \item \textbf{Scalability gap}: The cumulative weighted contribution of threshold violations across load levels, quantifying how much load contributes to failure.
+  \item \textbf{Performance offset}: The severity of threshold violations, measuring how far response times exceed acceptable limits.
+\end{itemize}
+
+\subsection{Operational Profile}
+
+The methodology operates by defining an \textbf{operational profile} that captures realistic usage patterns through three components: behavior models (sequences of API operations representing user workflows), behavior mix (relative frequencies of different workflows), and load distribution (discrete concurrency levels and their probabilities of occurrence). This probabilistic characterization ensures that scalability metrics emphasize commonly encountered scenarios rather than treating all load levels uniformly.
+
+Applying this methodology manually is labor-intensive, requiring deployment automation, workload generation, metrics collection, and multi-level analysis. Integrating this methodology into an automated toolchain is a key contribution of this thesis.
 
 \section{Summary and Positioning of ServiceSlicer}
 
@@ -294,7 +326,15 @@ The M2MDF framework synthesizes these techniques into a six-phase process model,
 
 \chapter{ServiceSlicer — System Architecture \& Design}\label{chap:architecture}
 
-This chapter presents the architecture and design of the ServiceSlicer platform, building on the decomposition challenges and methodologies discussed previously. It describes the system's structure, key components, and data flows, explaining how ServiceSlicer integrates static analysis and empirical benchmarking to support monolith decomposition. The following sections provide a detailed overview of each architectural element and their roles in enabling reproducible evaluation of candidate microservice boundaries.
+This chapter operationalizes the concepts introduced in Chapter~\ref{chap:challenges} by mapping the M2MDF framework phases and the Multi-Level Scalability Assessment methodology to concrete system components and workflows. The scalability metrics defined in Chapter~\ref{chap:challenges}—DM, baseline thresholds, scalability footprint, and operational profiles—are implemented through the platform's benchmarking infrastructure, while the decomposition approaches (static analysis, domain-driven design, actor-driven decomposition) are realized through the static analysis workflow.
+
+The following sections describe ServiceSlicer's architecture, key components, and data flows, explaining how the platform integrates static analysis and empirical benchmarking to support monolith decomposition.
+
+\section{Overview}
+
+ServiceSlicer is a research tool designed to assist software engineers in decomposing monolithic Java applications into microservice architectures. Rather than relying solely on static code inspection or expert intuition, the platform integrates \textbf{static dependency analysis} with \textbf{empirical performance testing} to generate quantitative, evidence-based insights into how different service boundaries affect system behavior.
+
+By combining these two perspectives, ServiceSlicer directly addresses a central challenge in software architecture: assessing whether a proposed decomposition will deliver measurable improvements in performance and scalability compared to the original monolith. This enables architects to move beyond speculative design and validate decomposition decisions using reproducible data collected under realistic workloads.
 
 \begin{figure}[htb]
   \centering
@@ -302,12 +342,6 @@ This chapter presents the architecture and design of the ServiceSlicer platform,
   \caption{High-level end-to-end workflow of the ServiceSlicer platform}%
   \label{fig:highlevel_workflow}
 \end{figure}
-
-\section{Overview}
-
-ServiceSlicer is a research tool designed to assist software engineers in decomposing monolithic Java applications into microservice architectures. Rather than relying solely on static code inspection or expert intuition, the platform integrates \textbf{static dependency analysis} with \textbf{empirical performance testing} to generate quantitative, evidence-based insights into how different service boundaries affect system behavior.
-
-By combining these two perspectives, ServiceSlicer directly addresses a central challenge in software architecture: assessing whether a proposed decomposition will deliver measurable improvements in performance and scalability compared to the original monolith. This enables architects to move beyond speculative design and validate decomposition decisions using reproducible data collected under realistic workloads.
 
 \section{Workflows}
 
@@ -322,7 +356,7 @@ Both workflows follow an event-driven model in which user-initiated commands tri
 \begin{figure}[htb]
   \centering
   \includegraphics[width=0.9\textwidth]{figures/activityDiagram.png}
-  \caption{Detailed diagram of the two workflows supported in ServiceSlicer}%
+  \caption{Activity diagram showing static analysis and benchmarking workflow stages}%
   \label{fig:context}
 \end{figure}
 
@@ -330,7 +364,7 @@ Both workflows follow an event-driven model in which user-initiated commands tri
 
 ServiceSlicer addresses several critical gaps identified in the M2MDF review by providing integrated tooling support across multiple framework phases. As illustrated in Figure~\ref{fig:m2mdf}, the platform implements functionality spanning Phases~I through VI, with particular emphasis on the underrepresented deployment-based evaluation phase.
 
-The \textbf{static analysis workflow} implements M2MDF Phases I--IV. In \textbf{Phase~I (Input Collection)}, ServiceSlicer accepts compiled JAR artefacts, focusing on bytecode-level analysis rather than requiring source code or design documentation. For \textbf{Phase~II (Monolith Analysis)}, the platform employs static analysis through bytecode inspection to extract class-level dependencies and construct a complete structural graph. \textbf{Phase~III (Microservices Identification)} leverages graph-based clustering algorithms (Louvain, Leiden, Label Propagation) to identify candidate service boundaries, supplemented by AI-assisted semantic analysis to generate domain-driven and actor-driven decomposition candidates. The platform provides limited support for \textbf{Phase~IV (Optimisation)} through AI-assisted refinement suggesting cluster merges, splits, and naming improvements.
+The \textbf{static analysis workflow} implements M2MDF Phases I--IV. In \textbf{Phase~I (Input Collection)}, ServiceSlicer accepts compiled JAR artefacts, focusing on bytecode-level analysis rather than requiring source code or design documentation. For \textbf{Phase~II (Monolith Analysis)}, the platform employs static analysis through bytecode inspection to extract class-level dependencies and construct a complete structural graph. \textbf{Phase~III (Microservices Identification)} leverages graph-based clustering algorithms to identify candidate service boundaries, supplemented by AI-assisted semantic analysis to generate domain-driven and actor-driven decomposition candidates. The platform provides limited support for \textbf{Phase~IV (Optimisation)} through AI-assisted refinement suggesting cluster merges, splits, and naming improvements.
 
 The \textbf{benchmarking workflow} implements M2MDF Phases V--VI. For \textbf{Phase~V (Evaluation)}, ServiceSlicer computes structural quality metrics including service coupling and size distribution, enabling quantitative comparison of decomposition candidates. Most notably, ServiceSlicer directly addresses the Phase~VI gap identified in the M2MDF review: \textbf{deployment-based validation}. The platform automates the complete benchmarking lifecycle—deploying architectural variants via container orchestration, executing realistic workload profiles, collecting performance metrics, and computing multi-level scalability indicators. This empirical evaluation capability enables architects to validate decomposition decisions using measured system behavior under realistic conditions, moving beyond the speculative approaches that characterize existing research.
 
@@ -368,7 +402,7 @@ ServiceSlicer is implemented as a web-based application that orchestrates the en
   \label{fig:architecture}
 \end{figure}
 
-ServiceSlicer integrates several cooperating components and external tools, as depicted in Figure~\ref{fig:architecture}. The system follows a client-server architecture: a React-based frontend communicates with a Kotlin/Spring Boot backend via a REST API\@. The backend orchestrates all analytical and benchmarking workflows, coordinating interactions with four persistent storage systems—PostgreSQL\footnote{\url{https://www.postgresql.org/}} for domain entities and workflow state, Neo4j\footnote{\url{https://neo4j.com/}} for dependency graphs, MinIO\footnote{\url{https://min.io/}} for large binary artefacts, and Prometheus\footnote{\url{https://prometheus.io/}} for performance metrics. During benchmarking, the backend automatically deploys Systems Under Test using Docker Compose, executes load tests with k6\footnote{\url{https://grafana.com/docs/k6/latest/}}, and collects metrics for comparative analysis. The architecture is designed to support both local execution (for development) and remote deployment (for reproducible testing environments). 
+ServiceSlicer integrates several cooperating components and external tools, as depicted in Figure~\ref{fig:architecture}. The system follows a client-server architecture: a React-based frontend communicates with a Kotlin/Spring Boot backend via a REST API\@. The backend orchestrates all analytical and benchmarking workflows, coordinating interactions with four persistent storage systems—PostgreSQL for domain entities and workflow state, Neo4j for dependency graphs, MinIO\footnote{\url{https://min.io/}} for large binary artefacts, and Prometheus\footnote{\url{https://prometheus.io/}} for performance metrics. During benchmarking, the backend automatically deploys SUTs using Docker Compose, executes load tests with k6\footnote{\url{https://grafana.com/docs/k6/latest/}}, and collects metrics for comparative analysis. The architecture is designed to support both local execution (for development) and remote deployment (for reproducible testing environments). 
 
 \section{Component Overview}
 
@@ -421,14 +455,16 @@ This layered architecture separates concerns between user interaction, persisten
 
 \chapter{Static Code Analysis Workflow}\label{chap:static-analysis}
 
-The static code analysis workflow extracts structural dependencies from a monolithic Java application and identifies candidate microservice boundaries using graph-based clustering algorithms. This process provides architects with data-driven insights into how the system's components interact, enabling informed decisions about service partitioning.
+This chapter details the implementation of M2MDF Phases I--III (Input Collection, Monolith Analysis, and Microservices Identification) introduced in Chapter~\ref{chap:challenges}. It describes how ServiceSlicer extracts structural dependencies from Java bytecode, constructs dependency graphs, and applies clustering algorithms to identify candidate service boundaries. The semantic refinement step operationalizes the domain-driven and actor-driven decomposition approaches discussed in Section~2.2.
+
+The static code analysis workflow provides architects with data-driven insights into how the system's components interact, enabling informed decisions about service partitioning.
 
 \begin{figure}[htb]
   \centering
   \includegraphics[width=0.8\textwidth]{figures/static-analysis-sequence.png}
   \caption{Static Analysis Sequence Diagram}%
   \label{fig:ai-decomposition-configuration}
-\end{figure}\FloatBarrier
+\end{figure}
 
 \section{Workflow Overview}
 
@@ -436,7 +472,7 @@ The workflow is structured around the concept of a decomposition job, which enca
 
 \subsection{Phase 1: Job Initialization and Configuration}
 
-Users initiate a decomposition job through the web interface (Figure~\ref{fig:static-code-analysis-workflow}) by uploading a compiled JAR file representing the monolithic application and specifying configuration parameters such as the base package namespace and optional exclusion patterns. The ability to exclude specific packages or patterns addresses a practical concern: many codebases contain automatically generated artefacts—such as persistence layer code, API schema definitions, or database access objects—that do not reflect meaningful domain relationships. Including such artefacts in the dependency analysis would introduce structural noise and potentially distort the resulting service boundary recommendations. Once submitted, the job is queued for asynchronous processing, enabling the analysis of large codebases without blocking the user interface.
+Users initiate a decomposition job through the web interface (see Appendix~\ref{app:ui}, Figure~\ref{fig:ui-decomposition}) by uploading a compiled JAR file representing the monolithic application and specifying configuration parameters such as the base package namespace and optional exclusion patterns. The ability to exclude specific packages or patterns addresses a practical concern: many codebases contain automatically generated artefacts—such as persistence layer code, API schema definitions, or database access objects—that do not reflect meaningful domain relationships. Including such artefacts in the dependency analysis would introduce structural noise and potentially distort the resulting service boundary recommendations. Once submitted, the job is queued for asynchronous processing, enabling the analysis of large codebases without blocking the user interface.
 
 \subsection{Phase 2: Dependency Extraction and Graph Construction}
 
@@ -472,16 +508,17 @@ The dependency graph is transformed into a structured representation and submitt
 
 It is important to note that AI-generated decompositions are not perfect solutions. Language models lack deep domain expertise and contextual understanding of the specific business requirements, team structures, and operational constraints that influence real-world decomposition decisions. The generated candidates should therefore be viewed as a starting point for exploration rather than definitive recommendations, requiring validation and refinement by architects with domain knowledge.
 
+\FloatBarrier%
 \section{Workflow Output and Visualization}
 
 Upon completion of the static code analysis workflow, ServiceSlicer produces a set of decomposition results that enable architects to explore and compare alternative microservice boundaries. For each analysis run, the system generates multiple decomposition candidates derived from both algorithmic clustering techniques (Louvain, Leiden, and Label Propagation) and semantically informed approaches based on Domain-Driven Design and Actor-Driven Design principles. Each candidate specifies proposed service boundaries by assigning classes to services, complemented by descriptive service names and quality metrics, allowing structural and semantic decompositions to be evaluated side by side.
 
 To support intuitive analysis, ServiceSlicer provides an interactive visualization of the class-level dependency graph, as shown in Figure~\ref{fig:decomposition-job-details}. Nodes in the graph represent classes and are colored according to their assigned service in the selected decomposition candidate, while directed edges capture dependencies such as method invocations and field accesses. Users can dynamically switch between decomposition candidates and interact with the graph through zooming and node selection, making it possible to examine cohesion within services and dependencies that cross service boundaries. This visual representation complements quantitative metrics by making architectural trade-offs explicit and enabling early identification of potential integration hotspots before proceeding to implementation or performance evaluation.
 
-\begin{figure}[ht]
+\begin{figure}[hbt]
   \centering
-  \includegraphics[width=0.9\textwidth]{figures/decompositionJob.jpeg}
-  \caption{Decomposition job details page visualizing candidate microservice boundaries with color-coded clusters}%
+  \includegraphics[width=1\textwidth]{figures/decomposition_visualization.png}
+  \caption{Visualization of candidate microservice boundaries with color-coded clusters}%
   \label{fig:decomposition-job-details}
 \end{figure}
 
@@ -489,13 +526,13 @@ To support intuitive analysis, ServiceSlicer provides an interactive visualizati
 
 \chapter{Performance Benchmarking Workflow}\label{chap:benchmarking}
 
-The automated performance benchmarking workflow evaluates the scalability characteristics of different architectural variants under realistic load conditions. By executing controlled load tests and collecting detailed performance metrics, this workflow provides empirical data to inform architectural decisions based on observed system behavior rather than theoretical assumptions or intuition.
+This chapter operationalizes the Multi-Level Scalability Assessment methodology introduced in Section~2.4. The concepts defined there—baseline thresholds, domain metric, scalability footprint, scalability gap, and operational profiles—are implemented through ServiceSlicer's benchmarking infrastructure. This chapter describes how the platform automates deployment, workload generation, metrics collection, and multi-level analysis to make the methodology practical for iterative architectural evaluation.
 
 \section{Methodological Foundation}
 
-The benchmarking methodology implemented in this chapter is based on the Multi-Level Scalability Assessment framework introduced by Avritzer et al.~\cite{scalabilityAssessment}. This framework provides a systematic approach for evaluating system scalability at multiple levels of granularity under realistic operational profiles. The framework defines the mathematical formulations for scalability thresholds, domain metrics, share metrics, and weighted aggregation procedures that enable comparative assessment of architectural variants.
+The benchmarking workflow implements the Multi-Level Scalability Assessment framework introduced by Avritzer et al.~\cite{scalabilityAssessment}. As described in Section~2.4, this framework compares architectural variants by measuring scalability at both system and operation levels, using baseline thresholds to determine pass/fail criteria and aggregating results into a domain metric. 
 
-\textbf{The contribution of this thesis is not the scalability assessment methodology itself, but rather the implementation of an automated infrastructure that operationalizes this existing methodology within the context of monolith-to-microservices decomposition.} Specifically, this work provides: (1) automated deployment and orchestration of architectural variants; (2) workload generation based on actor-driven behavior models; (3) systematic collection and aggregation of performance metrics; and (4) integration with the static decomposition analysis workflow described in the previous chapter. The formulas, metrics, and multi-level assessment procedures presented in this chapter are drawn directly from the referenced methodology and are implemented as specified in the original work.
+\textbf{The contribution of this thesis is not the scalability assessment methodology itself, but rather the implementation of an automated infrastructure that operationalizes this existing methodology within the context of monolith-to-microservices decomposition.} Specifically, this work provides: (1) automated deployment and orchestration of architectural variants; (2) workload generation based on behavior models; (3) systematic collection and aggregation of performance metrics; and (4) integration with the static decomposition analysis workflow described in the previous chapter.
 
 \section{Workflow Overview}
 
@@ -503,58 +540,35 @@ The benchmarking workflow is designed around the principle of comparative evalua
 
 \subsection{Phase 1: System Under Test Definition}
 
-The first phase establishes the architectural variants to be compared through the creation of system under test (SUT) definitions. Each SUT defines a complete architectural variant to be evaluated (Figure~\ref{fig:create-sut}). An SUT includes a Docker Compose deployment descriptor specifying all services, resource allocations, and dependencies; operational metadata such as health-check endpoint, exposed port, and startup timeout; and optional database initialization configurations that seed persistent storage with representative application state prior to testing. This ensures each variant can be deployed, validated, tested, and torn down automatically and reproducibly, with consistent initial conditions across all benchmark runs.
-
-\begin{figure}[htb]
-  \centering
-  \includegraphics[width=0.9\textwidth]{figures/ServiceSlicer_createSUTPage.jpeg}
-  \caption{System under test configuration interface}%
-  \label{fig:create-sut}
-\end{figure}
+The first phase establishes the architectural variants to be compared through the creation of system under test (SUT) definitions. Each SUT defines a complete architectural variant to be evaluated. An SUT includes a Docker Compose deployment descriptor specifying all services, resource allocations, and dependencies; operational metadata such as health-check endpoint, exposed port, and startup timeout; and optional database initialization configurations that seed persistent storage with representative application state prior to testing. This ensures each variant can be deployed, validated, tested, and torn down automatically and reproducibly, with consistent initial conditions across all benchmark runs.
 
 \subsection{Phase 2: Operational Setting Specification}
 
-An operational setting defines the workload model applied during benchmarking (Figure~\ref{fig:operational-setting}). It formalizes expected usage patterns by specifying which actors interact with the system, what sequences of operations they perform, and how frequently these patterns occur under realistic conditions. The specification is grounded in an OpenAPI contract that defines all exposed operations and serves as both a validation artifact and the foundation for workload construction. The operational setting comprises two components: behavior models and an operational profile.
-
-\begin{figure}[htb]
-  \centering
-  \includegraphics[width=0.9\textwidth]{figures/ServiceSlicer_createOperationalSettingPage.jpeg}
-  \caption{Operational setting configuration interface}%
-  \label{fig:operational-setting}
-\end{figure}
+An operational setting implements the operational profile concept defined in Section~2.4.5, providing the workload specification for benchmarking (see Appendix~\ref{app:ui}, Figure~\ref{fig:ui-operational-setting}). The specification is grounded in an OpenAPI contract that defines all exposed operations. The operational setting comprises two components: behavior models and load level distribution.
 
 \subsubsection{Behavior Models}
 
-Behavior models formalize user interaction patterns as sequences of API operations that actors execute to accomplish specific goals. Each model captures the temporal ordering of operations, data dependencies between requests, and inter-operation delays.
-
-The system supports three specification modes:
+Behavior models define the sequences of API operations that actors execute. The system supports three specification modes:
 
 \begin{itemize}
   \item \textbf{Interactive Definition}: Models are constructed through a guided user interface for specifying operation sequences, parameter bindings, and timing constraints.
 
   \item \textbf{Structured Import}: Models are provided as JSON data that can be generated programmatically or exported from prior runs, enabling version control and automation.
 
-  \item \textbf{AI-Assisted Synthesis}: Models can be synthesized automatically from the API contract using large language models when empirical usage data is unavailable, though refinement based on observed patterns is recommended for production use.
+  \item \textbf{AI-Assisted Synthesis}: Models can be synthesized automatically from the API contract using large language models when empirical usage data is unavailable. 
 \end{itemize}
 
-Each behavior model specifies the actor type (e.g., customer, administrator), relative frequency of occurrence, and the complete operation sequence. Operations include HTTP methods, endpoint paths, parameters, headers, and request bodies. Data dependencies are captured through variable bindings, allowing values from one response to be injected into subsequent requests—enabling stateful workflows like authentication followed by resource manipulation. Stochastic think times between operations model realistic user pauses.
+Each behavior model specifies the actor type, relative frequency of occurrence, and the complete operation sequence including HTTP methods, endpoint paths, parameters, headers, and request bodies. Variable bindings allow values from one response to be injected into subsequent requests, enabling stateful workflows. Configurable think times between operations model realistic user pauses.
 
-\subsubsection{Operational Profile}
+\subsubsection{Load Level Distribution}
 
-The operational profile defines the load distribution applied during benchmarking. It specifies discrete load levels—each representing a target number of concurrent virtual users—along with the probability that each load level occurs under realistic production conditions. This probabilistic characterization enables weighted aggregation of performance metrics, ensuring that results emphasize the most frequently encountered load levels rather than treating all scenarios uniformly.
+The load level distribution specifies discrete concurrency levels and their probabilities, as required by the scalability assessment methodology. Users define the target number of concurrent virtual users for each level and assign probability weights that reflect expected production conditions.
 
 \subsection{Phase 3: Benchmark Definition}
 
-With the SUTs defined, along with a preconfigured operational setting, a benchmark instance is created to link these components and initiate the empirical evaluation process (Figure~\ref{fig:benchmark-details}). A benchmark serves as a lightweight container that associates a specific baseline architecture, one or more target architectures, and an operational setting defining the workload to be applied. By separating the definition of architectural variants, workload models, and benchmark experiments, the system enables reuse of components across multiple studies and facilitates systematic exploration of alternative designs under varied operational scenarios. 
+With the SUTs defined, along with a preconfigured operational setting, a benchmark instance is created to link these components and initiate the empirical evaluation process (see Appendix~\ref{app:ui}, Figure~\ref{fig:ui-benchmark-dashboard}). A benchmark serves as a lightweight container that associates a specific baseline architecture, one or more target architectures, and an operational setting defining the workload to be applied. By separating the definition of architectural variants, workload models, and benchmark experiments, the system enables reuse of components across multiple studies and facilitates systematic exploration of alternative designs under varied operational scenarios. 
 
 \subsection{Phase 4: Configuration Validation}
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.9\textwidth]{figures/ServiceSlicer_benchmarkPage.jpeg}
-  \caption{Benchmark interface showing validation status and diagnostic outputs}%
-  \label{fig:benchmark-details}
-\end{figure}
 
 Before executing a full benchmark, an optional validation phase verifies the correctness and consistency of all inputs associated with a given SUT and operational setting. This step detects configuration errors early in the workflow, preventing wasted computational resources and ensuring that subsequent benchmark results are meaningful and reproducible.
 
@@ -572,11 +586,7 @@ Once configuration validation succeeds, the full execution phase performs automa
 
 A benchmark run constructs a structured execution plan using a two-layer abstraction. A \textbf{TestCase} encapsulates a single test execution for a specific SUT at a particular load level, storing results, collected metrics, and execution state. A \textbf{TestSuite} groups all test cases for a single SUT across all load levels defined in the operational profile. The total number of test cases equals $|\text{SUTs}| \times |\text{load levels}|$, organized into $|\text{SUTs}|$ test suites.
 
-When creating a benchmark, one SUT must be designated as the baseline. The baseline test suite's lowest load level establishes the scalability thresholds $\Gamma_j^0$ for each operation $j$:
-\begin{equation}
-\Gamma_j^0 = \mu_j^0 + 3\sigma_j^0
-\end{equation}
-where $\mu_j^0$ is the mean response time and $\sigma_j^0$ is the standard deviation observed during the baseline's minimum load test. These thresholds serve as the performance reference for evaluating all architectures—including the baseline itself at higher loads.
+When creating a benchmark, one SUT must be designated as the baseline. The baseline test suite's lowest load level establishes the scalability thresholds for each operation, as defined in Section~2.4.2. These thresholds serve as the performance reference for evaluating all architectures—including the baseline itself at higher loads.
 
 The workflow executes test suites sequentially, starting with the baseline test suite. Within each suite, test cases execute sequentially in order of ascending load. Each test case progresses through well-defined states, with suite and benchmark status derived from the aggregate state of constituent tests. This structured approach ensures traceability, supports restart semantics in case of infrastructure failures, and enables incremental result inspection as tests complete.
 
@@ -586,25 +596,29 @@ Each test case follows a standardized execution procedure. The designated SUT is
 
 \paragraph{Performance Metric Computation}
 
-Upon test completion, the framework computes aggregated performance statistics from steady-state measurements. Key metrics include mean response time and standard deviation for each operation, invocation frequency across the workload, and pass/fail classification based on scalability thresholds established by the baseline architecture at minimal load.
-
-The methodology derives multi-level scalability indicators at three levels of granularity. \textbf{Operation-level metrics} capture the maximum sustainable load per operation (scalability footprint) and the severity of threshold violations (performance offset). \textbf{Load-level metrics} quantify scalability loss at specific concurrency levels (scalability gap). \textbf{Architecture-level metrics} aggregate operation-level results into a relative domain metric expressing overall scalability satisfaction compared to the baseline. Formal definitions and mathematical formulations of these metrics are provided in the Multi-Level Scalability Assessment methodology~\cite{scalabilityAssessment}.
+Upon test completion, the framework computes aggregated performance statistics from steady-state measurements. Key metrics include mean response time and standard deviation for each operation, invocation frequency across the workload, and pass/fail classification based on scalability thresholds. The platform then computes the multi-level scalability indicators defined in Section~2.4: domain metric, scalability footprint, scalability gap, and performance offset.
 
 \paragraph{Result Persistence and System Teardown}
 
 Computed metrics and test case metadata are persisted to the relational database. The SUT is then systematically torn down to ensure clean isolation between successive test cases.
 
-\FloatBarrier
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/benchmark-sequence.png}
+  \caption{Benchmark Execution Sequence Diagram}%
+  \label{fig:benchmark-execution-sequence}
+\end{figure}
+\FloatBarrier%
 
 \chapter{Demonstration of ServiceSlicer in Practice}\label{chap:demonstration}
 
 This chapter demonstrates the practical application of ServiceSlicer through two representative examples that illustrate how the platform supports monolith decomposition workflows. Rather than presenting a formal empirical evaluation with controlled experiments and statistical analysis, this chapter provides a hands-on preview of the tool's capabilities, showing how architects can use it to explore decomposition strategies and assess their viability through automated performance testing.
 
-The demonstrations examine two systems of different scales and contexts. The first is RealWorld Conduit, a medium-complexity demonstration application implementing a standardized blogging platform specification. This system serves as an accessible example that illustrates the complete workflow—from static analysis through decomposition candidate generation to performance benchmarking—in a well-understood domain. The second is Technika, an industrial fleet and equipment management system deployed in production. This example demonstrates how ServiceSlicer handles real-world complexity, including domain-specific business logic, operational constraints, and the trade-offs that emerge when evaluating architectural alternatives for systems with established user bases and performance requirements.
+The demonstrations examine two systems in different contexts. The first is RealWorld Conduit, a medium-complexity demonstration application implementing a standardized blogging platform specification. This system serves as an accessible example that illustrates the complete workflow—from static analysis through decomposition candidate generation to performance benchmarking—in a well-understood domain. The second is Technika, an industrial fleet and equipment management system deployed in production. This example demonstrates how ServiceSlicer handles a real-world codebase with realistic usage patterns derived from actual system logs.
 
 These demonstrations serve three purposes. First, they validate that ServiceSlicer can successfully process real applications, extract meaningful dependency structures, and execute automated benchmarks against containerized deployments. Second, they illustrate the types of insights the platform provides—including structural metrics, semantic decomposition candidates, and multi-level scalability assessments—and how these insights support architectural decision-making. Third, they reveal practical considerations that arise when applying the tool, such as the effort required to prepare operational profiles, the interpretability of clustering results, and the relationship between static analysis and runtime behavior.
 
-The chapter is structured as follows. Section~6.1 presents the demonstration of ServiceSlicer applied to RealWorld Conduit, walking through the complete workflow from dependency analysis to performance comparison. Section~6.2 demonstrates the tool's application to Technika, highlighting how it addresses industrial system complexity. Section~6.3 synthesizes observations across both examples, discussing patterns, discovered limitations, and practical implications for practitioners considering similar decomposition efforts. Finally, Section~6.4 reflects on the scope and limitations of these demonstrations and the boundaries within which the presented findings should be interpreted.
+The chapter is structured as follows. Section~6.1 presents the demonstration of ServiceSlicer applied to RealWorld, walking through the complete workflow from dependency analysis to performance comparison. Section~6.2 demonstrates the tool's application to Technika, a production system with realistic usage patterns. Section~6.3 synthesizes observations across both examples, discussing patterns and practical implications. Finally, Section~6.4 reflects on the scope and limitations of these demonstrations.
 
 \section{Demonstration 1: RealWorld Conduit}
 
@@ -616,30 +630,26 @@ The \textbf{RealWorld} Conduit application is a medium-fidelity blogging platfor
 
 The static analysis of the RealWorld Conduit application resulted in a dependency graph comprising 81 nodes and 183 edges. Given the limited size of the codebase, the complete decomposition job completed in 58 seconds, demonstrating low computational overhead for static analysis on small to medium systems. Both the Louvain and Leiden community detection algorithms produced comparable decompositions consisting of five clusters. The corresponding modularity scores of 0.56 for Louvain and 0.55 for Leiden indicate a clearly identifiable, though not extreme, community structure within the dependency graph, suggesting the presence of cohesive groups of classes with relatively fewer dependencies across cluster boundaries.
 
-In contrast, the Label Propagation algorithm identified only two clusters, one of which contained the majority of classes. This result reflects the existence of a densely connected core within the application, with only a small subset of classes forming a loosely coupled peripheral group. The divergence between modularity-based and diffusion-based clustering outcomes highlights that, while the system exhibits strong overall cohesion, finer-grained structural partitions can still be extracted when optimizing for modularity. Figure~\ref{fig:realworld-leiden} illustrates the decomposition produced by the Leiden algorithm, which is representative of the modularity-based results and serves as a basis for subsequent analysis.
+In contrast, the Label Propagation algorithm identified only two clusters, with most classes grouped into a single large cluster. This difference is expected: Label Propagation tends to produce coarser partitions in well-connected graphs because labels spread easily across the network. The modularity-based algorithms (Louvain and Leiden) actively optimize for balanced partitions with fewer cross-cluster edges, enabling them to detect finer-grained structure even when the overall graph is densely connected. Figure~\ref{fig:realworld-leiden} illustrates the Leiden decomposition, which we use as the basis for subsequent decomposition.
 
 \begin{figure}
-\centering
-\includegraphics[width=0.9\textwidth]{figures/realWorld_leiden.png}
-\caption{Leiden algorithm decomposition of the RealWorld Conduit application}%
-\label{fig:realworld-leiden}
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/realWorld_leiden_graph.png}
+  \caption{Leiden algorithm decomposition of the RealWorld Conduit application}%
+  \label{fig:realworld-leiden}
 \end{figure}
 
 \subsection{Generated Decomposition Candidates and Implementation}
 
-The algorithmic clustering results and AI-assisted decomposition suggestions obtained during the static analysis phase served as guidance for designing a microservices architecture. The Leiden algorithm's output, which achieved the highest modularity score and produced structurally coherent clusters, was interpreted alongside domain knowledge of the blogging platform to derive a decomposition that is both structurally justified and practically deployable.
+The Leiden algorithm's output was combined with AI-assisted decomposition suggestions and domain knowledge of the blogging platform to design a deployable microservices architecture. Based on this analysis, three microservices were extracted: an \textit{article-service}, a \textit{comments-service}, and a \textit{user-service}. This decomposition aligns with the natural domain boundaries of a blogging platform, where articles, comments, and user management represent distinct areas of functionality with clear responsibilities and data ownership.
 
-Based on this analysis, three microservices were extracted: an \textit{article-service}, a \textit{comments-service}, and a \textit{user-service}. This decomposition aligns with the natural domain boundaries of a blogging platform, where articles, user interactions through comments, and user management represent distinct areas of functionality with well-defined responsibilities and data ownership.
+The services are deployed behind an API gateway that exposes the same REST API as the original monolith, ensuring functional equivalence and enabling fair performance comparison. Each microservice manages its own database, enforcing data ownership and eliminating direct cross-service database access.
 
-The services are deployed behind an API gateway that exposes the same REST API as the original monolithic application, ensuring functional equivalence and enabling fair performance comparison. Each microservice manages its own database, enforcing data ownership and eliminating direct cross-service database access.
+The microservice-based application was containerized using Docker Compose to support automated deployment during benchmarking. Representative seed data was generated to ensure that load tests run against a realistic dataset rather than an empty state.
 
-The resulting microservice-based application was containerized using Docker Compose to support automated deployment during benchmarking. In preparation for performance evaluation, representative seed data was generated and loaded into the respective databases to ensure that load tests were executed against a realistic dataset rather than an empty or trivial state.
+\subsection{Operational Setting}
 
-\subsection{Definition of the Operational Setting}
-
-The operational setting for the RealWorld Conduit application was defined to approximate realistic system usage based on the existing REST API and observed interaction patterns. To this end, the deployed demo version of the application was used to simulate representative user sessions, during which network requests issued by the frontend were recorded and analyzed.
-
-Based on this analysis, two primary actor types were identified: a \textit{reader} and a \textit{writer}. These actors were further refined into three distinct behavior models. The \textit{reader-passive} behavior represents passive consumption and consists of reading an article and retrieving its associated metadata. The \textit{reader-active} behavior extends this flow by including interactive actions such as posting comments and following authors. The \textit{writer} behavior captures content creation activities, including author authentication and article publication. Each behavior model was defined as an ordered sequence of API operations corresponding to the recorded request traces.
+The operational setting was derived by recording network requests from representative user sessions on the deployed demo application. The list of API operations was extracted from the application's OpenAPI specification, ensuring complete coverage of the exposed endpoints. Two actor types were identified: \textit{reader} and \textit{writer}, refined into three behavior models. The \textit{reader-passive} behavior represents passive content consumption. The \textit{reader-active} behavior extends this with interactive actions such as posting comments and following authors. The \textit{writer} behavior captures content creation activities. Table~\ref{tab:realworld-operations} lists the API operations used, and Table~\ref{tab:realworld-behavior-models} shows the operation sequences for each behavior model.
 
 \begin{table}[ht]
   \centering
@@ -663,8 +673,7 @@ Based on this analysis, two primary actor types were identified: a \textit{reade
   \end{tabular}
 \end{table}
 
-The extracted request sequences served as the basis for constructing the operational profile, ensuring that the generated load reflects realistic mixes of read and write interactions. To determine a feasible workload intensity given the available computational resources, a series of preliminary load tests were conducted. These diagnostic runs were used to identify a load level at which the system remained responsive without exhibiting excessive error rates or resource exhaustion.
-
+To simulate realistic user behavior, think times were configured between operations. Two categories of delays were used: \textit{automatic} think times (1--200ms) representing browser processing and network latency between consecutive requests, and \textit{user} think times (1--7 seconds) representing manual interactions such as reading content or clicking links. Content creation actions required longer delays—for example, a think time exceeding 15 seconds was configured before \texttt{createArticle} to simulate the time spent composing a blog post.
 
 \begin{table}[ht]
   \centering
@@ -692,17 +701,126 @@ The extracted request sequences served as the basis for constructing the operati
   \vspace{0.2em}
 \end{table}
 
-Based on the identified sustainable load, the final operational profile was defined using a normal distribution centered around this value. This approach models typical fluctuations in user activity while avoiding unrealistically extreme load conditions, and it provides a stable foundation for subsequent scalability assessment.
+To determine appropriate load levels, preliminary tests were conducted to identify the system's capacity threshold—the point at which response times began to degrade significantly. Based on these observations, seven discrete load levels were defined ranging from 50 to 350 concurrent virtual users, with probability weights assigned to emphasize mid-range loads where the system operates under realistic stress. Table~\ref{tab:realworld-load-levels} summarizes the operational profile used for benchmarking.
+
+\begin{table}[ht]
+  \centering
+  \caption{Operational profile load levels for RealWorld Conduit benchmarking}%
+  \label{tab:realworld-load-levels}
+  \begin{tabular}{cc}
+  \hline
+  \textbf{Concurrent Users} & \textbf{Probability} \\
+  \hline
+  50  & 0.119 \\
+  100 & 0.139 \\
+  150 & 0.171 \\
+  200 & 0.203 \\
+  250 & 0.162 \\
+  300 & 0.114 \\
+  350 & 0.092 \\
+  \hline
+  \end{tabular}
+\end{table}
 
 \subsection{Benchmark Execution and Results}
 
-The benchmarking workflow was executed following the procedure outlined in Chapter 5. The test cases were configured to run for a 30s warm-up period followed by a 5-minute measurement phase at each load level. Benchmarks compared each candidate architecture against the original monolithic baseline, executing load tests at all specified load levels and collecting performance metrics.
+The benchmarking workflow was executed following the procedure outlined in Chapter~\ref{chap:benchmarking}. Test cases were executed with a 30-second warm-up period (during which metrics were excluded) followed by a 5-minute measurement phase at each load level. Each test case was repeated three times to reduce variance from random fluctuations and transient system states. Both architectural variants were evaluated across all seven load levels defined in the operational profile.
 
-[TODO: Present performance measurements and scalability assessment outcomes]
+\paragraph{System-Level Results}
+
+Figure~\ref{fig:realworld-domain-metric} visualizes the relative domain metrics for both architectures at each load. The monolithic architecture achieved a total domain metric of 0.788, while the microservices architecture scored 0.600. The monolithic architecture demonstrated superior overall scalability, maintaining acceptable performance until 200 concurrent users before degradation became significant. The microservices variant began showing performance degradation earlier, at 150 concurrent users. This difference is reflected in the 18.8\% lower domain metric for the decomposed architecture.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/domain-metric-real-world.png}
+  \caption{Domain metric comparison between Monolith and Microservices architectures for RealWorld Conduit}%
+  \label{fig:realworld-domain-metric}
+\end{figure}
+
+\paragraph{Operation-Level Results}
+
+Figure~\ref{fig:realworld-operation-footprints} visualizes the scalability footprint for each operation across both architectures. The footprint indicates the maximum load level at which an operation consistently met its performance threshold. In the monolith, most operations sustained load up to 250 VUs, with \texttt{createComment} reaching 300 VUs and \texttt{userLogin} being the weakest at 200 VUs. The microservices architecture shows a more varied pattern: some operations degraded earlier while others improved.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/scalability-footprint-real-world.png}
+  \caption{Operation-level scalability footprints for RealWorld Conduit (Monolith vs.\ Microservices)}%
+  \label{fig:realworld-operation-footprints}
+\end{figure}
+
+Tables~\ref{tab:realworld-operation-results-monolith} and~\ref{tab:realworld-operation-results-microservices} present the detailed operation-level metrics for both architectures, including request counts, failure rates, scalability footprints, gaps, and performance offsets.
+
+\begin{table}[ht]
+  \centering
+  \caption{Operation-level scalability metrics for RealWorld Conduit (Monolith)}%
+  \label{tab:realworld-operation-results-monolith}
+  \small
+  \begin{tabular}{lrrrcc}
+  \hline
+  \textbf{Operation} & \textbf{Requests} & \textbf{Failed} & \textbf{Footprint} & \textbf{Gap} & \textbf{Offset} \\
+  \hline
+  follow          & 6,952  & 0     & 250 & 0.032 & 0.064 \\
+  article         & 38,222 & 0     & 250 & 0.207 & 21.213 \\
+  getFeed         & 11,567 & 0     & 250 & 0.054 & 5.340 \\
+  getTags         & 42,087 & 0     & 250 & 0.205 & 5.504 \\
+  userLogin       & 11,703 & 136   & 200 & 0.060 & 0.151 \\
+  getArticles     & 37,549 & 0     & 250 & 0.186 & 7.075 \\
+  getComments     & 31,770 & 0     & 250 & 0.173 & 2.544 \\
+  createArticle   & 4,615  & 1,111 & 250 & 0.022 & 7.805 \\
+  createComment   & 6,655  & 0     & 300 & 0.035 & 1.872 \\
+  favoriteArticle & 6,612  & 2     & 250 & 0.032 & 2.279 \\
+  \hline
+  \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+  \centering
+  \caption{Operation-level scalability metrics for RealWorld Conduit (Microservices)}%
+  \label{tab:realworld-operation-results-microservices}
+  \small
+  \begin{tabular}{lrrrcc}
+  \hline
+  \textbf{Operation} & \textbf{Requests} & \textbf{Failed} & \textbf{Footprint} & \textbf{Gap} & \textbf{Offset} \\
+  \hline
+  follow          & 6,036  & 0     & 250 & 0.036 & 0.057 \\
+  article         & 34,073 & 0     & 200 & 0.194 & 1.502 \\
+  getFeed         & 10,724 & 0     & 200 & 0.066 & 2.446 \\
+  getTags         & 38,240 & 0     & 300 & 0.212 & 0.413 \\
+  userLogin       & 10,724 & 0     & 200 & 0.066 & 5.868 \\
+  getArticles     & 33,998 & 0     & 100 & 0.192 & 0.113 \\
+  getComments     & 28,212 & 1,084 & 350 & N/A   & N/A \\
+  createArticle   & 4,242  & 1,080 & 200 & 0.026 & 1.161 \\
+  createComment   & 5,829  & 0     & 200 & 0.028 & 0.779 \\
+  favoriteArticle & 5,802  & 5     & N/A & N/A   & N/A \\
+  \hline
+  \end{tabular}
+\end{table}
 
 \subsection{Observations and Insights}
 
-[TODO: Discuss what the results reveal about the decomposition and the tool's utility]
+\paragraph{Monolith Outperformed Microservices in Overall Scalability}
+The monolithic architecture achieved a domain metric of 0.788 compared to 0.600 for the microservices variant—a 18.8\% difference. The monolith sustained acceptable performance up to 200 concurrent users, while the microservices architecture began degrading at 150 users. This result contradicts the common assumption that microservices inherently improve scalability; for this application size and workload profile, the decomposition introduced overhead that outweighed any benefits from service isolation.
+
+\paragraph{Inter-Service Communication Overhead}
+The \texttt{getArticles} operation demonstrated the clearest evidence of decomposition overhead: its scalability footprint dropped from 250 concurrent users in the monolith to just 100 in the microservices variant. Since article retrieval in the decomposed architecture requires coordination across services, the additional network hops and serialization costs degraded performance substantially. This pattern highlights that read-heavy operations spanning multiple services are particularly vulnerable to distributed system overhead.
+
+\paragraph{Service Isolation Benefited Some Operations}
+Not all operations suffered from decomposition. The \texttt{getTags} operation actually improved in the microservices architecture, sustaining load up to 300 VUs (compared to 250 VUs in the monolith) with a dramatically lower performance offset (0.413 vs.\ 5.504). Isolating tag management into a dedicated service reduced contention with other components, demonstrating that decomposition can benefit operations with minimal cross-service dependencies.
+
+\paragraph{Authentication Remained a Bottleneck Across Both Architectures}
+The \texttt{userLogin} operation exhibited early threshold violations in both architectures, with a footprint of 200 VUs. However, the microservices variant showed significantly worse degradation severity (performance offset of 5.868 vs.\ 0.151). This suggests that authentication represents a shared bottleneck—likely due to database contention or connection pool exhaustion—that decomposition alone cannot resolve and may even make worse.
+
+\paragraph{Write Operation Failures}
+The \texttt{createArticle} operation experienced high failure rates in both architectures: 1,111 failures out of 4,615 requests in the monolith, and 1,080 out of 4,242 in microservices. Write operations under load appear particularly vulnerable to timeouts and resource contention, and distributing them across services did not improve reliability.
+
+\paragraph{Decomposition Introduced New Failure Modes}
+Some operations that were reliable in the monolith became problematic after decomposition. The \texttt{getComments} operation had zero failures in the monolith but experienced 1,084 failures in the microservices variant. Similarly, \texttt{favoriteArticle} failed to meet its performance threshold at any load level in the microservices architecture, preventing meaningful scalability metrics from being computed. These new failure modes illustrate that decomposition can introduce reliability risks not present in the original system.
+
+\paragraph{Static Analysis Could Not Predict Runtime Coupling}
+The static decomposition analysis identified structurally coherent clusters, but could not reveal the runtime coupling that emerged under load. Operations like \texttt{article}, \texttt{getArticles}, and \texttt{getFeed} exhibited correlated degradation patterns, indicating synchronous inter-service dependencies that only became apparent during benchmarking. This finding validates the core thesis motivation: static analysis alone is insufficient for evaluating decomposition quality.
+
+\paragraph{Granular Metrics Enabled Targeted Optimization Insights}
+The multi-level assessment methodology provided actionable insights that aggregate metrics would obscure. While the \texttt{article} operation had a moderate scalability gap (0.207), its extreme performance offset (21.213 in the monolith) revealed that threshold violations were severe when they occurred. Conversely, \texttt{getTags} had a similar gap (0.205) but much lower offset (5.504), indicating more gradual degradation. These distinctions help architects prioritize optimization efforts based on both frequency and severity of performance violations.
 
 \section{Demonstration 2: Technika}
 
@@ -714,33 +832,34 @@ As a production system with real operational history, Technika provides an oppor
 
 \subsection{Static Analysis Workflow}
 
-The Technika monolith was uploaded to ServiceSlicer as a compiled JAR artifact and processed through the static analysis workflow described in Chapter~4. The dependency extraction phase identified the application's structural composition, producing a dependency graph consisting of 60 class nodes connected by 153 directed edges representing method invocations, field accesses, and type dependencies.
+The Technika monolith was uploaded to ServiceSlicer as a compiled JAR artifact and processed through the static analysis workflow described in Chapter~\ref{chap:static-analysis}. The dependency extraction phase identified the application's structural composition, producing a dependency graph consisting of 60 class nodes connected by 153 directed edges representing method invocations, field accesses, and type dependencies.
 
 Following graph construction, three community detection algorithms were applied to identify candidate service boundaries. The Louvain algorithm achieved a modularity score of 0.4554, indicating moderate structural separation between detected clusters. The Leiden algorithm produced a slightly higher modularity of 0.4775, suggesting improved cluster quality through its refinement mechanisms. The Label Propagation algorithm converged to a 3-cluster partition, reflecting a coarser-grained decomposition compared to the hierarchical methods.
 
 These modularity values, while lower than those typically observed in larger systems, are characteristic of smaller monoliths where tight integration across functional areas is common. The relatively compact codebase and limited number of domain entities naturally constrain the degree of structural separation that can be achieved through purely algorithmic partitioning.
 
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/technika-add-graph.png}
+  \caption{AI-assisted Actor-Driven decomposition graph of the Technika application}%
+  \label{fig:technika-leiden}
+\end{figure}
+
 \subsection{Generated Decomposition Candidates and Implementation}
 
-The algorithmic clustering results served as initial guidance for identifying service boundaries, but the final decomposition strategy was developed in coordination with a domain expert who understood the system's operational context and business requirements. This collaborative approach enabled the integration of structural insights from static analysis with domain knowledge about functional cohesion, operational workflows, and data ownership patterns.
-
-Through this process, a decomposition strategy emerged that aligned with the two primary actor types interacting with the system. Rather than pursuing fine-grained decomposition based solely on structural clustering, the decision was made to extract two coarser-grained services that corresponded to distinct operational responsibilities:
+The algorithmic clustering results served as initial guidance, but the final decomposition strategy was developed with a domain expert who understood the system's operational context. Rather than pursuing fine-grained decomposition based solely on structural clustering, two coarser-grained services were extracted that aligned with the primary actor types:
 
 \begin{itemize}
-  \item \textbf{Admin Service}: Responsible for managing master data synchronization with external systems, handling devices, employees, and projects. This service encapsulates the system's administrative interface used primarily by automated external processes for bulk data updates and periodic synchronization operations.
+  \item \textbf{Admin Service}: Manages master data synchronization with external systems, handling devices, employees, and projects. Used primarily by automated processes for data updates.
 
-  \item \textbf{Worker Service}: Responsible for operational workflows performed by field workers, including transaction management (device usage tracking, fuel consumption, mileage recording) and work log entries (time tracking, project assignment). This service supports the high-frequency, interactive operations that constitute the majority of day-to-day system usage.
+  \item \textbf{Worker Service}: Handles operational workflows performed by field workers, including transaction management (device usage, fuel consumption, mileage) and work log entries. Supports the high-frequency operations that constitute the majority of daily system usage.
 \end{itemize}
 
-This actor-aligned decomposition strategy reflects a pragmatic balance between architectural clarity and operational feasibility. By organizing services around distinct user personas rather than pursuing maximal structural decomposition, the design maintains clear service boundaries while limiting the operational complexity that would arise from managing numerous fine-grained microservices in a production environment.
-
-Based on this strategy, a microservices implementation was developed consisting of the Admin Service and Worker Service as described above. Each microservice was containerized using Docker Compose, with deployment configurations specifying resource allocations, network topologies, and database initialization procedures. To ensure realistic testing conditions, the benchmark environment was initialized using a database dump extracted from the production server, providing representative data volume and distribution patterns that reflect actual system usage.
-
-This approach enabled comparative assessment between the original monolithic architecture and the proposed microservices decomposition under conditions closely approximating production workloads, offering insights into how the architectural transition might affect system performance in operational deployment.
+Each microservice was containerized using Docker Compose. To ensure realistic testing conditions, the benchmark environment was initialized using a database dump from the production server, providing representative data volume and distribution patterns.
 
 \subsection{Operational Profile Configuration}
 
-The operational setting for Technika was derived from analysis of real system usage patterns conducted in collaboration with a domain expert. Building on the actor-aligned decomposition described in the previous section, behavior models were constructed to capture the typical operation sequences executed by the External System Actor and Common Worker Actor.
+The operational setting for Technika was derived from analysis of real system usage patterns conducted in collaboration with a domain expert. Building on the actor-aligned decomposition described in the previous section, behavior models were constructed to capture the typical operation sequences executed by the Admin Actor and Worker Actor.
 
 \begin{table}[ht]
   \centering
@@ -765,7 +884,7 @@ The operational setting for Technika was derived from analysis of real system us
   \end{tabular}
 \end{table}
 
-These behavior models formalize the workflows performed by each actor type, including the sequential ordering of API operations, parameter dependencies between requests, and realistic think times reflecting human interaction patterns or automated processing delays. The behavior mix was weighted according to observed usage frequencies, with worker operations constituting the majority of system traffic (90\%) and external system synchronization occurring at lower frequency (10\%) but with distinct performance characteristics.
+The behavior mix was weighted according to observed usage frequencies: worker operations constitute 90\% of system traffic, while external system synchronization occurs at 10\% frequency.
 
 \begin{table}[ht]
   \centering
@@ -775,16 +894,16 @@ These behavior models formalize the workflows performed by each actor type, incl
   \begin{tabularx}{\textwidth}{
     l
     l
-    >{\centering\arraybackslash}p{1.7cm}
+    >{\arraybackslash}p{1.7cm}
     X
   }
     \hline
-    \textbf{Actor} & \textbf{Behavior model} & \textbf{Behavior mix} & \textbf{Steps (operation shortcuts)} \\
+    \textbf{Actor} & \textbf{Behavior model} & \textbf{Behavior mix} & \textbf{Operations} \\
     \hline
-    External System & sync-data-write & 0.05 &
+    Admin & sync-data-write & 0.05 &
     o1 $\rightarrow$ o2 $\rightarrow$ o2 $\rightarrow$ o2 $\rightarrow$ o3 $\rightarrow$ o4 $\rightarrow$ o4 $\rightarrow$ o4 $\rightarrow$ o5 $\rightarrow$ o6 $\rightarrow$ o6 $\rightarrow$ o6 \\
     \hline
-    External System & sync-data-read & 0.05 &
+    Admin & sync-data-read & 0.05 &
     o7 $\rightarrow$ o8 \\
     \hline
     Worker & create-worklog & 0.3 &
@@ -797,107 +916,157 @@ These behavior models formalize the workflows performed by each actor type, incl
   \vspace{0.2em}
 \end{table}
 
-Each step in the behavior models includes a configurable think time to simulate realistic interaction delays. Automated operations (such as data synchronization) use short delays of 0--200ms, while human-operated steps (such as form submissions) use longer delays of 1000--5000ms to reflect typical user pauses during interactive workflows.
+Each step in the behavior models includes a configurable think time to simulate realistic interaction delays. Automated operations (such as data synchronization) use short delays of 1--200ms, while human-operated steps (such as form submissions) use longer delays of 1000--5000ms to reflect typical user pauses during interactive workflows.
 
-Load levels were specified to reflect realistic operational conditions, ranging from 0 to 300 concurrent users distributed across the two actor types. This range encompasses both typical daily usage patterns and peak load scenarios observed during periods of high field activity.
+Load levels were specified to reflect realistic operational conditions, ranging from 20 to 70 concurrent users distributed across the two actor types. This range encompasses both typical daily usage patterns and peak load scenarios observed during periods of high field activity.
 
 The operational profile was validated through diagnostic runs to confirm correct API interaction patterns, verify data dependencies between sequential operations, and ensure that the modeled workload accurately represented production usage characteristics.
 
 \subsection{Benchmark Execution and Results}
 
-The benchmarking workflow was executed following the same procedure as for RealWorld Conduit. Test cases were configured with a 30s warm-up period followed by a 5-minute measurement phase at each load level. Performance metrics were collected and aggregated according to the multi-level scalability assessment methodology. 
+The benchmarking workflow was executed following the same procedure as for RealWorld Conduit. Test cases were configured with a 30-second warm-up period followed by a 5-minute measurement phase at each load level. Each test case was repeated three times to reduce variance. Both architectural variants—the original monolith and the two-service microservices decomposition—were evaluated across all load levels defined in the operational profile.
 
-[TODO: Present performance comparison between monolith and decomposed architecture]
+\paragraph{System-Level Results}
 
+Figure~\ref{fig:technika-domain-metric} visualizes the domain metrics for both architectures across load levels. The monolithic architecture achieved a total domain metric of 0.812, while the microservices architecture scored 0.739. Unlike the RealWorld demonstration where microservices performed significantly worse, the Technika decomposition maintained relatively competitive performance—only a 7.3\% reduction in the domain metric.
 
-\subsection{Limitations Encountered}
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/domain-metric-technika.png}
+  \caption{Domain metric comparison between Monolith and Microservices architectures for Technika}%
+  \label{fig:technika-domain-metric}
+\end{figure}
 
-Several practical limitations emerged during the Technika demonstration that inform future development priorities:
+\paragraph{Operation-Level Results}
 
-\begin{itemize}
-  \item \textbf{Configuration coupling}: Modifying existing operational settings affects already completed or running benchmarks. The current implementation lacks sufficient separation between configuration snapshots and benchmark runs, requiring careful version management of operational profiles.
+Figure~\ref{fig:technika-operation-footprints} visualizes the scalability footprint for each operation across both architectures. In the monolith, most operations sustained load between 50 and 70 concurrent users, with \texttt{save} (projects) being the weakest at 40 VUs. The microservices architecture shows a consistent pattern of slightly earlier degradation across write operations.
 
-  \item \textbf{Limited algorithm configurability}: The graph clustering algorithms expose minimal configuration options. More advanced parameterization—such as resolution settings for modularity optimization or seed control for Label Propagation—would enable finer-grained exploration of decomposition alternatives.
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/scalability-footprint-technika.png}
+  \caption{Operation-level scalability footprints for Technika (Monolith vs.\ Microservices)}%
+  \label{fig:technika-operation-footprints}
+\end{figure}
 
-  \item \textbf{Behavior model sensitivity}: Load testing revealed a high rate of failing requests due to improper variable bindings in behavior models. For example, \texttt{POST /transactions} returned numerous 400 errors because of misconfigured request bodies. This highlights the importance of thorough validation runs and the need for improved debugging support in the operational setting configuration interface.
-  \item \text{Scalability gap and performance offset visualization}: The current reporting interface lacks intuitive visualizations for interpreting some of the metrics. Graphical representations of scalability gaps and performance offsets across load levels would enhance result interpretability.
-\end{itemize}
+Tables~\ref{tab:technika-operation-results-monolith} and~\ref{tab:technika-operation-results-microservices} present the detailed operation-level metrics for both architectures, including request counts, failure rates, scalability footprints, gaps, and performance offsets.
 
-These limitations reflect the prototype nature of the current implementation and identify concrete areas for engineering refinement in future development cycles.
+\begin{table}[ht]
+  \centering
+  \caption{Operation-level scalability metrics for Technika (Monolith)}%
+  \label{tab:technika-operation-results-monolith}
+  \small
+  \begin{tabular}{lrrrcc}
+  \hline
+  \textbf{Operation} & \textbf{Requests} & \textbf{Failed} & \textbf{Footprint} & \textbf{Gap} & \textbf{Offset} \\
+  \hline
+  save              & 1,341  & 0 & 40 & 0.024 & 0.040 \\
+  save\_1           & 1,335  & 0 & 50 & 0.021 & 0.465 \\
+  save\_2           & 1,333  & 0 & 50 & 0.021 & 0.445 \\
+  save\_3           & 3,165  & 0 & 50 & 0.054 & 0.426 \\
+  save\_4           & 13,186 & 0 & 50 & 0.227 & 0.422 \\
+  listAll           & 10,238 & 0 & 50 & 0.175 & 0.095 \\
+  listAll\_1        & 10,238 & 0 & 50 & 0.175 & 0.083 \\
+  listAll\_2        & 7,073  & 0 & 60 & 0.120 & 0.526 \\
+  listSinceLastUpdate   & 571 & 0 & 70 & N/A & N/A \\
+  getCurrentServerTime  & 9,758 & 0 & 50 & 0.167 & 0.271 \\
+  listSinceLastUpdate\_1 & 571 & 0 & 60 & 0.011 & 0.352 \\
+  \hline
+  \end{tabular}
+\end{table}
 
-\subsection{Scope and Representativeness}
+\begin{table}[ht]
+  \centering
+  \caption{Operation-level scalability metrics for Technika (Microservices)}%
+  \label{tab:technika-operation-results-microservices}
+  \small
+  \begin{tabular}{lrrrcc}
+  \hline
+  \textbf{Operation} & \textbf{Requests} & \textbf{Failed} & \textbf{Footprint} & \textbf{Gap} & \textbf{Offset} \\
+  \hline
+  save              & 1,538  & 0 & 40 & 0.026 & 0.169 \\
+  save\_1           & 1,529  & 0 & 40 & 0.025 & 0.138 \\
+  save\_2           & 1,515  & 0 & 40 & 0.025 & 0.178 \\
+  save\_3           & 3,095  & 0 & 40 & 0.050 & 0.134 \\
+  save\_4           & 12,706 & 0 & 40 & 0.226 & 0.156 \\
+  listAll           & 10,002 & 0 & 50 & 0.174 & 0.433 \\
+  listAll\_1        & 10,002 & 0 & 50 & 0.174 & 0.363 \\
+  listAll\_2        & 6,907  & 0 & 50 & 0.119 & 0.109 \\
+  listSinceLastUpdate   & 535 & 0 & 60 & 0.010 & 0.027 \\
+  getCurrentServerTime  & 9,448 & 0 & 50 & 0.164 & 0.486 \\
+  listSinceLastUpdate\_1 & 535 & 0 & 60 & 0.010 & 0.434 \\
+  \hline
+  \end{tabular}
+\end{table}
+
+\subsection{Observations and Insights}
+
+\paragraph{Smaller Performance Gap Than RealWorld}
+The Technika decomposition showed a much smaller performance difference between architectures compared to RealWorld Conduit. The microservice architecture achieved only a 7.3\% reduction, compared to 18.8\% in the RealWorld experiment. This suggests that the actor-aligned decomposition strategy, which produced two coarse-grained services with minimal inter-service communication, preserved more of the monolith's performance characteristics.
+
+\paragraph{Write Operations Degraded Uniformly}
+All write operations (\texttt{save}, \texttt{save\_1}, \texttt{save\_2}, \texttt{save\_3}, \texttt{save\_4}) showed reduced scalability footprints in the microservices variant, dropping from 40--50 VUs to a uniform 40 VUs. This consistent degradation pattern differs from RealWorld, where write operation behavior varied significantly. The uniformity suggests that the Admin Service and Worker Service share similar write path characteristics.
+
+\paragraph{Read Operations Remained Stable}
+The read operations (\texttt{listAll}, \texttt{listAll\_1}, \texttt{listAll\_2}) maintained identical scalability footprints (50--60 VUs) across both architectures. This stability indicates that the decomposition did not introduce significant overhead for read-heavy operations—a notable contrast to RealWorld where \texttt{getArticles} dropped from 250 to 100 VUs.
+
+\paragraph{No Failed Requests in Either Architecture}
+Unlike RealWorld Conduit, which experienced over 1,000 failed requests in both architectures, Technika processed all requests successfully. This reliability difference likely reflects Technika's maturity as a production application that has been fine-tuned for stability under real-world usage conditions.
+
+\paragraph{Lower Performance Offsets in Microservices}
+Several operations exhibited lower performance offsets in the microservices architecture. For example, \texttt{save\_4} (transaction creation) had an offset of 0.422 in the monolith but only 0.156 in microservices, and \texttt{listAll\_2} dropped from 0.526 to 0.109. This counterintuitive result suggests that isolating the Worker Service reduced contention for high-frequency transaction operations.
+
+\paragraph{Actor-Aligned Decomposition Minimized Cross-Service Calls}
+The two-service decomposition aligned with actor boundaries (Admin vs.\ Worker) resulted in minimal inter-service communication during typical workflows. Each behavior model's operations were largely contained within a single service, avoiding the cascading latency observed in RealWorld where article retrieval required coordination across multiple services.
+
+\section{Scope and Representativeness}
 
 The two demonstrated systems represent different points on the complexity spectrum but share certain characteristics that may limit generalizability. Both are relatively small (fewer than 100 classes), built on similar technology stacks (Spring Boot, PostgreSQL), and follow conventional layered architectures. They do not exhibit the extreme coupling, legacy complexity, or polyglot characteristics typical of large enterprise monoliths. Furthermore, single-host benchmarking cannot capture the network latency and distributed coordination overhead that emerge in production-scale deployments. These demonstrations validate that ServiceSlicer functions correctly on representative applications, but additional case studies on larger and more diverse systems would strengthen confidence in the tool's broader applicability.
 
 \section{Summary}
 
-The demonstrations presented in this chapter validate that ServiceSlicer can successfully process real applications, generate meaningful decomposition candidates, and execute automated benchmarks against containerized deployments. Both RealWorld Conduit and Technika progressed through the complete workflow—from static dependency extraction through algorithmic clustering to multi-level scalability assessment—producing actionable insights for architectural decision-making.
+The demonstrations presented in this chapter validate that ServiceSlicer can successfully process real applications, generate meaningful decomposition candidates, and execute automated benchmarks against containerized deployments. Both RealWorld Conduit and Technika progressed through the complete workflow, producing actionable insights for architectural decision-making. 
 
-Key observations emerged across both systems. Static analysis consistently identified structurally cohesive clusters, though these required interpretation through domain knowledge to yield practical service boundaries. The actor-aligned decomposition approach proved effective for the industrial system, demonstrating that organizing services around user personas can balance architectural clarity with operational feasibility. Operational profile construction required substantial domain expertise, highlighting the importance of realistic workload modeling for meaningful scalability assessment.
+The two demonstrations yielded contrasting results. RealWorld Conduit's three-service decomposition resulted in a 24\% domain metric reduction with significant inter-service overhead, while Technika's actor-aligned two-service decomposition showed only a 9\% reduction. In both cases, the monolithic architecture outperformed microservices, reinforcing that decomposition decisions should be grounded in empirical performance data rather than assumptions about microservices benefits.
 
-The practical limitations encountered—configuration coupling, algorithm configurability constraints, and behavior model sensitivity—identify concrete areas for future engineering refinement and strengthen the platform's applicability to a broader range of decomposition scenarios.
+\chapter{Conclusion}\label{chap:conclusions}
 
-\chapter{Conclusions \& Future Directions}\label{chap:conclusions}
-
-This thesis presents ServiceSlicer, a platform combining static analysis with automated benchmarking to support monolith decomposition. ServiceSlicer helps architects explore decomposition strategies and test them under realistic conditions using dependency extraction, graph clustering, AI-assisted semantic analysis, and multi-level scalability assessment.
-
-The platform addresses a critical gap identified in recent systematic reviews~\cite{M2MDF}: the lack of integrated tooling that spans from boundary identification through deployment-based validation. While existing approaches typically focus on either static analysis or runtime evaluation in isolation, ServiceSlicer combines both perspectives, enabling architects to ground architectural decisions in empirical performance data.
+ServiceSlicer addresses a critical gap identified in recent systematic reviews~\cite{M2MDF}: the lack of integrated tooling that spans from boundary identification through deployment-based validation. While existing approaches typically focus on either static analysis or runtime evaluation in isolation, ServiceSlicer combines both perspectives, enabling architects to ground architectural decisions in empirical performance data.
 
 \section{Summary of Contributions}
 
-This work makes three primary contributions:
+This thesis makes three primary contributions:
 
-\textbf{Integrated Decomposition Support Platform.} ServiceSlicer implements multiple phases of the M2MDF framework~\cite{M2MDF}, including bytecode-level dependency extraction, graph-based clustering (Louvain, Leiden, Label Propagation), AI-assisted semantic analysis, structural quality metrics, and automated deployment-based validation. The hexagonal architecture integrates Neo4j, PostgreSQL, MinIO, Prometheus, and k6 into a cohesive workflow accessible through a browser-based interface. 
+\textbf{Integrated Decomposition Platform.} ServiceSlicer combines static analysis and performance benchmarking into a unified workflow. The platform extracts dependencies from Java bytecode, applies graph-based clustering algorithms to identify candidate service boundaries, and supports AI-assisted semantic refinement. For validation, it automates deployment and load testing of architectural variants.
 
-\textbf{Automated Multi-Level Scalability Assessment.} The thesis provides an automated implementation of the Multi-Level Scalability Assessment methodology~\cite{scalabilityAssessment}, fully automating deployment orchestration, behavior-model-driven workload execution, and computation of operation-level, component-level, and system-level scalability indicators. This reduces evaluation time from days to hours and enables reproducible performance comparison across architectural variants.
+\textbf{Automated Multi-Level Scalability Assessment.} The platform provides an automated implementation of the Multi-Level Scalability Assessment methodology~\cite{scalabilityAssessment}. It automates deployment orchestration, executes workloads based on behavior models, and computes scalability metrics at both system and operation levels. This automation reduces evaluation effort and enables reproducible performance comparison across architectural variants.
 
-\textbf{Demonstration Through Real Systems.} The platform's applicability is demonstrated through RealWorld Conduit (a blogging platform) and Technika (an industrial fleet management system), validating that ServiceSlicer can process real applications, generate semantically coherent decomposition candidates, and execute automated benchmarks against containerized deployments.
+\textbf{Empirical Validation.} The platform was applied to two applications: RealWorld Conduit and Technika. These demonstrations validate that ServiceSlicer can process actual codebases, generate meaningful decomposition candidates, and execute automated benchmarks against containerized deployments.
 
 \section{Key Findings}
 
-\textbf{Static analysis provides guidance, not prescriptions.} Clustering algorithms produce structurally coherent partitions, but these require interpretation through domain knowledge to yield practically deployable microservices. The most effective decompositions combined algorithmic results with domain expertise.
+The demonstrations revealed several insights relevant to practitioners considering monolith decomposition:
 
-\textbf{Actor-aligned decomposition balances clarity and feasibility.} Organizing services around distinct actor types rather than pursuing maximal structural granularity can produce architectures that are both clear and operationally manageable, particularly for smaller systems or teams with limited operational maturity.
+\textbf{Static analysis provides guidance, not prescriptions.} Clustering algorithms produce structurally coherent partitions, but these require interpretation through domain knowledge to yield practically deployable microservices.
 
-\textbf{Operational profiles require domain knowledge.} Constructing realistic behavior models and load distributions requires substantial domain expertise. While AI-assisted synthesis can generate plausible sequences, validation against observed traffic patterns significantly improves assessment quality.
+\textbf{Coarse-grained decompositions can outperform fine-grained ones.} The actor-aligned two-service decomposition of Technika showed only 9\% performance degradation, compared to 24\% for RealWorld's three-service decomposition. Organizing services around actor boundaries rather than pursuing maximal structural granularity preserved more of the monolith's performance characteristics.
 
-\textbf{Deployment-based validation reveals non-obvious bottlenecks.} Automated benchmarking uncovered performance characteristics unpredictable from static analysis alone—including network latency, serialization overhead, database contention, and cascading failures under load—reinforcing the importance of empirical evaluation.
+\textbf{Deployment-based validation reveals hidden bottlenecks.} Automated benchmarking uncovered performance characteristics unpredictable from static analysis alone—including inter-service communication overhead, contention patterns, and cascading degradation under load.
 
-\section{Limitations}
-
-\textbf{JVM-only static analysis.} Dependency extraction operates exclusively on JVM bytecode, limiting applicability to Java, Kotlin, and Scala. Extending support to other language ecosystems would require implementing language-specific parsers.
-
-\textbf{Docker Compose deployment model.} Benchmarking assumes systems can be deployed via Docker Compose, excluding Kubernetes, serverless platforms, or geographically distributed deployments that introduce complexities not captured in single-host scenarios.
-
-\textbf{Manual microservices implementation.} ServiceSlicer generates decomposition candidates but does not automatically extract code to produce functioning microservices, requiring significant manual implementation effort.
-
-\textbf{Limited scope of demonstrations.} The two demonstrated systems are relatively small (fewer than 100 classes), use relational databases, and do not exhibit the extreme coupling or legacy complexity typical of large enterprise monoliths.
-
-\textbf{Absence of formal evaluation.} This thesis presents demonstrations rather than controlled empirical studies, validating feasibility without establishing quantitative claims about decomposition quality or comparative effectiveness.
+\textbf{Microservices do not inherently improve scalability.} In both demonstrations, the monolithic architecture outperformed the decomposed variant, reinforcing that decomposition decisions should be grounded in empirical data rather than assumptions.
 
 \section{Future Directions}
 
-\textbf{Multi-language static analysis.} Extend dependency extraction to support multiple programming languages through integration with language-agnostic tools or language-specific parsers, enabling analysis of polyglot codebases.
+Several avenues exist for future enhancement:
 
-\textbf{Scalable graph processing.} Implement distributed graph processing, incremental clustering algorithms, or graph sampling techniques to enable analysis of systems comprising tens of thousands of classes.
+\textbf{Multi-language static analysis.} Extend dependency extraction to support additional programming languages. This would broaden the platform's applicability, as the benchmarking workflow already supports any language through containerized deployments and REST APIs.
 
-\textbf{Automated code extraction.} Develop tooling to semi-automatically extract microservices from monolithic codebases based on identified boundaries, handling data migration, shared state, and API design challenges.
+\textbf{Scalable graph processing.} Introduce asynchronous transactions and selective fetching to handle larger codebases with tens of thousands of classes more efficiently.
 
-\textbf{Comparative architecture evaluation.} Support simultaneous comparison of multiple candidate architectures within a single benchmark, enabling more efficient exploration of the design space.
+\textbf{Advanced decomposition algorithms.} Integrate additional clustering approaches such as spectral clustering or hierarchical methods, and provide interactive refinement capabilities.
 
-\textbf{Advanced decomposition algorithms.} Integrate additional clustering approaches (spectral clustering, hierarchical methods, hybrid algorithms) and provide interactive refinement capabilities where architects can manually adjust clusters.
+\textbf{Workflow robustness.} Support stopping running jobs, restarting individual test cases, and recovering from partial failures more gracefully.
 
-\textbf{User management and multi-tenancy.} Implement authentication, authorization, and multi-tenant isolation to enable collaborative use and deployment as a shared organizational service.
-
-\textbf{Formal empirical evaluation.} Conduct controlled studies to evaluate ServiceSlicer's effectiveness compared to manual decomposition or alternative tools, measuring decomposition quality, user productivity, and scalability prediction accuracy.
-
-\textbf{CI/CD integration.} Embed analysis and benchmarking capabilities within continuous integration workflows to monitor architectural quality as systems evolve, alerting when coupling increases or scalability regresses.
-
-\section{Closing Remarks}
-
-The transition from monolithic to microservices architectures remains one of the most challenging decisions in modern software engineering. Poor decomposition decisions can result in systems that are more complex, less performant, and harder to operate than the monoliths they replaced. ServiceSlicer contributes to addressing this challenge by providing integrated tooling that spans boundary identification, semantic refinement, and empirical validation.
-
-The demonstrations validate the feasibility of the approach and illustrate its application to real systems. While significant work remains—particularly in extending language support, automating code extraction, and conducting formal evaluation—ServiceSlicer represents a step toward making systematic, data-driven monolith decomposition accessible to practitioners. As organizations continue to grapple with architectural modernization, tools that reduce uncertainty, accelerate learning, and provide empirical validation will become increasingly valuable.
+\textbf{Benchmark reporting.} Generate exportable summaries of benchmark results in PDF or structured data formats suitable for documentation and stakeholder communication.
 
 \appendix
 
@@ -1183,6 +1352,65 @@ The \texttt{generate:api} command generates TypeScript API client code from the 
   \end{tabularx}
 \end{table}
 
-\printindex
+\chapter{User Interface Guide}\label{app:ui}
+
+This appendix presents the key user interface screens of the ServiceSlicer platform. The web-based interface provides access to both the static analysis and benchmarking workflows, enabling users to configure analyses, monitor progress, and inspect results through an intuitive graphical environment.
+
+\section{Decomposition Job Details}
+
+The decomposition job details page (Figure~\ref{fig:ui-decomposition}) serves as the primary interface for exploring static analysis results. After a decomposition job completes, this page presents the extracted dependency graph alongside the generated decomposition candidates.
+
+The main area displays an interactive visualization of the class-level dependency graph. Nodes represent Java classes extracted from the uploaded JAR file, while directed edges indicate structural dependencies such as method invocations, field accesses, and type references. Users can pan, zoom, and select individual nodes to inspect class details and their connections.
+
+A selection control allows users to switch between different decomposition candidates. When a candidate is selected, nodes are colored according to their assigned service, making it easy to visually assess cluster cohesion and identify dependencies that cross service boundaries.
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/decomposition_job_page.jpeg}
+  \caption{Decomposition job details page showing the interactive dependency graph visualization with color-coded service assignments}%
+  \label{fig:ui-decomposition}
+\end{figure}
+
+\FloatBarrier
+
+\section{Operational Setting Configuration}
+
+The operational setting configuration page (Figure~\ref{fig:ui-operational-setting}) enables users to define workload specifications for benchmarking. An operational setting captures the expected usage patterns of a system through behavior models and load level distributions.
+
+The configuration process begins with uploading an OpenAPI specification that describes the API of the system under test. ServiceSlicer parses this specification to extract available operations, which then serve as building blocks for constructing behavior models.
+
+The behavior model editor allows users to define sequences of API operations that represent realistic user workflows. For each step in a behavior model, users specify the operation to invoke, parameter values or variable bindings, request headers, and think time delays. Variable bindings enable stateful workflows where values extracted from one response (such as authentication tokens or resource identifiers) are injected into subsequent requests.
+
+The operational profile section defines load levels and their probability distribution. Users specify discrete concurrency levels representing the number of simultaneous virtual users, along with the probability that each level occurs under realistic conditions. This probabilistic characterization ensures that scalability metrics emphasize commonly encountered load scenarios.
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figures/operational_setting_create_page.jpeg}
+  \caption{Operational setting configuration page showing behavior model definition and load level specification}%
+  \label{fig:ui-operational-setting}
+\end{figure}
+
+\FloatBarrier%
+
+\section{Benchmark Run Dashboard}
+
+The benchmark run dashboard (Figure~\ref{fig:ui-benchmark-dashboard}) provides real-time monitoring of benchmark execution and presents aggregated performance results upon completion. This interface is the central location for observing scalability assessment progress and comparing architectural variants.
+
+During execution, the dashboard displays the current state of each test suite and test case. A test suite groups all load-level tests for a single system under test, while individual test cases represent specific SUT-load level combinations. Status indicators show whether each test is pending, running, completed, or failed, enabling users to monitor progress across the entire benchmark run.
+
+The results section presents performance metrics organized at two levels of granularity. At the system level, users can compare the overall domain metric across architectural variants, providing a high-level assessment of relative scalability. Below the system-level summary, operation-level metrics are displayed in tabular format, organized into two views: aggregated metrics across all load levels for each operation, and detailed per-test-case metrics showing performance at specific concurrency levels. These tables include mean response time, standard deviation, throughput, and pass/fail classification against scalability thresholds.
+
+Interactive charts visualize performance trends across load levels, making it easy to identify scalability bottlenecks and understand how different architectures respond to increasing concurrency. The scalability footprint chart shows the maximum sustainable load for each operation, while response time distribution plots reveal latency characteristics under various conditions.
+
+A comparison view enables side-by-side analysis of the baseline architecture against decomposed alternatives, highlighting operations where the microservices architecture improves or degrades performance relative to the monolith.
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.7\textwidth]{figures/benchmark_run_dashboard_page.jpeg}
+  \caption{Benchmark run dashboard displaying test execution progress and aggregated performance metrics across architectural variants}%
+  \label{fig:ui-benchmark-dashboard}
+\end{figure}
+
+\FloatBarrier%
 
 \end{document}
