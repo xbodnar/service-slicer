@@ -36,11 +36,13 @@ export OPENAI_API_KEY=your-api-key-here
 ./mvnw spring-boot:run
 ```
 
-The backend will be available at http://localhost:8080
+The backend will be available at http://localhost:8080/api
 
-- Swagger UI: http://localhost:8080/swagger-ui.html
+- Swagger UI: http://localhost:8080/api/swagger-ui.html
 - PostgreSQL: localhost:33771
 - Neo4j Browser: http://localhost:7474
+- MinIO Console: http://localhost:9001
+- Prometheus: http://localhost:9091
 
 ### Frontend
 
